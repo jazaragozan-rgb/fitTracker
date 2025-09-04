@@ -13,7 +13,7 @@ export function mostrarTimer(){
   clearInterval(timerInterval);
   const timerContainer=document.getElementById("timerContainer");
   const fin=parseInt(localStorage.getItem("timerFin"));
-  if(!fin||!timerContainer) return;
+  if(!fin || !timerContainer) return;
 
   timerContainer.innerHTML="";
   timerContainer.className="timer-active";
@@ -21,20 +21,22 @@ export function mostrarTimer(){
   const tiempoLabel=document.createElement("div");
   tiempoLabel.className="timer-label";
 
+  // Botón de Pausa
   const btnPause=document.createElement("button");
   btnPause.textContent="⏸";
+  btnPause.className = "btn-pause";  // Agregar la clase CSS
 
   let pausado=false;
   let tiempoRestante=Math.floor((fin-Date.now())/1000);
 
-  btnPause.onclick=()=>{
+  btnPause.onclick=()=> {
     if(!pausado){
       pausado=true;
       tiempoRestante=Math.floor((fin-Date.now())/1000);
       localStorage.setItem("timerPause",tiempoRestante);
       localStorage.removeItem("timerFin");
       btnPause.textContent="▶️";
-    }else{
+    } else {
       pausado=false;
       const nuevoFin=Date.now()+tiempoRestante*1000;
       localStorage.setItem("timerFin",nuevoFin);
@@ -44,9 +46,11 @@ export function mostrarTimer(){
     }
   };
 
+  // Botón de Parar
   const btnSkip=document.createElement("button");
   btnSkip.textContent="⏹";
-  btnSkip.onclick=()=>{
+  btnSkip.className = "btn-skip";  // Agregar la clase CSS
+  btnSkip.onclick=()=> {
     clearInterval(timerInterval);
     timerContainer.innerHTML="";
     localStorage.removeItem("timerFin");
@@ -70,6 +74,7 @@ export function mostrarTimer(){
     const mm=Math.floor(t/60), ss=t%60;
     tiempoLabel.textContent=mm+":"+(ss<10?"0"+ss:ss);
   }
+
   actualizar();
   timerInterval=setInterval(actualizar,1000);
 }
