@@ -259,7 +259,10 @@ function renderizar() {
       numBtn.textContent=serie.marca|| (idx+1);
       numBtn.addEventListener('click',e=>{
         e.stopPropagation();
-        mostrarSelectorMarca(serie,()=>renderizar());
+        mostrarSelectorMarca(serie,idx,()=>{
+          guardarDatos();     // aquí sí tienes acceso
+          renderizar();       // refresca la UI
+        });
       });
 
       const reps=document.createElement('input');
@@ -304,6 +307,32 @@ function renderizar() {
     });
     contenido.appendChild(addSerie);
 
+ // 📊 Bloque Volumen y 1RM
+    const statsBox = document.createElement('div');
+    statsBox.style.background = "#f5f5f5";
+    statsBox.style.padding = "12px";
+    statsBox.style.margin = "10px";
+    statsBox.style.borderRadius = "8px";
+    statsBox.style.color = "#000";
+
+    // Calcular volumen total y 1RM
+    let volumenTotal = 0;
+    let mejor1RM = 0;
+    nivel.series.forEach(serie => {
+      const peso = parseFloat(serie.peso) || 0;
+      const reps = parseInt(serie.reps) || 0;
+      volumenTotal += peso * reps;
+      const estimado = peso * (1 + reps / 30);
+      if (estimado > mejor1RM) mejor1RM = estimado;
+    });
+
+    statsBox.innerHTML = `
+      <p><b>Volumen total:</b> ${volumenTotal.toFixed(2)} kg</p>
+      <p><b>1RM estimado:</b> ${mejor1RM.toFixed(2)} kg</p>
+    `;
+
+    contenido.appendChild(statsBox);
+
     const notas=document.createElement('textarea');
     notas.placeholder='Notas del ejercicio...';
     notas.value=nivel.notas||''; notas.className='notes';
@@ -334,7 +363,7 @@ function renderizar() {
 }
 
 // ==================== Crear índice ====================
-function crearIndice(item, index, nivel){
+function crearIndice(item, index, nivel) {
   const div = document.createElement('div');
   div.className = 'list-item';
   div.style.display = 'flex';
@@ -344,13 +373,16 @@ function crearIndice(item, index, nivel){
   div.style.overflow = 'hidden';
 
   if (!item.editando) item.editando = false;
+
   if (item.editando) {
+    // ----------- MODO EDICIÓN -----------
     const input = document.createElement('input');
     input.value = item.nombre || '';
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
     setTimeout(() => { input.focus(); input.select(); }, 50);
+
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         item.nombre = input.value || 'Sin nombre';
@@ -362,7 +394,21 @@ function crearIndice(item, index, nivel){
       item.editando = false; guardarDatos(); renderizar();
     });
     div.appendChild(input);
+
+    // 👉 Si estamos en nivel 3, añadimos input de fecha
+    if (rutaActual.length === 3) {
+      const fechaInput = document.createElement('input');
+      fechaInput.type = 'date';
+      fechaInput.value = item.fecha || '';
+      fechaInput.addEventListener('input', e => {
+        item.fecha = e.target.value;
+        guardarDatos();
+      });
+      div.appendChild(fechaInput);
+    }
+
   } else {
+    // ----------- MODO VISUAL -----------
     const input = document.createElement('input');
     input.value = item.nombre;
     input.readOnly = true;
@@ -371,6 +417,20 @@ function crearIndice(item, index, nivel){
 
     input.addEventListener('mousedown', () => { rutaActual.push(index); renderizar(); });
     div.appendChild(input);
+
+    // 👉 Si estamos en nivel 3, mostramos también la fecha
+    if (rutaActual.length === 3) {
+      const fechaInput = document.createElement('input');
+      fechaInput.type = 'date';
+      fechaInput.value = item.fecha || '';
+      fechaInput.addEventListener('mousedown', e => e.stopPropagation());
+      fechaInput.addEventListener('click', e => e.stopPropagation());
+      fechaInput.addEventListener('change', e => {
+        item.fecha = e.target.value;
+        guardarDatos();
+      });
+      div.appendChild(fechaInput);
+    }
 
     const editar = document.createElement('button');
     editar.className = "btn-edit"; editar.textContent = '✏️';
@@ -392,6 +452,7 @@ function crearIndice(item, index, nivel){
   }
   return div;
 }
+
 // ==================== Eventos ====================
 document.addEventListener("DOMContentLoaded", () => {
   if (homeButton) {
