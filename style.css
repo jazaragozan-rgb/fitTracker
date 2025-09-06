@@ -109,7 +109,7 @@ button { cursor:pointer; }
   margin-left:0px;display:grid; grid-template-columns:repeat(7,1fr); gap:1px; align-items:center;
 }
 .series-header { font-weight:bold; margin-bottom:10px; }
-.series-container input { background:#e2e2e2; color:#000; padding: 8px; border-radius:6px; }
+.series-container input { background:#ececec94; color:#000; padding: 4px; border-radius:6px; font-size: 1.2rem; }
 
 /* Botones de series */
 .series-container button, .list-item button, #headerButtons button {
@@ -130,8 +130,8 @@ button { cursor:pointer; }
 
 /* Notas */
 .notes {
-  width:94%; height: 100px; margin-top:10px; margin-left: 12px;
-  border:1px solid #ccc; border-radius:10px; padding:10px;
+  width:94%; height: 100px; margin-top:10px; margin: 12px;
+  border:1px solid #ccc; border-radius:10px; padding:14px;
 }
 
 /* Timer */
@@ -202,7 +202,7 @@ button { cursor:pointer; }
 
 /* Estilos para el botón de pausa */
 .btn-pause {
-  background-color: #87d88a; /* Verde */
+  background-color: #c2c2c2; /* Verde */
   color: white;
   font-size: 24px;
   border: none;
@@ -212,18 +212,18 @@ button { cursor:pointer; }
   transition: background-color 0.3s ease;
   width: 90px; height: 90px;
   display: inline-block;
-  box-shadow: 0 0 15px 8px rgba(40, 255, 58, 0.3);
+  box-shadow: 0 0 20px 10px rgba(146, 146, 146, 0.3);
   outline: none;
   }
 
 .btn-pause:hover {
-  background-color: #45a049; /* Verde más oscuro */
-  box-shadow: 0 0 0px 4px rgba(40, 255, 58, 0.3);
+  background-color: #8d8d8d;
+  box-shadow: 0 0 20px 10px rgba(146, 146, 146, 0.3);
 }
 
 /* Estilos para el botón de parar */
 .btn-skip {
-  background-color: #f56e6e; /* Rojo */
+  background-color: #f56e6e9f; /* Rojo */
   color: white;
   font-size: 24px;
   border: none;
@@ -234,10 +234,10 @@ button { cursor:pointer; }
   width: 90px; height: 90px;
   display: inline-block;
   margin-left: 50px;
-  box-shadow: 0 0 15px 8px rgba(230, 82, 82, 0.493);
+  box-shadow: 0 0 20px 10px rgba(230, 82, 82, 0.3);
 }
 
 .btn-skip:hover {
   background-color: #e53935; /* Rojo más oscuro */
-  box-shadow: 0 0 0px 4px rgba(230, 82, 82, 0.493);
+  box-shadow: 0 0 20px 10px rgba(230, 82, 82, 0.3);
 }
