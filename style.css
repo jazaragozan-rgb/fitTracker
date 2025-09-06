@@ -212,12 +212,13 @@ button { cursor:pointer; }
   transition: background-color 0.3s ease;
   width: 90px; height: 90px;
   display: inline-block;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 15px 8px rgba(40, 255, 58, 0.3);
+  outline: none;
   }
 
 .btn-pause:hover {
   background-color: #45a049; /* Verde más oscuro */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0px 4px rgba(40, 255, 58, 0.3);
 }
 
 /* Estilos para el botón de parar */
@@ -233,10 +234,10 @@ button { cursor:pointer; }
   width: 90px; height: 90px;
   display: inline-block;
   margin-left: 50px;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 15px 8px rgba(230, 82, 82, 0.493);
 }
 
 .btn-skip:hover {
   background-color: #e53935; /* Rojo más oscuro */
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 0px 4px rgba(230, 82, 82, 0.493);
 }
