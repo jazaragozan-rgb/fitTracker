@@ -333,6 +333,166 @@ function renderizar() {
 
     contenido.appendChild(statsBox);
 
+    // ==================== FUNCIONES ====================
+
+function fechaATimestamp(fechaStr) {
+  if (!fechaStr || typeof fechaStr !== "string") return 0;
+  return new Date(fechaStr).getTime() || 0;
+}
+
+// ==================== Buscar ejercicio anterior ====================
+// Obtener nodo "Full body" o "Push pull legs" (nivel 3)
+const sesion = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]];
+console.log("📌 Nodo 'Full body' o 'Push pull legs' (nivel 3):", sesion);
+
+// Mostrar los hijos de "Full body" o "Push pull legs" (nivel 4)
+console.log("📌 Hijos de 'Full body' o 'Push pull legs' (nivel 4):", sesion?.hijos);
+
+// Obtener el hijo específico en nivel 4 (donde puede estar la fecha)
+const nivel4 = sesion?.hijos?.[rutaActual[3]];
+console.log("📌 Nodo nivel 4:", nivel4);
+
+// Intentar leer la fecha en nivel 4
+const fechaActualSesion = nivel4?.fecha || null;
+console.log("📌 Fecha sesión actual (nivel 4):", fechaActualSesion);
+
+const nombreEjercicioActual = nivel.nombre.trim().toLowerCase();  // Normalizar nombre ejercicio actual
+let ejercicioAnterior = null;
+let timestampActual = fechaATimestamp(fechaActualSesion);
+
+console.log("📌 Fecha sesión actual:", fechaActualSesion);
+console.log("📌 Timestamp actual:", timestampActual);
+console.log("📌 Nombre ejercicio actual:", nombreEjercicioActual);  // Mostrar nombre ejercicio actual normalizado
+
+// Ahora solo necesitamos recorrer las sesiones de "Full body" y "Push pull legs" que contienen la fecha
+for (const meso of datos) {
+  console.log(`🔸 Mesociclo: ${meso.nombre || "sin nombre"}`);
+
+  // Buscar el nodo "Full body" o "Push pull legs"
+  for (const micro of meso.hijos || []) {
+    console.log(`  🔹 Microciclo: ${micro.nombre || "sin nombre"}`);
+
+    // Comprobamos si el microciclo es "Fuerza" o algún otro objetivo
+    if (micro.nombre && micro.nombre.toLowerCase() === "fuerza") {
+      console.log("    ✅ Microciclo 'Fuerza' encontrado, buscando dentro...");
+
+      // Buscamos dentro de los hijos de "Full body" o "Push pull legs" (sesiones)
+      for (const sesion of micro.hijos || []) {
+        console.log(`    🔹 Sesión encontrada: ${sesion.nombre}`);
+
+        // Verificamos si la sesión tiene una fecha
+        if (!sesion.fecha) {
+          console.log(`      ⚠️ Sesión sin fecha, buscando en el siguiente nivel...`);
+
+          // Si la sesión no tiene fecha, verificamos en los hijos de esta sesión
+          if (sesion.hijos && sesion.hijos.length > 0) {
+            for (const sesionInferior of sesion.hijos) {
+              console.log(`        🔍 Buscando en nivel inferior: ${sesionInferior.nombre}`);
+              if (sesionInferior.fecha) {
+                console.log(`        ✅ Sesión en nivel inferior con fecha encontrada: ${sesionInferior.nombre} - Fecha: ${sesionInferior.fecha}`);
+                sesion.fecha = sesionInferior.fecha;  // Asignamos la fecha encontrada en el nivel inferior
+                break;  // Ya encontramos la fecha, podemos continuar
+              }
+            }
+          }
+          // Si después de buscar en los hijos no tiene fecha, la saltamos
+          if (!sesion.fecha) {
+            console.log("        ⚠️ No se encontró ninguna fecha en el nivel inferior. Se salta.");
+            continue;
+          }
+        }
+
+        // Aquí es donde debe usarse sesionInferior si se encontró una fecha en el subnivel
+        console.log(`    ✅ Sesión con fecha encontrada: ${sesion.fecha ? sesion.nombre : sesionInferior.nombre} - Fecha: ${sesion.fecha || sesionInferior.fecha}`);
+
+        // Convertimos la fecha de la sesión a timestamp
+        const fechaSes = fechaATimestamp(sesion.fecha || sesionInferior.fecha);
+        console.log(`    🔍 Sesión: ${sesion.nombre || sesionInferior.nombre} - Fecha: ${sesion.fecha || sesionInferior.fecha} (timestamp: ${fechaSes})`);
+
+        if (fechaSes >= timestampActual) {
+          console.log("      ❌ Sesión no es anterior a la actual, se salta.");
+          continue;  // Si la sesión no es anterior a la fecha actual, se salta
+        }
+
+        // **Aquí está la modificación principal**
+        // Ahora buscamos los ejercicios dentro de esta sesión, que están en los "hijos de los hijos"
+        for (const sesionInferior of sesion.hijos || []) {
+          console.log(`      ➤ Buscando ejercicios dentro de los hijos de la sesión: ${sesionInferior.nombre}`);
+
+          // Verificamos si esta sesión inferior tiene ejercicios
+          for (const ejercicio of sesionInferior.hijos || []) {
+            console.log(`        ➤ Ejercicio encontrado: ${ejercicio.nombre}`);
+
+            const nombreEjercicioComparar = ejercicio.nombre.trim().toLowerCase();  // Normalizamos también el nombre del ejercicio anterior
+            console.log(`        ➤ Comparando ejercicio: '${ejercicio.nombre}' (normalizado: '${nombreEjercicioComparar}')`);
+            console.log(`        ➤ Ejercicio actual: '${nombreEjercicioActual}'`);
+
+            // Comprobamos si el nombre del ejercicio coincide
+            if (nombreEjercicioComparar === nombreEjercicioActual) {
+              console.log("          ✅ Coincidencia encontrada con ejercicio:", ejercicio.nombre);
+
+              // La fecha aquí debe ser del nivel de la sesión, no del propio ejercicio
+              const fechaSesionEjercicioAnterior = sesion.fecha || sesionInferior.fecha; // Fecha de la sesión, no del ejercicio
+
+              if (ejercicio.series?.length > 0) {
+                console.log("          ✅ Ejercicio anterior con series encontrado");
+
+                if (!ejercicioAnterior || fechaATimestamp(fechaSesionEjercicioAnterior) > fechaATimestamp(ejercicioAnterior._fecha)) {
+                  ejercicioAnterior = { ...ejercicio, _fecha: fechaSesionEjercicioAnterior };
+                  console.log(`          ⭐ Nuevo ejercicio anterior más reciente guardado de fecha: ${fechaSesionEjercicioAnterior}`);
+                }
+              } else {
+                console.log("          ⚠️ Ejercicio encontrado sin series, se ignora.");
+              }
+            } else {
+              console.log("          ❌ Nombres no coinciden");
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+if (ejercicioAnterior) {
+  console.log("📦 Ejercicio anterior más reciente:", ejercicioAnterior);
+} else {
+  console.log("❌ No se encontró ningún ejercicio anterior con el mismo nombre y series.");
+}
+
+// Si encontramos un ejercicio anterior, mostramos la caja de estadísticas
+if (ejercicioAnterior) {
+  const statsBoxAnt = document.createElement('div');
+  statsBoxAnt.style.background = "#f5f5f5";
+  statsBoxAnt.style.padding = "12px";
+  statsBoxAnt.style.margin = "10px";
+  statsBoxAnt.style.borderRadius = "8px";
+  statsBoxAnt.style.color = "#000";
+
+  let volumenAnt = 0;
+  let mejor1RMAnt = 0;
+  let pesoMax = 0;
+
+  ejercicioAnterior.series.forEach(serie => {
+    const peso = parseFloat(serie.peso) || 0;
+    const reps = parseInt(serie.reps) || 0;
+    volumenAnt += peso * reps;
+    const estimado = peso * (1 + reps / 30);
+    if (estimado > mejor1RMAnt) mejor1RMAnt = estimado;
+    if (peso > pesoMax) pesoMax = peso;
+  });
+
+  statsBoxAnt.innerHTML = `
+    <p><b>📅 Anterior (${ejercicioAnterior._fecha}):</b></p>
+    <p><b>Volumen total:</b> ${volumenAnt.toFixed(2)} kg</p>
+    <p><b>1RM estimado:</b> ${mejor1RMAnt.toFixed(2)} kg</p>
+    <p><b>Peso máximo:</b> ${pesoMax.toFixed(2)} kg</p>
+  `;
+
+  contenido.appendChild(statsBoxAnt);
+}
+
+
     const notas=document.createElement('textarea');
     notas.placeholder='Notas del ejercicio...';
     notas.value=nivel.notas||''; notas.className='notes';
@@ -493,3 +653,6 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==================== Init ====================
 renderizar();
 restaurarTimer();
+renderizar();
+restaurarTimer();
+
