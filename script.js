@@ -1,3 +1,5 @@
+//llamada a modulo dashboard.js
+import { renderizarDashboard } from "./dashboard.js";
 // ==================== Firebase Auth + Firestore ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
@@ -204,6 +206,11 @@ function renderizar() {
   if (!contenido) return;
   contenido.innerHTML = '';
   let nivel = nivelActual();
+
+    if (rutaActual.length === 0) {
+    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
+    return;
+  }
 
   if (rutaActual.length === 0) {
     tituloNivel.textContent = 'Dashboard';
@@ -653,6 +660,3 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==================== Init ====================
 renderizar();
 restaurarTimer();
-renderizar();
-restaurarTimer();
-
