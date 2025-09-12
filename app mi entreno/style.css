@@ -287,8 +287,12 @@ button { cursor:pointer; }
   color: #fff;
   border-color: #2776c0;
   font-weight: bold;
+  box-shadow: 4px 4px 10px #b6b6b6;
 }
-
+.day-btn.done .letra {
+  font-size: 12px;
+  color: #e0e0e0;
+}
 
 /* Estilos para el botón de pausa */
 .btn-pause {
