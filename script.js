@@ -1,5 +1,3 @@
-//llamada a modulo dashboard.js
-import { renderizarDashboard } from "./dashboard.js";
 // ==================== Firebase Auth + Firestore ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
@@ -200,6 +198,9 @@ onAuthStateChanged(auth, async (user) => {
   rutaActual = [];
   renderizar();
 });
+
+//llamada a modulo dashboard.js
+import { renderizarDashboard } from "./dashboard.js";
 
 // ==================== Renderizado ====================
 function renderizar() {
@@ -660,3 +661,4 @@ document.addEventListener("DOMContentLoaded", () => {
 // ==================== Init ====================
 renderizar();
 restaurarTimer();
+
