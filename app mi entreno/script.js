@@ -656,6 +656,27 @@ document.addEventListener("DOMContentLoaded", () => {
       menuOverlay.classList.add("hidden");
     });
   });
+  // Toggle Login/Register
+  const formLogin = $("form-login");
+  const formRegister = $("form-register");
+  const showRegisterBtn = $("showRegisterBtn");
+  const showLoginBtn = $("showLoginBtn");
+
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener("click", () => {
+      hide(formLogin);
+      show(formRegister);
+      $("log-msg").textContent = "";
+    });
+  }
+
+  if (showLoginBtn) {
+    showLoginBtn.addEventListener("click", () => {
+      hide(formRegister);
+      show(formLogin);
+      $("reg-msg").textContent = "";
+    });
+  }
 });
 
 // ==================== Init ====================
