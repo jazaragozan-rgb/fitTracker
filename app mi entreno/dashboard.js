@@ -132,6 +132,16 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   tituloCard2.textContent = 'Ejercicios completados';
   card2.appendChild(tituloCard2);
 
+  // 👇 Selector de rango
+  const filtroDias = document.createElement('select');
+  [30, 60, 90].forEach(rango => {
+    const option = document.createElement('option');
+    option.value = rango;
+    option.textContent = `Últimos ${rango} días`;
+    filtroDias.appendChild(option);
+  });
+  card2.appendChild(filtroDias);
+
   const scrollContainer = document.createElement('div');
   scrollContainer.style.display = 'flex';
   scrollContainer.style.overflowX = 'auto';
@@ -162,7 +172,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
               if (pesoMax > 0) {
                 ejerciciosTodos.push({
                   nombre: ej.nombre,
-                  fecha: sesion.fecha,   // guardamos string "YYYY-MM-DD"
+                  fecha: sesion.fecha,
                   pesoMax
                 });
               }
@@ -185,79 +195,78 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     ejDiv.style.whiteSpace = 'nowrap';
     ejDiv.style.cursor = 'pointer';
 
-ejDiv.addEventListener('click', () => {
-  const datosEjercicio = ejerciciosTodos
-    .filter(e => e.nombre === nombre)
-    .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+    ejDiv.addEventListener('click', () => {
+      const datosEjercicio = ejerciciosTodos
+        .filter(e => e.nombre === nombre)
+        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
 
-  // 🔑 pares {x, y}
-  const data = datosEjercicio.map(e => ({
-    x: new Date(e.fecha),
-    y: e.pesoMax
-  }));
+      const data = datosEjercicio.map(e => ({
+        x: new Date(e.fecha),
+        y: e.pesoMax
+      }));
 
-  // 🟢 DEBUG
-  console.log("Ejercicio seleccionado:", nombre);
-  console.log("Datos crudos:", datosEjercicio);
-  console.log("Fechas (string):", datosEjercicio.map(e => e.fecha));
-  console.log("Fechas (Date):", data.map(p => p.x));
-  console.log("Pesos:", data.map(p => p.y));
+      if (window.Chart) {
+        if (chartContainer.chartInstance) chartContainer.chartInstance.destroy();
 
-  if (window.Chart) {
-    if (chartContainer.chartInstance) chartContainer.chartInstance.destroy();
-
-    const ctx = chartContainer.getContext('2d');
-    chartContainer.chartInstance = new Chart(ctx, {
-      type: 'line',
-      data: {
-        datasets: [{
-          label: nombre + ' - Peso máximo (kg)',
-          data,
-          borderColor: 'rgb(75, 192, 192)',
-          backgroundColor: 'rgba(75, 192, 192, 0.2)',
-          tension: 0.3,
-          fill: true,
-          pointRadius: 5
-        }]
-      },
-      options: {
-        responsive: true,
-        plugins: {
-          legend: { display: true },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return `${context.dataset.label}: ${context.parsed.y} kg`;
+        const ctx = chartContainer.getContext('2d');
+        const rangoDias = parseInt(filtroDias.value); // 👈 lee el rango elegido
+        chartContainer.chartInstance = new Chart(ctx, {
+          type: 'line',
+          data: {
+            datasets: [{
+              label: nombre + ' - Peso máximo (kg)',
+              data,
+              borderColor: 'rgb(75, 192, 192)',
+              backgroundColor: 'rgba(75, 192, 192, 0.2)',
+              tension: 0.3,
+              fill: true,
+              pointRadius: 5
+            }]
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: true },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return `${context.dataset.label}: ${context.parsed.y} kg`;
+                  }
+                }
+              }
+            },
+            scales: {
+              x: {
+                type: 'time',
+                time: {
+                  unit: 'day',
+                  tooltipFormat: 'dd/MM',
+                  displayFormats: { day: 'dd/MM' }
+                },
+                title: { display: true, text: 'Día' },
+                min: new Date(Date.now() - rangoDias * 24 * 60 * 60 * 1000), // 👈 dinámico
+                max: new Date()
+              },
+              y: {
+                title: { display: true, text: 'Peso máximo (kg)' }
               }
             }
           }
-        },
-        scales: {
-          x: {
-            type: 'time',
-            time: {
-              unit: 'day',
-              tooltipFormat: 'dd/MM',
-              displayFormats: { day: 'dd/MM' }
-            },
-            title: { display: true, text: 'Día' },
-            min: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
-            max: new Date()
-          },
-          y: {
-            title: { display: true, text: 'Peso máximo (kg)' }
-          }
-        }
+        });
       }
     });
-  }
-});
-
 
     scrollContainer.appendChild(ejDiv);
   });
 
   if (nombresUnicos.length > 0) scrollContainer.firstChild.click();
+
+  // 👇 Si cambia el filtro, se redibuja el gráfico con el primer ejercicio
+  filtroDias.addEventListener('change', () => {
+    if (scrollContainer.firstChild) {
+      scrollContainer.firstChild.click();
+    }
+  });
 
   dashboard.appendChild(card2);
 
