@@ -380,10 +380,6 @@ for (const meso of datos) {
   for (const micro of meso.hijos || []) {
     console.log(`  🔹 Microciclo: ${micro.nombre || "sin nombre"}`);
 
-    // Comprobamos si el microciclo es "Fuerza" o algún otro objetivo
-    if (micro.nombre && micro.nombre.toLowerCase() === "fuerza") {
-      console.log("    ✅ Microciclo 'Fuerza' encontrado, buscando dentro...");
-
       // Buscamos dentro de los hijos de "Full body" o "Push pull legs" (sesiones)
       for (const sesion of micro.hijos || []) {
         console.log(`    🔹 Sesión encontrada: ${sesion.nombre}`);
@@ -458,7 +454,6 @@ for (const meso of datos) {
           }
         }
       }
-    }
   }
 }
 
