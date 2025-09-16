@@ -248,7 +248,7 @@ function renderizar() {
 
     const encabezados = document.createElement('div');
     encabezados.className = 'series-header';
-    ['','Reps','Peso','RIR','Descanso','',''].forEach(txt=>{
+    ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt=>{
       const col=document.createElement('div');
       col.textContent=txt;
       encabezados.appendChild(col);
@@ -317,11 +317,13 @@ function renderizar() {
 
  // 📊 Bloque Volumen y 1RM
     const statsBox = document.createElement('div');
-    statsBox.style.background = "#f5f5f5";
-    statsBox.style.padding = "12px";
-    statsBox.style.margin = "10px";
-    statsBox.style.borderRadius = "8px";
+    statsBox.style.background = "#ffffffff";
+    statsBox.style.padding = "14px";
+    statsBox.style.margin = "12px";
+    statsBox.style.borderRadius = "10px";
     statsBox.style.color = "#000";
+    statsBox.style.boxShadow = "-2px 2px 5px #b6b6b6";
+    statsBox.style.width = "94%";
 
     // Calcular volumen total y 1RM
     let volumenTotal = 0;
@@ -466,11 +468,13 @@ if (ejercicioAnterior) {
 // Si encontramos un ejercicio anterior, mostramos la caja de estadísticas
 if (ejercicioAnterior) {
   const statsBoxAnt = document.createElement('div');
-  statsBoxAnt.style.background = "#f5f5f5";
-  statsBoxAnt.style.padding = "12px";
-  statsBoxAnt.style.margin = "10px";
-  statsBoxAnt.style.borderRadius = "8px";
-  statsBoxAnt.style.color = "#000";
+    statsBoxAnt.style.background = "#ffffffff";
+    statsBoxAnt.style.padding = "14px";
+    statsBoxAnt.style.margin = "12px";
+    statsBoxAnt.style.borderRadius = "10px";
+    statsBoxAnt.style.color = "#000";
+    statsBoxAnt.style.boxShadow = "-2px 2px 5px #b6b6b6";
+    statsBoxAnt.style.width = "94%";
 
   let volumenAnt = 0;
   let mejor1RMAnt = 0;
