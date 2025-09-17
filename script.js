@@ -322,7 +322,7 @@ function renderizar() {
     statsBox.style.margin = "12px";
     statsBox.style.borderRadius = "10px";
     statsBox.style.color = "#000";
-    statsBox.style.boxShadow = "-2px 2px 5px #b6b6b6";
+    statsBox.style.boxShadow = "0px 2px 10px #b6b6b6";
     statsBox.style.width = "94%";
 
     // Calcular volumen total y 1RM

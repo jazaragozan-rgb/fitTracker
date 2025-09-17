@@ -25,24 +25,25 @@ header {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  background:#ffffff;
+  background: #3498f7;
   color:#000000;
   padding:0 12px;
   height:60px;
   justify-content: space-between;
   border-bottom: none;
 }
-#tituloNivel { flex:1; text-align:center; font-size:1.8rem; font-weight: 500; }
+#tituloNivel { flex:1; text-align:center; font-size:1.8rem; font-weight: 500; color: #ffffff;}
 
 .header-btn {
   background:none;
-  color:#000000;
+  color:#ffffff;
   border:none;
   border-radius:10px;
   cursor:pointer;
   display:grid;
   place-items:center;
   padding-top: 0%;
+  font-weight: bold;
 }
 .big-btn { width: 40px; height:40px; font-size:2rem; }
 .plus-btn { font-size:2.4rem; }
@@ -65,9 +66,11 @@ header {
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #ffffff;
+  background: #3498f7;
   height: 30px;
-  border-bottom: 1px solid #ccc;
+  border-bottom: none;
+  box-shadow: 0 35px 50px 60px #3498f7;
+  z-index: -100;
 }
 
 /* Botones dentro del subheader */
@@ -101,17 +104,21 @@ button { cursor:pointer; }
 .list-item {
   display:flex; align-items:center; vertical-align: text-top; gap:8px;
   background:#ffffff; padding:10px; margin: 20px;
-  border-radius:8px; cursor:pointer;box-shadow: -5px 5px 10px #b6b6b6;width: 95%; margin-left: 2.5%; height: 80px;
+  border-radius:8px; cursor:pointer;box-shadow: 0px 2px 10px #b6b6b6;width: 95%; margin-left: 2.5%; height: 80px;
 }
 .list-item input { background:transparent; border:none; color:#414141; flex:1; font-size: 1.2rem;text-align: left;}
 
 /* === Series === */
 .series-header, .series-container>div {
-  margin-left:0px;display:grid; grid-template-columns:repeat(7,1fr); gap:1px; align-items:center;
+  margin-left:3%;display:grid; grid-template-columns:repeat(7,1fr); gap:1px; align-items:center;
 }
-.series-header { font-weight:bold; margin-bottom:10px; }
-.series-container input { background:#ffffff; color:#000; padding: 4px; border-radius:6px; font-size: 1.2rem; box-shadow: -2px 2px 5px #b6b6b6 }
+.series-header { color:#ffffff; font-weight:bold; margin-bottom:10px; }
+.series-container input { background:#ffffff; color:#000;margin-inline: 1px; padding: 4px;gap: 1px; border-radius:6px; font-size: 1.2rem; box-shadow: 0px 2px 10px #b6b6b6 }
+.serie-row { background:#ffffff; margin-bottom:5px; width: 94%; 
+border-radius:10px;
+box-shadow: 0px 2px 10px #b6b6b6;
 
+}
 /* Botones de series */
 .series-container button, .list-item button, #headerButtons button {
   width:35px; height: 35px;
@@ -128,13 +135,14 @@ button { cursor:pointer; }
   margin:12px;
   width: 94%;
   font-size: 1.2rem;
-  box-shadow: -2px 2px 5px #b6b6b6;
+  box-shadow: 0px 2px 10px #b6b6b6;
 }
 
 /* Notas */
 .notes {
   width:94%; height: 100px; margin-top:10px; margin: 12px;
   border:1px solid #ccc; border-radius:10px; padding:14px;
+  box-shadow: 0px 2px 5px #b6b6b6;
 }
 
 /* Timer */
@@ -167,13 +175,15 @@ button { cursor:pointer; }
 
 #menuButton {
   background: none;
-  color: #000000;
+  color: #ffffff;
   border: none;
   border-radius: 10px;
   cursor: pointer;
   padding: none;
   width: 40px;
   height: 40px;
+  z-index: 1;
+  font-size: 1.5rem; font-weight: bold;
 }
 
 .sideMenu {
@@ -186,20 +196,32 @@ button { cursor:pointer; }
 
 #logomenulateral {
   text-align: left;
-  margin-bottom: 100px;
-  margin-top: 70px;
+  margin-bottom: 0px;
+  margin-top: 0px;
   margin-left: 0px;
   font-size: 1.3rem;
+  background: none;
 }
 #logomenulateral img {
-  width: 30%;
+  width: 50%;
   max-width: 50px;
   margin-top: 20px;
   margin-bottom: 0px;
 }
+
+#header1 {
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 60px;
+  background: none;
+  align-items: center;
+  padding-left: 20px;
+}
+
 /* Dashboard */
-.dashboard-container { display:flex; flex-wrap:wrap; gap:20px; padding:5px; }
-.dashboard-card { background:#f5f5f5;border: #000000; padding:15px 5px; border-radius:10px; width: 100%;height: 300px; text-align:center; box-shadow:-5px 5px 10px #cacaca;}
+.dashboard-container { display:flex; flex-wrap:wrap; gap:20px; padding:5px; width: 95%;margin-left: 2.5%;}
+.dashboard-card { background:#f5f5f5;border: #000000; padding:15px 5px; border-radius:10px; width: 100%;height: 300px; text-align:center; box-shadow:0px 5px 10px #cacaca;}
 .dashboard-card h3 { margin:0 0 10px; color:#414141; }
 .dashboard-card p { color: #000000; font-size:15px; font-weight:bold; }
 
@@ -208,13 +230,12 @@ button { cursor:pointer; }
   display: flex;
   align-items: center;
   justify-content: space-between; /* < y > a los extremos */
-  gap: 10px; 
-  margin: 10px 0;
+  gap: 5px; 
 }
 
 /* Botones de cambiar semana */
 .week-nav {
-  background-color: #eee;
+  background: none;
   border: none;
   padding: 0px 4px;
   margin-left: 0px;
@@ -227,7 +248,7 @@ button { cursor:pointer; }
 /* Fila que contiene los días */
 .days-row {
   display: flex;
-  gap: 5px; /* espacio entre los botones de día */
+  gap: 2px; /* espacio entre los botones de día */
   flex: 1; /* que ocupe el espacio entre los botones < y > */
   justify-content: center;
 }
@@ -235,7 +256,7 @@ button { cursor:pointer; }
 /* Día de hoy */
 .day-btn.today {
   border: 2px solid #3498f7;
-  background-color: #d6eaff;
+  background-color: #e2e2e2;
   font-weight: bold;
 }
 
@@ -259,7 +280,7 @@ button { cursor:pointer; }
   background: #f9f9f9;
   cursor: pointer;
   transition: background 0.2s, transform 0.1s;
-  width: 40px; height: 60px;
+  width: 35px; height: 70px;
   display: inline-flex;
   justify-content: space-between;
   gap: 8px;
