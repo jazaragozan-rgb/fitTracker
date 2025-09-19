@@ -52,7 +52,18 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   datos[0]?.hijos?.forEach(meso => {
     meso.hijos?.forEach(micro => {
       micro.hijos?.forEach(sesion => {
-        if (sesion.fecha) sesiones.push({ fecha: sesion.fecha, ejercicios: sesion.hijos || [] });
+        // Buscar la fecha más profunda disponible
+        let fechaSesion = sesion.fecha;
+        if (!fechaSesion && sesion.hijos && sesion.hijos.length > 0) {
+          // Si la sesión no tiene fecha, buscar en el primer hijo que tenga fecha
+          for (const subNivel of sesion.hijos) {
+            if (subNivel.fecha) {
+              fechaSesion = subNivel.fecha;
+              break;
+            }
+          }
+        }
+        if (fechaSesion) sesiones.push({ fecha: fechaSesion, ejercicios: sesion.hijos || [] });
       });
     });
   });
@@ -164,21 +175,28 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   datos.forEach(meso => {
     (meso.hijos || []).forEach(micro => {
       (micro.hijos || []).forEach(sesion => {
-        const fechaSesion = new Date(sesion.fecha).getTime() || 0;
-        if (fechaSesion <= hoy) {
-          (sesion.hijos || []).forEach(subNivel => {
-            (subNivel.hijos || []).forEach(ej => {
-              const pesoMax = Math.max(...(ej.series?.map(s => parseFloat(s.peso) || 0) || [0]));
-              if (pesoMax > 0) {
-                ejerciciosTodos.push({
-                  nombre: ej.nombre,
-                  fecha: sesion.fecha,
-                  pesoMax
-                });
-              }
+        // Recorrer los hijos de la sesión (Día A, Día B)
+        (sesion.hijos || []).forEach(subSesion => {
+          const fechaSubSesion = subSesion.fecha;
+          const fechaSubSesionTS = new Date(fechaSubSesion).getTime() || 0;
+          if (fechaSubSesionTS <= hoy) {
+            (subSesion.series ? [subSesion] : (subSesion.hijos || [])).forEach(ej => {
+              // Si subSesion tiene series, es un ejercicio; si no, recorrer sus hijos
+              const ejercicios = ej.series ? [ej] : (ej.hijos || []);
+              ejercicios.forEach(ejercicio => {
+                const pesoMax = Math.max(...(ejercicio.series?.map(s => parseFloat(s.peso) || 0) || [0]));
+                if (pesoMax > 0) {
+                  console.log('[Gráfico] Ejercicio:', ejercicio.nombre, 'Fecha:', fechaSubSesion, 'PesoMax:', pesoMax);
+                  ejerciciosTodos.push({
+                    nombre: ejercicio.nombre,
+                    fecha: fechaSubSesion,
+                    pesoMax
+                  });
+                }
+              });
             });
-          });
-        }
+          }
+        });
       });
     });
   });
@@ -259,7 +277,12 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     scrollContainer.appendChild(ejDiv);
   });
 
-  if (nombresUnicos.length > 0) scrollContainer.firstChild.click();
+  if (nombresUnicos.length > 0) {
+    // Forzar el click en el primer ejercicio tras un pequeño delay para asegurar que el DOM está listo
+    setTimeout(() => {
+      if (scrollContainer.firstChild) scrollContainer.firstChild.click();
+    }, 50);
+  }
 
   // 👇 Si cambia el filtro, se redibuja el gráfico con el primer ejercicio
   filtroDias.addEventListener('change', () => {
