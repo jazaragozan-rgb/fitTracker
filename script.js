@@ -1,6 +1,8 @@
 //llamada a modulo dashboard.js
 import { renderizarDashboard } from "./dashboard.js";
 
+import { renderizarSeguimiento } from "./seguimiento.js";
+
 // ==================== Firebase Auth + Firestore ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
@@ -97,29 +99,100 @@ const DATOS_POR_DEFECTO = [
   { nombre: 'Calendario', hijos: [] }
 ];
 let datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
+console.log('[Datos iniciales] datos:', datos);
 
 // Referencias UI
 let rutaActual = [];
-const contenido = $('contenido');
-const tituloNivel = $('tituloNivel');
-const headerButtons = $('headerButtons');
-const addButton = $('addButton');
-const backButton = $('backButton');
-const timerContainer = $('timerContainer');
-const homeButton = $('navHome');
-const logoutButton = $('logoutButton');
-const menuButton = $('menuButton');
-const sideMenu = $('sideMenu');
-const menuOverlay = $('menuOverlay');
+let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay;
+let menuTitulo;
 
-if (backButton) {
-  backButton.addEventListener("click", () => {
-    if (rutaActual.length > 0) {
-      rutaActual.pop();   // ← sube un nivel en la jerarquía
+let ultimoMenuSeleccionado = 'Dashboard';
+
+document.addEventListener("DOMContentLoaded", () => {
+  // Inicializar referencias UI globales
+  contenido = $('contenido');
+  tituloNivel = $('tituloNivel');
+  headerButtons = $('headerButtons');
+  addButton = $('addButton');
+  backButton = $('backButton');
+  timerContainer = $('timerContainer');
+  homeButton = $('navHome');
+  logoutButton = $('logoutButton');
+  menuButton = $('menuButton');
+  sideMenu = $('sideMenu');
+  menuOverlay = $('menuOverlay');
+  menuTitulo = $('menuTitulo');
+
+  // Eventos principales de botones
+  if (backButton) {
+    backButton.addEventListener("click", () => {
+      if (rutaActual.length > 0) {
+        rutaActual.pop();   // ← sube un nivel en la jerarquía
+        renderizar();
+      }
+    });
+  }
+  if (homeButton) {
+    homeButton.addEventListener("click", () => {
+      rutaActual = [];
       renderizar();
-    }
+    });
+  }
+  if (logoutButton) {
+    logoutButton.addEventListener("click", () => salir());
+  }
+  if (menuButton) {
+    menuButton.addEventListener("click", () => {
+      sideMenu.style.left = "0";
+      menuOverlay.classList.remove("hidden");
+    });
+  }
+  if (menuOverlay) {
+    menuOverlay.addEventListener("click", () => {
+      sideMenu.style.left = "-70%";
+      menuOverlay.classList.add("hidden");
+    });
+  }
+  document.querySelectorAll(".sideMenu-btn").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const seccion = btn.dataset.seccion;
+      if (seccion === "entrenamiento") { rutaActual = [0]; ultimoMenuSeleccionado = 'Entrenamiento'; }
+      if (seccion === "seguimiento") { rutaActual = [1]; ultimoMenuSeleccionado = 'Seguimiento'; }
+      if (seccion === "calendario") { rutaActual = [2]; ultimoMenuSeleccionado = 'Calendario'; }
+      if (seccion === "dashboard") { rutaActual = []; ultimoMenuSeleccionado = 'Dashboard'; }
+      renderizar();
+      sideMenu.style.left = "-70%";
+      menuOverlay.classList.add("hidden");
+    });
   });
-}
+  // Toggle Login/Register
+  const formLogin = $("form-login");
+  const formRegister = $("form-register");
+  const showRegisterBtn = $("showRegisterBtn");
+  const showLoginBtn = $("showLoginBtn");
+
+  if (showRegisterBtn) {
+    showRegisterBtn.addEventListener("click", () => {
+      hide(formLogin);
+      show(formRegister);
+      $("log-msg").textContent = "";
+    });
+  }
+
+  if (showLoginBtn) {
+    showLoginBtn.addEventListener("click", () => {
+      hide(formRegister);
+      show(formLogin);
+      $("reg-msg").textContent = "";
+    });
+  }
+
+  // Inicialización final
+  window.renderizar = renderizar;
+  window.guardarDatos = guardarDatos;
+  renderizar();
+  restaurarTimer();
+});
 
 // ==================== Firestore ====================
 async function cargarDatosUsuario(uid) {
@@ -139,15 +212,21 @@ async function cargarDatosUsuario(uid) {
 }
 
 async function guardarDatosUsuario(uid, datosActuales) {
-  if (!uid || !Array.isArray(datosActuales)) return;
+  if (!uid || !Array.isArray(datosActuales)) {
+    console.warn('[guardarDatosUsuario] uid o datosActuales inválidos:', uid, datosActuales);
+    return;
+  }
   try {
     const ref = doc(db, "usuarios", uid);
+    console.log('[guardarDatosUsuario] datos que se guardan en Firestore:', datosActuales);
     await setDoc(ref, { datos: structuredClone(datosActuales) });
+    console.log('[guardarDatosUsuario] guardado exitoso en Firestore');
   } catch (e) { console.error("Error al guardar datos:", e); }
 }
 
 let saveTimer = null;
 function guardarDatos() {
+  console.log('[guardarDatos] datos a guardar:', datos);
   localStorage.setItem("misDatos", JSON.stringify(datos));
   const user = auth.currentUser;
   if (!user) return;
@@ -182,6 +261,7 @@ onAuthStateChanged(auth, async (user) => {
 
     const datosRemotos = await cargarDatosUsuario(user.uid);
     datos = datosRemotos && Array.isArray(datosRemotos) ? datosRemotos : structuredClone(DATOS_POR_DEFECTO);
+    console.log('[Datos cargados Firestore] datos:', datos);
     if (!datosRemotos) await guardarDatosUsuario(user.uid, datos);
   } else {
     show(authSec); 
@@ -197,6 +277,7 @@ onAuthStateChanged(auth, async (user) => {
     hide(tituloNivel);
 
     datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
+    console.log('[Datos cargados localStorage] datos:', datos);
   }
   rutaActual = [];
   renderizar();
@@ -208,35 +289,64 @@ function renderizar() {
   contenido.innerHTML = '';
   let nivel = nivelActual();
 
+  // Mostrar el nombre correcto en el header según el nivel
+  if (menuTitulo) {
     if (rutaActual.length === 0) {
-    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
-    return;
+      menuTitulo.textContent = 'Dashboard';
+    } else if (rutaActual.length >= 1 && rutaActual.length <= 5) {
+      menuTitulo.textContent = 'Entrenamiento';
+    } else {
+      menuTitulo.textContent = ultimoMenuSeleccionado;
+    }
   }
 
+  // Subheader: añadir h2 con el nombre del nivel
+  subHeader.innerHTML = '';
+  if (rutaActual.length !== 0 && rutaActual.length !== 5) {
+    addButton.style.display = '';
+    subHeader.appendChild(addButton);
+    const addText = document.createElement('span');
+    addText.textContent = 'Añadir';
+    addText.style.marginLeft = '8px';
+    addText.style.fontWeight = 'bold';
+    subHeader.appendChild(addText);
+  } else {
+    addButton.style.display = 'none';
+    if (rutaActual.length === 5) {
+      const addSerieBtn = document.createElement('button');
+      addSerieBtn.className = 'add-serie';
+      addSerieBtn.textContent = 'Añadir serie';
+      addSerieBtn.onclick = function() {
+        if (nivel.series) nivel.series.push({});
+        else nivel.series = [{}];
+        guardarDatos();
+        renderizar();
+      };
+      subHeader.appendChild(addSerieBtn);
+    }
+  }
+  // Crear y añadir el h2 con el nombre del nivel
+  const h2Nivel = document.createElement('h2');
+  h2Nivel.id = 'tituloNivel';
   if (rutaActual.length === 0) {
-    tituloNivel.textContent = 'Dashboard';
-    backButton.style.visibility = 'hidden';
-    addButton.style.visibility = 'hidden';
+    h2Nivel.style.display = 'none';
+  } else if (rutaActual.length === 1) {
+    h2Nivel.textContent = 'Bloques';
+    h2Nivel.style.display = '';
+  } else {
+    h2Nivel.textContent = nivel.nombre || ultimoMenuSeleccionado;
+    h2Nivel.style.display = '';
+  }
+  subHeader.appendChild(h2Nivel);
 
-    const dashboard = document.createElement('div');
-    dashboard.className = 'dashboard-container';
-    [{ titulo: 'Entrenamientos realizados', valor: 0 },
-     { titulo: 'Ejercicios completados', valor: 0 },
-     { titulo: 'Objetivos alcanzados', valor: 0 }]
-     .forEach(t => {
-       const card = document.createElement('div');
-       card.className = 'dashboard-card';
-       card.innerHTML = `<h3>${t.titulo}</h3><p>${t.valor}</p>`;
-       dashboard.appendChild(card);
-     });
-    contenido.appendChild(dashboard);
-
-    datos.filter(item => !['Entrenamiento','Seguimiento','Calendario'].includes(item.nombre))
-         .forEach((item, index) => {
-           const div = crearIndice(item, index, { hijos: datos });
-           div.addEventListener('click', () => { rutaActual.push(index); renderizar(); });
-           contenido.appendChild(div);
-         });
+  // Pantalla Seguimiento SOLO si estamos en la sección Seguimiento
+  if (rutaActual.length === 1 && rutaActual[0] === 1) {
+    const nivel = nivelActual();
+    renderizarSeguimiento(nivel, contenido, subHeader, addButton);
+    return;
+  }
+  if (rutaActual.length === 0) {
+    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
     return;
   }
 
@@ -305,15 +415,6 @@ function renderizar() {
       seriesContainer.appendChild(serieDiv);
     });
     contenido.appendChild(seriesContainer);
-
-    const addSerie=document.createElement('button');
-    addSerie.textContent='+ Añadir Serie';
-    addSerie.className='add-serie';
-    addSerie.addEventListener('click',()=>{
-      nivel.series.push({ reps:'', peso:'', rir:'', descanso:'' });
-      guardarDatos(); renderizar();
-    });
-    contenido.appendChild(addSerie);
 
  // 📊 Bloque Volumen y 1RM
     const statsBox = document.createElement('div');
@@ -566,9 +667,10 @@ function crearIndice(item, index, nivel) {
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
-      fechaInput.value = item.fecha || '';
+      fechaInput.value = nivel.hijos[index].fecha || '';
       fechaInput.addEventListener('input', e => {
-        item.fecha = e.target.value;
+        nivel.hijos[index].fecha = e.target.value;
+        console.log('[Input fecha nivel 3] sesión principal:', nivel.hijos[index]);
         guardarDatos();
       });
       div.appendChild(fechaInput);
@@ -589,12 +691,14 @@ function crearIndice(item, index, nivel) {
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
-      fechaInput.value = item.fecha || '';
+      fechaInput.value = nivel.hijos[index].fecha || '';
       fechaInput.addEventListener('mousedown', e => e.stopPropagation());
       fechaInput.addEventListener('click', e => e.stopPropagation());
       fechaInput.addEventListener('change', e => {
-        item.fecha = e.target.value;
+        nivel.hijos[index].fecha = e.target.value;
+        console.log('[Input fecha nivel 3] sesión principal:', nivel.hijos[index]);
         guardarDatos();
+        renderizar();
       });
       div.appendChild(fechaInput);
     }
@@ -621,63 +725,67 @@ function crearIndice(item, index, nivel) {
 }
 
 // ==================== Eventos ====================
-document.addEventListener("DOMContentLoaded", () => {
-  if (homeButton) {
-    homeButton.addEventListener("click", () => {
-      rutaActual = [];
-      renderizar();
-    });
-  }
-  if (logoutButton) {
-    logoutButton.addEventListener("click", () => salir());
-  }
-  if (menuButton) {
-    menuButton.addEventListener("click", () => {
-      sideMenu.style.left = "0";
-      menuOverlay.classList.remove("hidden");
-    });
-  }
-  if (menuOverlay) {
-    menuOverlay.addEventListener("click", () => {
-      sideMenu.style.left = "-50%";
-      menuOverlay.classList.add("hidden");
-    });
-  }
-  document.querySelectorAll(".sideMenu-btn").forEach((btn) => {
-    btn.addEventListener("click", () => {
-      const seccion = btn.dataset.seccion;
-      if (seccion === "entrenamiento") rutaActual = [0];
-      if (seccion === "seguimiento") rutaActual = [1];
-      if (seccion === "calendario") rutaActual = [2];
-      if (seccion === "dashboard") rutaActual = [];
-      renderizar();
-      sideMenu.style.left = "-50%";
-      menuOverlay.classList.add("hidden");
-    });
-  });
-  // Toggle Login/Register
-  const formLogin = $("form-login");
-  const formRegister = $("form-register");
-  const showRegisterBtn = $("showRegisterBtn");
-  const showLoginBtn = $("showLoginBtn");
-
-  if (showRegisterBtn) {
-    showRegisterBtn.addEventListener("click", () => {
-      hide(formLogin);
-      show(formRegister);
-      $("log-msg").textContent = "";
-    });
-  }
-
-  if (showLoginBtn) {
-    showLoginBtn.addEventListener("click", () => {
-      hide(formRegister);
-      show(formLogin);
-      $("reg-msg").textContent = "";
-    });
-  }
-});
+// Modal para añadir medidas corporales
+// ...el resto del código...
+// (Eliminado bloque duplicado de DOMContentLoaded)
 
 // ==================== Init ====================
-renderizar();
-restaurarTimer();
+// (Eliminado: ahora la inicialización está dentro de DOMContentLoaded)
+
+// Swipe para navegación entre niveles (touch y mouse drag en toda la pantalla)
+  let touchStartX = null;
+  let touchEndX = null;
+  let isMouseDown = false;
+
+  function handleGesture() {
+    if (touchStartX === null || touchEndX === null) return;
+    const deltaX = touchEndX - touchStartX;
+    if (Math.abs(deltaX) < 50) return; // umbral mínimo
+    if (deltaX > 0) {
+      // Swipe derecha: volver nivel (en todos los niveles)
+      if (rutaActual.length > 0) {
+        rutaActual.pop();
+        renderizar();
+      }
+    } else {
+      // Swipe izquierda: avanzar solo en nivel 0 y 1
+      if (rutaActual.length === 0) {
+        let nivel = nivelActual();
+        if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
+          rutaActual.push(0); // avanzar al primer hijo
+          renderizar();
+        }
+      }
+    }
+    touchStartX = null;
+    touchEndX = null;
+    isMouseDown = false;
+  }
+
+  function onTouchStart(e) {
+    if (e.touches) {
+      touchStartX = e.touches[0].clientX;
+    } else {
+      isMouseDown = true;
+      touchStartX = e.clientX;
+    }
+  }
+  function onTouchMove(e) {
+    if (isMouseDown && e.clientX !== undefined) {
+      touchEndX = e.clientX;
+    }
+  }
+  function onTouchEnd(e) {
+    if (e.changedTouches) {
+      touchEndX = e.changedTouches[0].clientX;
+    } else if (isMouseDown) {
+      if (touchEndX === null) touchEndX = e.clientX;
+    }
+    handleGesture();
+  }
+  // Usar document.body para toda la pantalla
+  document.body.addEventListener('touchstart', onTouchStart);
+  document.body.addEventListener('touchend', onTouchEnd);
+  document.body.addEventListener('mousedown', onTouchStart);
+  document.body.addEventListener('mousemove', onTouchMove);
+  document.body.addEventListener('mouseup', onTouchEnd);
