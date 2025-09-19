@@ -72,6 +72,7 @@ export function mostrarConfirmacion(mensaje, onConfirm) {
   modal.style.display = 'flex';
   modal.style.alignItems = 'center';
   modal.style.justifyContent = 'center';
+  modal.style.zIndex = '9999';
 
   const caja = document.createElement('div');
   caja.style.background = '#fff';
