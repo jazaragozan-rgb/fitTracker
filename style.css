@@ -25,18 +25,19 @@ header {
   display:flex;
   align-items:center;
   justify-content:space-between;
-  background: #3498f7;
+  background: #ffffff;
   color:#000000;
   padding:0 12px;
   height:60px;
   justify-content: space-between;
   border-bottom: none;
+  z-index: 20;
 }
-#tituloNivel { flex:1; text-align:center; font-size:1.8rem; font-weight: 500; color: #ffffff;}
+#tituloNivel { flex:1; text-align:center; font-size:1.8rem; font-weight: 500; color: #000000;}
 
 .header-btn {
   background:none;
-  color:#ffffff;
+  color:#000000;
   border:none;
   border-radius:10px;
   cursor:pointer;
@@ -44,6 +45,7 @@ header {
   place-items:center;
   padding-top: 0%;
   font-weight: bold;
+  z-index: 20;
 }
 .big-btn { width: 40px; height:40px; font-size:2rem; }
 .plus-btn { font-size:2.4rem; }
@@ -62,15 +64,24 @@ header {
 
 /* Caja debajo del header */
 #subHeader {
+  position: relative;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 8px 12px;
-  background: #3498f7;
-  height: 30px;
-  border-bottom: none;
-  box-shadow: 0 35px 50px 60px #3498f7;
-  z-index: -100;
+  background: #ffffff;
+  height: 48px;
+  border-bottom: 1px solid #ccc;
+  z-index: 30;
+}
+#subHeader h2 {
+  flex: 1;
+  text-align: center;
+  font-size: 1.4rem;
+  font-weight: 500;
+  color: #000000;
+  margin: 0;
+  z-index: 31;
 }
 
 /* Botones dentro del subheader */
@@ -82,17 +93,19 @@ header {
   border-radius: 8px;
   background: none;
   cursor: pointer;
+  z-index: 20;
 }
 
 /* === Auth forms === */
 form { padding:12px; margin:10px auto; border:none; }
 input, button {
   width:75%;
-  margin:6px auto;
+  margin:10px auto;
   display:block;
   padding:8px;
   border-radius:6px;
   border:1px solid #ccc;
+  background-color: #ffffff;
 }
 button { cursor:pointer; }
 .hint { font-size:0.9rem; color:#ccc; text-align:center; }
@@ -112,12 +125,9 @@ button { cursor:pointer; }
 .series-header, .series-container>div {
   margin-left:3%;display:grid; grid-template-columns:repeat(7,1fr); gap:1px; align-items:center;
 }
-.series-header { color:#ffffff; font-weight:bold; margin-bottom:10px; }
+.series-header { color:#000000; font-weight:bold; margin-bottom:10px; }
 .series-container input { background:#ffffff; color:#000;margin-inline: 1px; padding: 4px;gap: 1px; border-radius:6px; font-size: 1.2rem; box-shadow: 0px 2px 10px #b6b6b6 }
-.serie-row { background:#ffffff; margin-bottom:5px; width: 94%; 
-border-radius:10px;
-box-shadow: 0px 2px 10px #b6b6b6;
-
+.serie-row { background:#ffffff; margin-bottom:5px; width: 94%; border-radius:10px; box-shadow: 0px 2px 10px #b6b6b6;
 }
 /* Botones de series */
 .series-container button, .list-item button, #headerButtons button {
@@ -130,12 +140,11 @@ box-shadow: 0px 2px 10px #b6b6b6;
 .add-serie {
   grid-column: span 6;
   padding:14px;
-  background:#ffffff; color:#000000;
+  background:none;
   border:none; border-radius:10px;
   margin:12px;
   width: 94%;
   font-size: 1.2rem;
-  box-shadow: 0px 2px 10px #b6b6b6;
 }
 
 /* Notas */
@@ -170,12 +179,12 @@ box-shadow: 0px 2px 10px #b6b6b6;
 /* Side menu */
 #menuOverlay {
   position:fixed; top:0; left:0; width:100%; height:100%;
-  background:rgba(65, 65, 65, 0.8); z-index:90;
+  background:rgba(37, 37, 37, 0.9); z-index:90;
 }
 
 #menuButton {
   background: none;
-  color: #ffffff;
+  color: #000000;
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -187,7 +196,7 @@ box-shadow: 0px 2px 10px #b6b6b6;
 }
 
 .sideMenu {
-  position:fixed; top:0; left:-50%; width:50%; height:100%;
+  position:fixed; top:0; left:-70%; width:70%; height:100%;
   background:#ffffff; padding:20px;
   transition:left .3s ease;
   display:flex; flex-direction:column; z-index:100;
@@ -221,7 +230,7 @@ box-shadow: 0px 2px 10px #b6b6b6;
 
 /* Dashboard */
 .dashboard-container { display:flex; flex-wrap:wrap; gap:20px; padding:5px; width: 95%;margin-left: 2.5%;}
-.dashboard-card { background:#f5f5f5;border: #000000; padding:15px 5px; border-radius:10px; width: 100%;height: 300px; text-align:center; box-shadow:0px 5px 10px #cacaca;}
+.dashboard-card { background:#ffffff;border: #000000; padding:15px 5px; border-radius:10px; width: 100%;height: 300px; text-align:center; box-shadow:0px 5px 10px #cacaca;}
 .dashboard-card h3 { margin:0 0 10px; color:#414141; }
 .dashboard-card p { color: #000000; font-size:15px; font-weight:bold; }
 
@@ -341,7 +350,7 @@ box-shadow: 0px 2px 10px #b6b6b6;
 
 /* Estilos para el botón de parar */
 .btn-skip {
-  background-color: #f56e6e9f; /* Rojo */
+  background-color: #ff6b6b; /* Rojo */
   color: white;
   font-size: 24px;
   border: none;
@@ -358,4 +367,10 @@ box-shadow: 0px 2px 10px #b6b6b6;
 .btn-skip:hover {
   background-color: #e53935; /* Rojo más oscuro */
   box-shadow: 0 0 20px 10px rgba(230, 82, 82, 0.3);
+}
+
+main#contenido {
+  position: relative;
+  z-index: 20;
+  background: transparent;
 }
