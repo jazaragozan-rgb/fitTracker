@@ -703,11 +703,12 @@ function crearIndice(item, index, nivel) {
     // ----------- MODO VISUAL -----------
     const input = document.createElement('input');
     input.value = item.nombre;
-  input.disabled = true;
+    input.disabled = true;
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-
-    input.addEventListener('mousedown', () => { rutaActual.push(index); renderizar(); });
+    // Permite que todo el área del input sea clicable para navegar
+    input.addEventListener('click', () => { rutaActual.push(index); renderizar(); });
+    input.addEventListener('touchstart', () => { rutaActual.push(index); renderizar(); });
     div.appendChild(input);
 
     // 👉 Si estamos en nivel 3, mostramos también la fecha
