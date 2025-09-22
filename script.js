@@ -14,7 +14,7 @@ import {
   getFirestore, doc, getDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-import { mostrarConfirmacion, mostrarSelectorMarca } from "./modals.js";
+import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
 import { iniciarTimer, restaurarTimer } from "./timer.js";
 
 // ⚡ Configuración Firebase
@@ -626,9 +626,30 @@ if (ejercicioAnterior) {
   }
 
   addButton.onclick = () => {
-    const nombreDefault = "Nuevo " + tituloNivel.textContent;
-    nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
-    guardarDatos(); renderizar();
+    // Solo mostrar confirmación si hay algo que pegar
+    if (rutaActual.length >= 1 && rutaActual.length <= 4 && window.itemCopiado) {
+      mostrarConfirmacion("¿Desea pegar el contenido aquí o desea crear un bloque nuevo?", () => {
+        // Pegar
+        if (window.itemCopiado.nivel !== rutaActual.length) {
+          mostrarConfirmacion(`El contenido se debe pegar en el nivel ${window.itemCopiado.nivel}`, () => {}, null, "Aceptar");
+        } else {
+          nivel.hijos.push(structuredClone(window.itemCopiado.datos));
+          window.itemCopiado = null;
+          guardarDatos();
+          renderizar();
+        }
+      }, () => {
+        // Crear nuevo índice normal
+        const nombreDefault = "Nuevo " + tituloNivel.textContent;
+        nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
+        guardarDatos(); renderizar();
+      }, "Pegar", "Crear nuevo");
+    } else {
+      // Crear nuevo índice normal directamente
+      const nombreDefault = "Nuevo " + tituloNivel.textContent;
+      nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
+      guardarDatos(); renderizar();
+    }
   };
 }
 
@@ -705,23 +726,43 @@ function crearIndice(item, index, nivel) {
       div.appendChild(fechaInput);
     }
 
-    const editar = document.createElement('button');
-    editar.className = "btn-edit"; editar.textContent = '✏️';
-    editar.addEventListener('click', e => {
-      e.stopPropagation(); item.editando = true; renderizar();
-    });
-    div.appendChild(editar);
+    // Solo mostrar el botón de opciones en niveles 1-4
+    if (rutaActual.length >= 1 && rutaActual.length <= 4) {
+      // Botón de opciones (3 círculos horizontales)
+      const opcionesBtn = document.createElement('button');
+      opcionesBtn.className = "btn-opciones";
+      opcionesBtn.innerHTML = `<span style="display:inline-block;width:18px;text-align:center;">
+        <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
+        <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
+        <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
+      </span>`;
 
-    const borrar = document.createElement('button');
-    borrar.className = "btn-delete"; borrar.textContent = '🗑';
-    borrar.addEventListener('click', e => {
-      e.stopPropagation();
-      mostrarConfirmacion(`¿Desea borrar "${item.nombre}"?`, () => {
-        nivel.hijos.splice(index, 1);
-        guardarDatos(); renderizar();
+      opcionesBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Oculta otros menús abiertos
+  document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
+  mostrarMenuOpciones({
+          anchorElement: opcionesBtn,
+          onEditar: () => {
+            item.editando = true;
+            guardarDatos();
+            renderizar();
+          },
+          onEliminar: () => {
+            mostrarConfirmacion(`¿Desea borrar "${item.nombre}"?`, () => {
+              nivel.hijos.splice(index, 1);
+              guardarDatos();
+              renderizar();
+            });
+          },
+          onCopiar: () => {
+            window.itemCopiado = { nivel: rutaActual.length, datos: structuredClone(item) };
+            // No mostrar ningún alert ni ventana del navegador
+          }
+        });
       });
-    });
-    div.appendChild(borrar);
+      div.appendChild(opcionesBtn);
+    }
   }
   return div;
 }

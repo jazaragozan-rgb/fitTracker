@@ -1,3 +1,93 @@
+// Muestra el menú de opciones (Editar, Eliminar, Copiar) como modal flotante
+export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCopiar }) {
+  let anterior = document.getElementById('modalMenuOpciones');
+  if (anterior) anterior.remove();
+
+  const menu = document.createElement('div');
+  menu.id = 'modalMenuOpciones';
+  menu.className = 'menu-opciones';
+  menu.style.position = 'fixed';
+  menu.style.background = '#fff';
+  menu.style.border = '1px solid #ccc';
+  menu.style.borderRadius = '8px';
+  menu.style.boxShadow = '0 2px 8px #bbb';
+  menu.style.zIndex = '1000';
+  menu.style.display = 'flex';
+  menu.style.flexDirection = 'column';
+  menu.style.minWidth = '120px';
+
+  // Posicionamiento relativo al botón
+  if (anchorElement) {
+    const rect = anchorElement.getBoundingClientRect();
+    menu.style.top = (rect.bottom + window.scrollY) + 'px';
+    // Esperar a que el menú esté en el DOM para obtener el ancho
+    setTimeout(() => {
+      menu.style.left = (rect.right + window.scrollX - menu.offsetWidth) + 'px';
+    }, 0);
+  } else {
+    menu.style.top = '40px';
+    menu.style.right = '10px';
+  }
+  // Alinear textos a la izquierda
+  menu.style.textAlign = 'left';
+
+  // Editar
+  const editarBtn = document.createElement('button');
+  editarBtn.textContent = 'Editar';
+  editarBtn.style.display = 'block';
+  editarBtn.style.width = '100%';
+  editarBtn.style.border = 'none';
+  editarBtn.style.background = 'none';
+  editarBtn.style.padding = '8px';
+  editarBtn.onclick = (e) => {
+    e.stopPropagation();
+    menu.remove();
+    if (onEditar) onEditar();
+  };
+  menu.appendChild(editarBtn);
+
+  // Eliminar
+  const eliminarBtn = document.createElement('button');
+  eliminarBtn.textContent = 'Eliminar';
+  eliminarBtn.style.display = 'block';
+  eliminarBtn.style.width = '100%';
+  eliminarBtn.style.border = 'none';
+  eliminarBtn.style.background = 'none';
+  eliminarBtn.style.padding = '8px';
+  eliminarBtn.onclick = (e) => {
+    e.stopPropagation();
+    menu.remove();
+    if (onEliminar) onEliminar();
+  };
+  menu.appendChild(eliminarBtn);
+
+  // Copiar
+  const copiarBtn = document.createElement('button');
+  copiarBtn.textContent = 'Copiar';
+  copiarBtn.style.display = 'block';
+  copiarBtn.style.width = '100%';
+  copiarBtn.style.border = 'none';
+  copiarBtn.style.background = 'none';
+  copiarBtn.style.padding = '8px';
+  copiarBtn.onclick = (e) => {
+    e.stopPropagation();
+    menu.remove();
+    if (onCopiar) onCopiar();
+  };
+  menu.appendChild(copiarBtn);
+
+  // Cerrar al hacer click fuera
+  setTimeout(() => {
+    document.addEventListener('mousedown', function cerrar(e) {
+      if (!menu.contains(e.target)) {
+        menu.remove();
+        document.removeEventListener('mousedown', cerrar);
+      }
+    });
+  }, 50);
+
+  document.body.appendChild(menu);
+}
 // modals.js
 export function mostrarSelectorMarca(serie, index, onSelect) {
   let anterior = document.getElementById('modalSelector');
