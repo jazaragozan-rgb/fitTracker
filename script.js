@@ -703,7 +703,7 @@ function crearIndice(item, index, nivel) {
     // ----------- MODO VISUAL -----------
     const input = document.createElement('input');
     input.value = item.nombre;
-    input.readOnly = true;
+  input.disabled = true;
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
 
@@ -832,4 +832,3 @@ function crearIndice(item, index, nivel) {
   document.body.addEventListener('mousedown', onTouchStart);
   document.body.addEventListener('mousemove', onTouchMove);
   document.body.addEventListener('mouseup', onTouchEnd);
-
