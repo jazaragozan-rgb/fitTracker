@@ -672,7 +672,7 @@ function crearIndice(item, index, nivel) {
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-    setTimeout(() => { input.focus(); input.select(); }, 50);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -832,3 +832,4 @@ function crearIndice(item, index, nivel) {
   document.body.addEventListener('mousedown', onTouchStart);
   document.body.addEventListener('mousemove', onTouchMove);
   document.body.addEventListener('mouseup', onTouchEnd);
+
