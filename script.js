@@ -672,7 +672,7 @@ function crearIndice(item, index, nivel) {
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-    setTimeout(() => { input.focus(); input.select(); }, 50);
+    setTimeout(() => { input.focus(); input.select(); }, 0);
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -703,11 +703,12 @@ function crearIndice(item, index, nivel) {
     // ----------- MODO VISUAL -----------
     const input = document.createElement('input');
     input.value = item.nombre;
-    input.readOnly = true;
+    input.disabled = true;
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-
-    input.addEventListener('mousedown', () => { rutaActual.push(index); renderizar(); });
+    // Permite que todo el área del input sea clicable para navegar
+    input.addEventListener('click', () => { rutaActual.push(index); renderizar(); });
+    input.addEventListener('touchstart', () => { rutaActual.push(index); renderizar(); });
     div.appendChild(input);
 
     // 👉 Si estamos en nivel 3, mostramos también la fecha

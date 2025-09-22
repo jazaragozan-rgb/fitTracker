@@ -147,7 +147,7 @@ export function mostrarSelectorMarca(serie, index, onSelect) {
   document.body.appendChild(modal);
 }
 
-export function mostrarConfirmacion(mensaje, onConfirm) {
+export function mostrarConfirmacion(mensaje, onConfirm, onCancel = null, textoConfirm = 'Sí', textoCancel = 'No') {
   let anterior = document.getElementById('modalConfirmacion');
   if (anterior) anterior.remove();
 
@@ -184,16 +184,17 @@ export function mostrarConfirmacion(mensaje, onConfirm) {
   botones.style.gap = '1em';
 
   const btnSi = document.createElement('button');
-  btnSi.textContent = 'Sí';
+  btnSi.textContent = textoConfirm;
   btnSi.onclick = () => {
     modal.remove();
     if (onConfirm) onConfirm();
   };
 
   const btnNo = document.createElement('button');
-  btnNo.textContent = 'No';
+  btnNo.textContent = textoCancel;
   btnNo.onclick = () => {
     modal.remove();
+    if (onCancel) onCancel();
   };
 
   botones.appendChild(btnSi);
