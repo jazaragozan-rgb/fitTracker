@@ -258,6 +258,7 @@ onAuthStateChanged(auth, async (user) => {
     show(backButton);
     show(menuButton);
     show(tituloNivel);
+    show(menuTitulo);
 
     const datosRemotos = await cargarDatosUsuario(user.uid);
     datos = datosRemotos && Array.isArray(datosRemotos) ? datosRemotos : structuredClone(DATOS_POR_DEFECTO);
@@ -275,6 +276,7 @@ onAuthStateChanged(auth, async (user) => {
     hide(backButton);
     hide(menuButton);
     hide(tituloNivel);
+    hide(menuTitulo);
 
     datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
     console.log('[Datos cargados localStorage] datos:', datos);
