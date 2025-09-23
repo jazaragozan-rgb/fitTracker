@@ -672,7 +672,11 @@ function crearIndice(item, index, nivel) {
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-    setTimeout(() => { input.focus(); input.select(); }, 0);
+    // Foco inmediato tras renderizar el input, para iOS
+    requestAnimationFrame(() => {
+      input.focus();
+      input.select();
+    });
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -732,7 +736,7 @@ function crearIndice(item, index, nivel) {
       // Botón de opciones (3 círculos horizontales)
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
-      opcionesBtn.innerHTML = `<span style="display:inline-block;width:18px;text-align:center;">
+      opcionesBtn.innerHTML = `<span style="display:inline-block;width:40px;text-align:center;">
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
