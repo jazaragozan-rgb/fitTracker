@@ -66,34 +66,39 @@ header {
 #subHeader {
   position: relative;
   display: flex;
-  justify-content: space-between;
-  align-items: center;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: stretch;
   padding: 8px 12px;
   background: #ffffff;
-  height: 48px;
+  height: 90px;
   border-bottom: 1px solid #ccc;
   z-index: 30;
 }
 #subHeader h2 {
-  flex: 1;
+  flex: none;
   text-align: center;
-  font-size: 1.4rem;
-  font-weight: 500;
+  font-size: 1.5rem;
+  font-weight: bold;
   color: #000000;
-  margin: 0;
+  margin: 0 0 8px 0;
   z-index: 31;
 }
 
 /* Botones dentro del subheader */
 #subHeader .header-btn {
-  width: 30px;
+  width: 300px;
   height: 30px;
-  font-size: 1.5rem;
+  font-size: 1rem; 
+  color: #ffffff;
   border: none;
   border-radius: 8px;
-  background: none;
+  background: #2fd8a3;
   cursor: pointer;
   z-index: 20;
+  align-self: center;
+  margin: 4px;
+  padding-top: 5px;
 }
 
 /* === Auth forms === */
@@ -131,25 +136,31 @@ button { cursor:pointer; }
   margin-left:3%;display:grid; grid-template-columns:repeat(7,1fr); gap:1px; align-items:center;
 }
 .series-header { color:#000000; font-weight:bold; margin-bottom:10px; }
-.series-container input { background:#ffffff; color:#000;margin-inline: 1px; padding: 4px;gap: 1px; border-radius:6px; font-size: 1.2rem; box-shadow: 0px 2px 10px #b6b6b6 }
-.serie-row { background:#ffffff; margin-bottom:5px; width: 94%; border-radius:10px; box-shadow: 0px 2px 10px #b6b6b6;
-}
+.series-container input { background:none; color:#000;border: none; margin-inline: 1px;margin-top: 5px; padding: 4px;gap: 1px; font-size: 1.2rem;font-weight: bold; }
+.serie-row { background:#ffffff;border-radius: 10px; margin-bottom:5px; width: 94%;height: 40px; border-bottom: 1px solid #2fd8a3;border-top: 1px solid #2fd8a3;}
+
 /* Botones de series */
 .series-container button, .list-item button, #headerButtons button {
   width:35px; height: 35px;
   border:none; border-radius:8px;
   background: none; color:#000; font-size:1.2rem;
+  margin-top: 0px;
 }
 
 /* Añadir serie */
 .add-serie {
-  grid-column: span 6;
-  padding:14px;
-  background:none;
-  border:none; border-radius:10px;
-  margin:12px;
-  width: 94%;
-  font-size: 1.2rem;
+  width: 300px;
+  height: 30px;
+  font-size: 1rem; 
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  background: #2fd8a3;
+  cursor: pointer;
+  z-index: 20;
+  align-self: center;
+  margin: 4px;
+  padding-top: 5px;
 }
 
 /* Notas */
