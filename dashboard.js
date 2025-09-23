@@ -140,7 +140,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   card2.style.background = '#fff';
 
   const tituloCard2 = document.createElement('h3');
-  tituloCard2.textContent = 'Ejercicios completados';
+  tituloCard2.textContent = 'Progreso de ejercicios';
   card2.appendChild(tituloCard2);
 
   // 👇 Selector de rango
