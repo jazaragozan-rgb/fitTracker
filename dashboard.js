@@ -159,12 +159,16 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   scrollContainer.style.gap = '8px';
   scrollContainer.style.padding = '4px 0';
   scrollContainer.style.borderBottom = '1px solid #ccc';
+  // Deshabilitar swipe global solo en el área de scroll
+  ['touchstart', 'touchmove', 'touchend'].forEach(eventName => {
+    scrollContainer.addEventListener(eventName, e => e.stopPropagation());
+  });
   card2.appendChild(scrollContainer);
 
   const chartContainer = document.createElement('canvas');
   chartContainer.id = 'ejerciciosChart';
   chartContainer.style.width = '100%';
-  chartContainer.style.height = '200px';
+  chartContainer.style.height = '150px';
   chartContainer.style.display = 'block';
   card2.appendChild(chartContainer);
 
@@ -243,6 +247,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
           },
           options: {
             responsive: true,
+            maintainAspectRatio: false,
             plugins: {
               legend: { display: true },
               tooltip: {
