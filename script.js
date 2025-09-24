@@ -101,7 +101,10 @@ window.login = async function () {
 };
 
 window.salir = async function () {
-  try { await signOut(auth); }
+  try { await signOut(auth); 
+        // Redirigir a la página de autenticación
+    window.location.href = "./auth.html"; 
+  }
   catch (err) { console.error("Error al cerrar sesión:", err); }
 };
 
