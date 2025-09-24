@@ -104,6 +104,7 @@ export function mostrarSelectorMarca(serie, index, onSelect) {
   modal.style.display = 'flex';
   modal.style.alignItems = 'center';
   modal.style.justifyContent = 'center';
+  modal.style.zIndex = '99999';
 
   const caja = document.createElement('div');
   caja.style.background = '#fff';

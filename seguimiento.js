@@ -4,27 +4,21 @@
 export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
   // Subheader: solo mostrar botón añadir
   subHeader.innerHTML = '';
-    // Subheader: crear botón añadir independiente
-    subHeader.innerHTML = '';
-    const btnAdd = document.createElement('button');
-    btnAdd.className = 'header-btn';
-    btnAdd.textContent = '+';
-    btnAdd.title = 'Añadir medidas';
-    btnAdd.style.fontSize = '1.5rem';
-    btnAdd.style.fontWeight = 'bold';
-    btnAdd.onclick = () => mostrarModalMedidas(nivel, contenido);
-    subHeader.appendChild(btnAdd);
-    const addText = document.createElement('span');
-    addText.textContent = 'Añadir';
-    addText.style.marginLeft = '8px';
-    addText.style.fontWeight = 'bold';
-    subHeader.appendChild(addText);
-  // Título
+  // Título primero
   const h2Nivel = document.createElement('h2');
   h2Nivel.id = 'tituloNivel';
   h2Nivel.textContent = 'Seguimiento corporal';
   h2Nivel.style.display = '';
   subHeader.appendChild(h2Nivel);
+  // Botón añadir debajo
+  const btnAdd = document.createElement('button');
+  btnAdd.className = 'header-btn';
+  btnAdd.textContent = '+ Añadir';
+  btnAdd.title = 'Añadir medidas';
+  btnAdd.style.fontSize = '1.5rem';
+  btnAdd.style.fontWeight = 'bold';
+  btnAdd.onclick = () => mostrarModalMedidas(nivel, contenido);
+  subHeader.appendChild(btnAdd);
 
   // Listado histórico de medidas
   contenido.innerHTML = '';

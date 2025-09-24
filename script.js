@@ -81,6 +81,19 @@ window.login = async function () {
   try {
     await signInWithEmailAndPassword(auth, email, pass);
     $('log-email').value = $('log-pass').value = '';
+    // Forzar ejecución de redirección, log y fallback
+    try {
+      console.log('Login exitoso, redirigiendo a subindex.html');
+      if (typeof window.onLoginSuccess === 'function') {
+        window.onLoginSuccess();
+      } else {
+        console.log('window.onLoginSuccess no está definida');
+        window.location.href = './subindex.html';
+      }
+    } catch (e) {
+      console.error('Error en redirección post-login:', e);
+      window.location.href = './subindex.html';
+    }
   } catch (err) {
     msg.textContent = getErrorMessage(err);
     msg.classList.add('err');
@@ -302,44 +315,40 @@ function renderizar() {
     }
   }
 
-  // Subheader: añadir h2 con el nombre del nivel
-  subHeader.innerHTML = '';
-  if (rutaActual.length !== 0 && rutaActual.length !== 5) {
-    addButton.style.display = '';
-    subHeader.appendChild(addButton);
-    const addText = document.createElement('span');
-    addText.textContent = 'Añadir';
-    addText.style.marginLeft = '8px';
-    addText.style.fontWeight = 'bold';
-    subHeader.appendChild(addText);
-  } else {
-    addButton.style.display = 'none';
-    if (rutaActual.length === 5) {
-      const addSerieBtn = document.createElement('button');
-      addSerieBtn.className = 'add-serie';
-      addSerieBtn.textContent = 'Añadir serie';
-      addSerieBtn.onclick = function() {
-        if (nivel.series) nivel.series.push({});
-        else nivel.series = [{}];
-        guardarDatos();
-        renderizar();
-      };
-      subHeader.appendChild(addSerieBtn);
+    // Subheader: ocultar en nivel 0
+    if (rutaActual.length === 0) {
+      subHeader.style.display = 'none';
+    } else {
+      subHeader.style.display = '';
+      subHeader.innerHTML = '';
+      const h2Nivel = document.createElement('h2');
+      h2Nivel.id = 'tituloNivel';
+      if (rutaActual.length === 1) {
+        h2Nivel.textContent = 'Bloques';
+        h2Nivel.style.display = '';
+      } else {
+        h2Nivel.textContent = nivel.nombre || ultimoMenuSeleccionado;
+        h2Nivel.style.display = '';
+      }
+      subHeader.appendChild(h2Nivel);
+
+      if (rutaActual.length !== 5) {
+        addButton.style.display = '';
+        subHeader.appendChild(addButton);
+      } else {
+        addButton.style.display = 'none';
+        const addSerieBtn = document.createElement('button');
+        addSerieBtn.className = 'add-serie';
+        addSerieBtn.textContent = '+ Añadir serie';
+        addSerieBtn.onclick = function() {
+          if (nivel.series) nivel.series.push({});
+          else nivel.series = [{}];
+          guardarDatos();
+          renderizar();
+        };
+        subHeader.appendChild(addSerieBtn);
+      }
     }
-  }
-  // Crear y añadir el h2 con el nombre del nivel
-  const h2Nivel = document.createElement('h2');
-  h2Nivel.id = 'tituloNivel';
-  if (rutaActual.length === 0) {
-    h2Nivel.style.display = 'none';
-  } else if (rutaActual.length === 1) {
-    h2Nivel.textContent = 'Bloques';
-    h2Nivel.style.display = '';
-  } else {
-    h2Nivel.textContent = nivel.nombre || ultimoMenuSeleccionado;
-    h2Nivel.style.display = '';
-  }
-  subHeader.appendChild(h2Nivel);
 
   // Pantalla Seguimiento SOLO si estamos en la sección Seguimiento
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
@@ -672,7 +681,21 @@ function crearIndice(item, index, nivel) {
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-    setTimeout(() => { input.focus(); input.select(); }, 0);
+    // Foco inmediato tras renderizar el input, para iOS (setTimeout mejora compatibilidad)
+    requestAnimationFrame(() => {
+      setTimeout(() => {
+        input.focus();
+        input.select();
+      }, 50);
+    });
+
+    // Bloquear el clic en el contenedor cuando está en edición
+    div.addEventListener('click', e => {
+      e.stopPropagation();
+    });
+    div.addEventListener('touchstart', e => {
+      e.stopPropagation();
+    });
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -732,7 +755,7 @@ function crearIndice(item, index, nivel) {
       // Botón de opciones (3 círculos horizontales)
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
-      opcionesBtn.innerHTML = `<span style="display:inline-block;width:18px;text-align:center;">
+      opcionesBtn.innerHTML = `<span style="display:inline-block;width:40px;text-align:center;">
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
