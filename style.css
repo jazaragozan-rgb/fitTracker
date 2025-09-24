@@ -390,3 +390,51 @@ main#contenido {
   z-index: 20;
   background: transparent;
 }
+
+.entrenamiento-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: #fff;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+}
+
+.entrenamiento-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.ejercicio {
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.serie {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.3rem;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.modal {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
