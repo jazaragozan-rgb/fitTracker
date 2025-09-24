@@ -81,6 +81,19 @@ window.login = async function () {
   try {
     await signInWithEmailAndPassword(auth, email, pass);
     $('log-email').value = $('log-pass').value = '';
+    // Forzar ejecución de redirección, log y fallback
+    try {
+      console.log('Login exitoso, redirigiendo a subindex.html');
+      if (typeof window.onLoginSuccess === 'function') {
+        window.onLoginSuccess();
+      } else {
+        console.log('window.onLoginSuccess no está definida');
+        window.location.href = './subindex.html';
+      }
+    } catch (e) {
+      console.error('Error en redirección post-login:', e);
+      window.location.href = './subindex.html';
+    }
   } catch (err) {
     msg.textContent = getErrorMessage(err);
     msg.classList.add('err');
