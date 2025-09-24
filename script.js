@@ -689,15 +689,33 @@ function crearIndice(item, index, nivel) {
       setTimeout(() => {
         input.focus();
         input.select();
-      }, 50);
+      }, 0);
     });
 
-    // Bloquear el clic en el contenedor cuando está en edición
-    div.addEventListener('click', e => {
-      e.stopPropagation();
+    // IMPORTANTE: evitar que el evento suba desde el input hasta el div
+    // (para que el click en el input coloque el cursor y abra el teclado)
+    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
+      input.addEventListener(evt, e => { e.stopPropagation(); })
+    );
+
+    // Si por algún motivo hay otros controles dentro del div (fecha, botones),
+    // evitamos que su interacción burbujee también:
+    div.addEventListener('click', function(e) {
+      // Si el click viene de dentro de un input/textarea/button/select, dejamos que funcione normalmente.
+      if (e.target.closest('input, textarea, button, select')) {
+        // No interferimos: el input ya paró la propagación y el foco funcionará.
+        return;
+      }
+      // Si no viene de un control de formulario, bloqueamos TODO (incluido el listener añadido
+      // desde fuera del div en renderizar), usando stopImmediatePropagation.
+      e.stopImmediatePropagation();
+      e.preventDefault();
     });
-    div.addEventListener('touchstart', e => {
-      e.stopPropagation();
+
+    div.addEventListener('touchstart', function(e) {
+      if (e.target.closest('input, textarea, button, select')) return;
+      e.stopImmediatePropagation();
+      e.preventDefault();
     });
 
     input.addEventListener('keydown', e => {
@@ -712,11 +730,17 @@ function crearIndice(item, index, nivel) {
     });
     div.appendChild(input);
 
-    // 👉 Si estamos en nivel 3, añadimos input de fecha
+    // 👉 Si estamos en nivel 3, añadimos input de fecha (y protegemos igual)
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
+
+      // Evitar que el click en la fecha burbujee
+      ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
+        fechaInput.addEventListener(evt, e => { e.stopPropagation(); })
+      );
+
       fechaInput.addEventListener('input', e => {
         nivel.hijos[index].fecha = e.target.value;
         console.log('[Input fecha nivel 3] sesión principal:', nivel.hijos[index]);
@@ -755,7 +779,6 @@ function crearIndice(item, index, nivel) {
 
     // Solo mostrar el botón de opciones en niveles 1-4
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
-      // Botón de opciones (3 círculos horizontales)
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
       opcionesBtn.innerHTML = `<span style="display:inline-block;width:40px;text-align:center;">
@@ -767,8 +790,8 @@ function crearIndice(item, index, nivel) {
       opcionesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         // Oculta otros menús abiertos
-  document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
-  mostrarMenuOpciones({
+        document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
+        mostrarMenuOpciones({
           anchorElement: opcionesBtn,
           onEditar: () => {
             item.editando = true;
@@ -793,6 +816,7 @@ function crearIndice(item, index, nivel) {
   }
   return div;
 }
+
 
 // ==================== Eventos ====================
 // Modal para añadir medidas corporales
