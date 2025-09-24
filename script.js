@@ -3,6 +3,8 @@ import { renderizarDashboard } from "./dashboard.js";
 
 import { renderizarSeguimiento } from "./seguimiento.js";
 
+import { iniciarEntrenamiento } from './live.js';
+
 // ==================== Firebase Auth + Firestore ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
@@ -320,7 +322,21 @@ function renderizar() {
 
     // Subheader: ocultar en nivel 0
     if (rutaActual.length === 0) {
-      subHeader.style.display = 'none';
+      tituloNivel.style.display = 'none';
+        // Mostrar subheader y botón de entrenamiento
+      subHeader.style.display = 'flex';
+      subHeader.innerHTML = ''; // Limpiamos contenido previo
+        // Crear botón solo si no existe
+        // Crear el botón directamente
+        const btnEntreno = document.createElement('button');
+        btnEntreno.id = 'btnEntrenamiento';
+        btnEntreno.textContent = 'Empezar entrenamiento';
+        btnEntreno.className = 'btn-primary'; // tu clase de estilo
+        subHeader.appendChild(btnEntreno);
+
+        btnEntreno.addEventListener('click', () => {
+          iniciarEntrenamiento(); // función de live.js
+        });
     } else {
       subHeader.style.display = '';
       subHeader.innerHTML = '';
