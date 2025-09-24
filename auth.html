@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>fitTracker - Autenticación</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <section id="auth">
+    <form id="form-login" onsubmit="return false;">
+      <h3><span style="font-weight: bold;color: rgb(0, 0, 0);">INICIAR SESIÓN</span></h3>
+      <input id="log-email" type="email" placeholder="Email" required>
+      <input id="log-pass" type="password" placeholder="Contraseña" required>
+      <button type="button" onclick="login()">Entrar</button>
+      <button type="button" id="showRegisterBtn">Crear cuenta nueva</button>
+      <div id="log-msg" class="hint"></div>
+    </form>
+
+    <form id="form-register" class="hidden" onsubmit="return false;">
+      <h3><span style="font-weight: bold;color: rgb(0, 0, 0);">REGISTRO</span></h3>
+      <input id="reg-email" type="email" placeholder="Email" required>
+      <input id="reg-pass" type="password" placeholder="Contraseña (mín. 6 caracteres)" minlength="6" required>
+      <input id="reg-pass2" type="password" placeholder="Repite la contraseña" minlength="6" required>
+      <button type="button" onclick="register()">Crear cuenta</button>
+      <button type="button" id="showLoginBtn">Ya tengo cuenta</button>
+      <div id="reg-msg" class="hint"></div>
+    </form>
+  </section>
+  <script type="module" src="script.js"></script>
+</body>
+</html>
