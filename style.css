@@ -153,7 +153,7 @@ button { cursor:pointer; }
 }
 .series-header { color:#000000; font-weight:bold; margin-bottom:10px; }
 .series-container input { background:none; color:#000;border: none; margin-inline: 1px;margin-top: 5px; padding: 4px;gap: 1px; font-size: 1.2rem;font-weight: bold; }
-.serie-row { background:#ffffff;border-radius: 10px; margin-bottom:5px; width: 94%;height: 40px; border-bottom: 1px solid #2fd8a3;border-top: 1px solid #2fd8a3;}
+.serie-row { background:#ffffff;border-radius: 10px; margin-bottom:5px; width: 94%;height: 40px; border-bottom: 1px solid #4d4d4d;border-top: 1px solid #4d4d4d;}
 
 /* Botones de series */
 .series-container button, .list-item button, #headerButtons button {

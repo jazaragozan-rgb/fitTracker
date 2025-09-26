@@ -438,10 +438,12 @@ function renderizar() {
           // Si ya es tick, volver a reloj y color normal
           temporizador.textContent = '⏱';
           serieDiv.style.backgroundColor = ''; // se restaura el color original
+          serieDiv.style.borderColor = '#4d4d4d'; // color de borde original
         } else {
           // Si es reloj, marcar tick y poner fila verde
           temporizador.textContent = '🗸';
           serieDiv.style.backgroundColor = '#d4edda'; // verde claro
+          serieDiv.style.borderColor = '#6fbe82ff';
         }
 
         // Iniciar el temporizador solo si se marcó el tick
