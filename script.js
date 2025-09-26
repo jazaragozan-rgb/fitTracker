@@ -772,28 +772,64 @@ function crearIndice(item, index, nivel) {
     input.disabled = true;
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-    // Permite que todo el área del input sea clicable para navegar
-    input.addEventListener('click', () => { rutaActual.push(index); renderizar(); });
-    input.addEventListener('touchstart', () => { rutaActual.push(index); renderizar(); });
+
+    // Detectar tap vs swipe
+    let touchStartXInput = null;
+    let touchStartYInput = null;
+
+    input.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        touchStartXInput = e.touches[0].clientX;
+        touchStartYInput = e.touches[0].clientY;
+      }
+    });
+
+    input.addEventListener('touchend', e => {
+      if (!touchStartXInput || !touchStartYInput) return;
+      const deltaX = e.changedTouches[0].clientX - touchStartXInput;
+      const deltaY = e.changedTouches[0].clientY - touchStartYInput;
+      const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+
+      if (distancia < 10) { // Umbral: si no se mueve, es tap
+        rutaActual.push(index);
+        renderizar();
+      }
+
+      touchStartXInput = null;
+      touchStartYInput = null;
+    });
+
+    // También soporta click de mouse
+    input.addEventListener('click', () => {
+      rutaActual.push(index);
+      renderizar();
+    });
+
     div.appendChild(input);
 
-    // 👉 Si estamos en nivel 3, mostramos también la fecha
+    // 👉 Nivel 3: input fecha
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
-      fechaInput.addEventListener('mousedown', e => e.stopPropagation());
-      fechaInput.addEventListener('click', e => e.stopPropagation());
+
+      // Mantener el mismo patrón de tap vs swipe para fechas si quieres, 
+      // o solo stopPropagation si no debe swiparse
+      ['mousedown', 'click'].forEach(evt => 
+        fechaInput.addEventListener(evt, e => e.stopPropagation())
+      );
+
       fechaInput.addEventListener('change', e => {
         nivel.hijos[index].fecha = e.target.value;
         console.log('[Input fecha nivel 3] sesión principal:', nivel.hijos[index]);
         guardarDatos();
         renderizar();
       });
+
       div.appendChild(fechaInput);
     }
 
-    // Solo mostrar el botón de opciones en niveles 1-4
+    // Botón de opciones (niveles 1-4)
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
@@ -805,7 +841,6 @@ function crearIndice(item, index, nivel) {
 
       opcionesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Oculta otros menús abiertos
         document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
         mostrarMenuOpciones({
           anchorElement: opcionesBtn,
@@ -823,12 +858,13 @@ function crearIndice(item, index, nivel) {
           },
           onCopiar: () => {
             window.itemCopiado = { nivel: rutaActual.length, datos: structuredClone(item) };
-            // No mostrar ningún alert ni ventana del navegador
           }
         });
       });
+
       div.appendChild(opcionesBtn);
     }
+
   }
   return div;
 }
