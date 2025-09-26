@@ -9,6 +9,8 @@
   --header-btn-size: 64px;
 }
 
+* {  -webkit-tap-highlight-color: transparent;}
+
 * { margin:0; padding:0; box-sizing:border-box;text-align: center; }
 
 body {
@@ -93,7 +95,7 @@ header {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  background: #2fd8a3;
+  background: #00b97f;
   cursor: pointer;
   z-index: 20;
   align-self: center;
@@ -155,7 +157,7 @@ button { cursor:pointer; }
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  background: #2fd8a3;
+  background: #00b97f;
   cursor: pointer;
   z-index: 20;
   align-self: center;

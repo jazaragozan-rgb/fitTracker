@@ -20,13 +20,20 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   if (anchorElement) {
     const rect = anchorElement.getBoundingClientRect();
     menu.style.top = (rect.bottom + window.scrollY) + 'px';
-    // Esperar a que el menú esté en el DOM para obtener el ancho
-    setTimeout(() => {
-      menu.style.left = (rect.right + window.scrollX - menu.offsetWidth) + 'px';
-    }, 0);
+
+  // Establecer top
+  menu.style.top = (rect.bottom + window.scrollY) + 'px';
+
+  // Posicionar left usando un truco: calcular ancho sin necesidad de setTimeout
+  menu.style.visibility = 'hidden'; // ocultamos mientras calculamos
+  document.body.appendChild(menu); // añadir al DOM para medir offsetWidth
+  menu.style.left = (rect.right + window.scrollX - menu.offsetWidth) + 'px';
+  menu.style.visibility = 'visible'; // mostrar ya en posición correcta
+  
   } else {
     menu.style.top = '40px';
     menu.style.right = '10px';
+    document.body.appendChild(menu);
   }
   // Alinear textos a la izquierda
   menu.style.textAlign = 'left';
