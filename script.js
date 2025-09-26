@@ -329,7 +329,7 @@ function renderizar() {
         // Crear botón solo si no existe
         // Crear el botón directamente
         const btnEntreno = document.createElement('button');
-        btnEntreno.id = 'btnEntrenamiento';
+        btnEntreno.id = 'liveEntrenamiento';
         btnEntreno.textContent = 'Empezar entrenamiento';
         btnEntreno.className = 'btn-primary'; // tu clase de estilo
         subHeader.appendChild(btnEntreno);
@@ -431,7 +431,23 @@ function renderizar() {
 
       const temporizador=document.createElement('button');
       temporizador.className="btn-timer"; temporizador.textContent='⏱';
-      temporizador.addEventListener('click',()=>iniciarTimer(serie.descanso));
+      temporizador.addEventListener('click', () => {
+        const isTick = temporizador.textContent === '🗸';
+
+        if (isTick) {
+          // Si ya es tick, volver a reloj y color normal
+          temporizador.textContent = '⏱';
+          serieDiv.style.backgroundColor = ''; // se restaura el color original
+        } else {
+          // Si es reloj, marcar tick y poner fila verde
+          temporizador.textContent = '🗸';
+          serieDiv.style.backgroundColor = '#d4edda'; // verde claro
+        }
+
+        // Iniciar el temporizador solo si se marcó el tick
+        if (!isTick) iniciarTimer(serie.descanso);
+      });
+
 
       const borrar=document.createElement('button');
       borrar.className="btn-delete"; borrar.textContent='🗑';

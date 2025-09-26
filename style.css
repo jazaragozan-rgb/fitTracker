@@ -30,12 +30,25 @@ header {
   background: #ffffff;
   color:#000000;
   padding:0 12px;
-  height:60px;
+  height:45px;
   justify-content: space-between;
   border-bottom: none;
   z-index: 20;
 }
 #tituloNivel { flex:1; text-align:center; font-size:1.8rem; font-weight: 500; color: #000000;}
+#menuTitulo { flex:1; text-align:center; font-size:1.8rem; font-weight: bold; color: #000000; margin-top: 10px;height: 40px;width: 298px; }
+
+#liveEntrenamiento.btn-primary {   
+  width: 300px;
+  height: 40px;
+  font-size: 1rem; 
+  color: #ffffff;
+  background: #3498f7;
+  cursor: pointer;
+  z-index: 20;
+  align-self: center;
+  margin: 4px;
+}
 
 .header-btn {
   background:none;
@@ -46,7 +59,7 @@ header {
   display:grid;
   place-items:center;
   padding-top: 0%;
-  font-weight: bold;
+  font-weight: 500;
   z-index: 20;
 }
 .big-btn { width: 40px; height:40px; font-size:2rem; }
@@ -56,6 +69,8 @@ header {
   background: none;
   border: none;
   cursor: pointer;
+  margin-top: 10px;
+  margin-bottom: 0px;
   width: 40px;
   height: 40px;
 }
@@ -81,7 +96,6 @@ header {
   flex: none;
   text-align: center;
   font-size: 1.5rem;
-  font-weight: bold;
   color: #000000;
   margin: 0 0 8px 0;
   z-index: 31;
@@ -95,7 +109,7 @@ header {
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  background: #00b97f;
+  background: #3498f7;
   cursor: pointer;
   z-index: 20;
   align-self: center;
@@ -157,7 +171,7 @@ button { cursor:pointer; }
   color: #ffffff;
   border: none;
   border-radius: 8px;
-  background: #00b97f;
+  background: #3498f7;
   cursor: pointer;
   z-index: 20;
   align-self: center;
@@ -206,11 +220,12 @@ button { cursor:pointer; }
   border: none;
   border-radius: 10px;
   cursor: pointer;
-  padding: none;
+  padding: 0px;
   width: 40px;
   height: 40px;
   z-index: 1;
   font-size: 1.5rem; font-weight: bold;
+  margin-top: 10px; margin-bottom: 0px;
 }
 
 .sideMenu {
