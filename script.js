@@ -320,54 +320,48 @@ function renderizar() {
     }
   }
 
-    // Subheader: ocultar en nivel 0
-    if (rutaActual.length === 0) {
-      tituloNivel.style.display = 'none';
-        // Mostrar subheader y botón de entrenamiento
-      subHeader.style.display = 'flex';
-      subHeader.innerHTML = ''; // Limpiamos contenido previo
-        // Crear botón solo si no existe
-        // Crear el botón directamente
-        const btnEntreno = document.createElement('button');
-        btnEntreno.id = 'liveEntrenamiento';
-        btnEntreno.textContent = 'Empezar entrenamiento';
-        btnEntreno.className = 'btn-primary'; // tu clase de estilo
-        subHeader.appendChild(btnEntreno);
-
-        btnEntreno.addEventListener('click', () => {
-          iniciarEntrenamiento(); // función de live.js
-        });
+  // Subheader: ocultar en nivel 0
+  if (rutaActual.length === 0) {
+    tituloNivel.style.display = 'none';
+    subHeader.style.display = 'flex';
+    subHeader.innerHTML = '';
+    const btnEntreno = document.createElement('button');
+    btnEntreno.id = 'liveEntrenamiento';
+    btnEntreno.textContent = 'Empezar entrenamiento';
+    btnEntreno.className = 'btn-primary';
+    subHeader.appendChild(btnEntreno);
+    btnEntreno.addEventListener('click', () => {
+      iniciarEntrenamiento();
+    });
+  } else {
+    subHeader.style.display = '';
+    subHeader.innerHTML = '';
+    const h2Nivel = document.createElement('h2');
+    h2Nivel.id = 'tituloNivel';
+    if (rutaActual.length === 1) {
+      h2Nivel.textContent = 'Bloques';
     } else {
-      subHeader.style.display = '';
-      subHeader.innerHTML = '';
-      const h2Nivel = document.createElement('h2');
-      h2Nivel.id = 'tituloNivel';
-      if (rutaActual.length === 1) {
-        h2Nivel.textContent = 'Bloques';
-        h2Nivel.style.display = '';
-      } else {
-        h2Nivel.textContent = nivel.nombre || ultimoMenuSeleccionado;
-        h2Nivel.style.display = '';
-      }
-      subHeader.appendChild(h2Nivel);
-
-      if (rutaActual.length !== 5) {
-        addButton.style.display = '';
-        subHeader.appendChild(addButton);
-      } else {
-        addButton.style.display = 'none';
-        const addSerieBtn = document.createElement('button');
-        addSerieBtn.className = 'add-serie';
-        addSerieBtn.textContent = '+ Añadir serie';
-        addSerieBtn.onclick = function() {
-          if (nivel.series) nivel.series.push({});
-          else nivel.series = [{}];
-          guardarDatos();
-          renderizar();
-        };
-        subHeader.appendChild(addSerieBtn);
-      }
+      h2Nivel.textContent = nivel.nombre || ultimoMenuSeleccionado;
     }
+    subHeader.appendChild(h2Nivel);
+
+    if (rutaActual.length !== 5) {
+      addButton.style.display = '';
+      subHeader.appendChild(addButton);
+    } else {
+      addButton.style.display = 'none';
+      const addSerieBtn = document.createElement('button');
+      addSerieBtn.className = 'add-serie';
+      addSerieBtn.textContent = '+ Añadir serie';
+      addSerieBtn.onclick = function() {
+        if (nivel.series) nivel.series.push({});
+        else nivel.series = [{}];
+        guardarDatos();
+        renderizar();
+      };
+      subHeader.appendChild(addSerieBtn);
+    }
+  }
 
   // Pantalla Seguimiento SOLO si estamos en la sección Seguimiento
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
@@ -408,8 +402,8 @@ function renderizar() {
       numBtn.addEventListener('click',e=>{
         e.stopPropagation();
         mostrarSelectorMarca(serie,idx,()=>{
-          guardarDatos();     // aquí sí tienes acceso
-          renderizar();       // refresca la UI
+          guardarDatos();
+          renderizar();
         });
       });
 
@@ -433,23 +427,17 @@ function renderizar() {
       temporizador.className="btn-timer"; temporizador.textContent='⏱';
       temporizador.addEventListener('click', () => {
         const isTick = temporizador.textContent === '🗸';
-
         if (isTick) {
-          // Si ya es tick, volver a reloj y color normal
           temporizador.textContent = '⏱';
-          serieDiv.style.backgroundColor = ''; // se restaura el color original
-          serieDiv.style.borderColor = '#4d4d4d'; // color de borde original
+          serieDiv.style.backgroundColor = '';
+          serieDiv.style.borderColor = '#4d4d4d';
         } else {
-          // Si es reloj, marcar tick y poner fila verde
           temporizador.textContent = '🗸';
-          serieDiv.style.backgroundColor = '#d4edda'; // verde claro
+          serieDiv.style.backgroundColor = '#d4edda';
           serieDiv.style.borderColor = '#6fbe82ff';
         }
-
-        // Iniciar el temporizador solo si se marcó el tick
         if (!isTick) iniciarTimer(serie.descanso);
       });
-
 
       const borrar=document.createElement('button');
       borrar.className="btn-delete"; borrar.textContent='🗑';
@@ -464,7 +452,7 @@ function renderizar() {
     });
     contenido.appendChild(seriesContainer);
 
- // 📊 Bloque Volumen y 1RM
+    // 📊 Bloque Volumen y 1RM
     const statsBox = document.createElement('div');
     statsBox.style.background = "#ffffffff";
     statsBox.style.padding = "14px";
@@ -474,7 +462,6 @@ function renderizar() {
     statsBox.style.boxShadow = "0px 2px 10px #b6b6b6";
     statsBox.style.width = "94%";
 
-    // Calcular volumen total y 1RM
     let volumenTotal = 0;
     let mejor1RM = 0;
     nivel.series.forEach(serie => {
@@ -489,165 +476,83 @@ function renderizar() {
       <p><b>Volumen total:</b> ${volumenTotal.toFixed(2)} kg</p>
       <p><b>1RM estimado:</b> ${mejor1RM.toFixed(2)} kg</p>
     `;
-
     contenido.appendChild(statsBox);
 
-    // ==================== FUNCIONES ====================
+    // ==================== Funciones auxiliares ====================
+    function fechaATimestamp(fechaStr) {
+      if (!fechaStr || typeof fechaStr !== "string") return 0;
+      return new Date(fechaStr).getTime() || 0;
+    }
 
-function fechaATimestamp(fechaStr) {
-  if (!fechaStr || typeof fechaStr !== "string") return 0;
-  return new Date(fechaStr).getTime() || 0;
-}
+    function buscarEjercicioAnterior(datos, rutaActual, ejercicioActual) {
+      if (!ejercicioActual || !datos) return null;
 
-// ==================== Buscar ejercicio anterior ====================
-// Obtener nodo "Full body" o "Push pull legs" (nivel 3)
-const sesion = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]];
-console.log("📌 Nodo 'Full body' o 'Push pull legs' (nivel 3):", sesion);
+      const nombreEjercicioActual = ejercicioActual.nombre.trim().toLowerCase();
+      const fechaActualSesion = ejercicioActual._fecha || ejercicioActual.fecha;
+      const timestampActual = fechaATimestamp(fechaActualSesion);
 
-// Mostrar los hijos de "Full body" o "Push pull legs" (nivel 4)
-console.log("📌 Hijos de 'Full body' o 'Push pull legs' (nivel 4):", sesion?.hijos);
+      let ejercicioAnterior = null;
 
-// Obtener el hijo específico en nivel 4 (donde puede estar la fecha)
-const nivel4 = sesion?.hijos?.[rutaActual[3]];
-console.log("📌 Nodo nivel 4:", nivel4);
+      for (const meso of datos) {
+        for (const micro of meso.hijos || []) {
+          for (const sesion of micro.hijos || []) {
+            const tsSesion = fechaATimestamp(sesion.fecha);
+            if (tsSesion >= timestampActual) continue;
 
-// Intentar leer la fecha en nivel 4
-const fechaActualSesion = nivel4?.fecha || null;
-console.log("📌 Fecha sesión actual (nivel 4):", fechaActualSesion);
+            for (const sesionInferior of sesion.hijos || []) {
+              for (const ejerc of sesionInferior.hijos || []) {
+                if (ejerc === ejercicioActual) continue;
+                const nombreComparar = (ejerc.nombre || '').trim().toLowerCase();
+                if (nombreComparar !== nombreEjercicioActual) continue;
+                if (!ejerc.series || ejerc.series.length === 0) continue;
 
-const nombreEjercicioActual = nivel.nombre.trim().toLowerCase();  // Normalizar nombre ejercicio actual
-let ejercicioAnterior = null;
-let timestampActual = fechaATimestamp(fechaActualSesion);
-
-console.log("📌 Fecha sesión actual:", fechaActualSesion);
-console.log("📌 Timestamp actual:", timestampActual);
-console.log("📌 Nombre ejercicio actual:", nombreEjercicioActual);  // Mostrar nombre ejercicio actual normalizado
-
-// Ahora solo necesitamos recorrer las sesiones de "Full body" y "Push pull legs" que contienen la fecha
-for (const meso of datos) {
-  console.log(`🔸 Mesociclo: ${meso.nombre || "sin nombre"}`);
-
-  // Buscar el nodo "Full body" o "Push pull legs"
-  for (const micro of meso.hijos || []) {
-    console.log(`  🔹 Microciclo: ${micro.nombre || "sin nombre"}`);
-
-      // Buscamos dentro de los hijos de "Full body" o "Push pull legs" (sesiones)
-      for (const sesion of micro.hijos || []) {
-        console.log(`    🔹 Sesión encontrada: ${sesion.nombre}`);
-
-        // Verificamos si la sesión tiene una fecha
-        if (!sesion.fecha) {
-          console.log(`      ⚠️ Sesión sin fecha, buscando en el siguiente nivel...`);
-
-          // Si la sesión no tiene fecha, verificamos en los hijos de esta sesión
-          if (sesion.hijos && sesion.hijos.length > 0) {
-            for (const sesionInferior of sesion.hijos) {
-              console.log(`        🔍 Buscando en nivel inferior: ${sesionInferior.nombre}`);
-              if (sesionInferior.fecha) {
-                console.log(`        ✅ Sesión en nivel inferior con fecha encontrada: ${sesionInferior.nombre} - Fecha: ${sesionInferior.fecha}`);
-                sesion.fecha = sesionInferior.fecha;  // Asignamos la fecha encontrada en el nivel inferior
-                break;  // Ya encontramos la fecha, podemos continuar
-              }
-            }
-          }
-          // Si después de buscar en los hijos no tiene fecha, la saltamos
-          if (!sesion.fecha) {
-            console.log("        ⚠️ No se encontró ninguna fecha en el nivel inferior. Se salta.");
-            continue;
-          }
-        }
-
-        // Aquí es donde debe usarse sesionInferior si se encontró una fecha en el subnivel
-        console.log(`    ✅ Sesión con fecha encontrada: ${sesion.fecha ? sesion.nombre : sesionInferior.nombre} - Fecha: ${sesion.fecha || sesionInferior.fecha}`);
-
-        // Convertimos la fecha de la sesión a timestamp
-        const fechaSes = fechaATimestamp(sesion.fecha || sesionInferior.fecha);
-        console.log(`    🔍 Sesión: ${sesion.nombre || sesionInferior.nombre} - Fecha: ${sesion.fecha || sesionInferior.fecha} (timestamp: ${fechaSes})`);
-
-        if (fechaSes >= timestampActual) {
-          console.log("      ❌ Sesión no es anterior a la actual, se salta.");
-          continue;  // Si la sesión no es anterior a la fecha actual, se salta
-        }
-
-        // **Aquí está la modificación principal**
-        // Ahora buscamos los ejercicios dentro de esta sesión, que están en los "hijos de los hijos"
-        for (const sesionInferior of sesion.hijos || []) {
-          console.log(`      ➤ Buscando ejercicios dentro de los hijos de la sesión: ${sesionInferior.nombre}`);
-
-          // Verificamos si esta sesión inferior tiene ejercicios
-          for (const ejercicio of sesionInferior.hijos || []) {
-            console.log(`        ➤ Ejercicio encontrado: ${ejercicio.nombre}`);
-
-            const nombreEjercicioComparar = ejercicio.nombre.trim().toLowerCase();  // Normalizamos también el nombre del ejercicio anterior
-            console.log(`        ➤ Comparando ejercicio: '${ejercicio.nombre}' (normalizado: '${nombreEjercicioComparar}')`);
-            console.log(`        ➤ Ejercicio actual: '${nombreEjercicioActual}'`);
-
-            // Comprobamos si el nombre del ejercicio coincide
-            if (nombreEjercicioComparar === nombreEjercicioActual) {
-              console.log("          ✅ Coincidencia encontrada con ejercicio:", ejercicio.nombre);
-
-              // La fecha aquí debe ser del nivel de la sesión, no del propio ejercicio
-              const fechaSesionEjercicioAnterior = sesion.fecha || sesionInferior.fecha; // Fecha de la sesión, no del ejercicio
-
-              if (ejercicio.series?.length > 0) {
-                console.log("          ✅ Ejercicio anterior con series encontrado");
-
-                if (!ejercicioAnterior || fechaATimestamp(fechaSesionEjercicioAnterior) > fechaATimestamp(ejercicioAnterior._fecha)) {
-                  ejercicioAnterior = { ...ejercicio, _fecha: fechaSesionEjercicioAnterior };
-                  console.log(`          ⭐ Nuevo ejercicio anterior más reciente guardado de fecha: ${fechaSesionEjercicioAnterior}`);
+                if (!ejercicioAnterior || tsSesion > fechaATimestamp(ejercicioAnterior._fecha)) {
+                  ejercicioAnterior = { ...ejerc, _fecha: ejerc._fecha || ejerc.fecha || sesion.fecha };
                 }
-              } else {
-                console.log("          ⚠️ Ejercicio encontrado sin series, se ignora.");
               }
-            } else {
-              console.log("          ❌ Nombres no coinciden");
             }
           }
         }
       }
-  }
-}
+      return ejercicioAnterior;
+    }
 
-if (ejercicioAnterior) {
-  console.log("📦 Ejercicio anterior más reciente:", ejercicioAnterior);
-} else {
-  console.log("❌ No se encontró ningún ejercicio anterior con el mismo nombre y series.");
-}
+    // ==================== Uso ====================
+    const nivel4 = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]]?.hijos?.[rutaActual[3]];
+    nivel._fecha = nivel4?.fecha || nivel._fecha || null;
+    const ejercicioAnterior = buscarEjercicioAnterior(datos, rutaActual, nivel);
 
-// Si encontramos un ejercicio anterior, mostramos la caja de estadísticas
-if (ejercicioAnterior) {
-  const statsBoxAnt = document.createElement('div');
-    statsBoxAnt.style.background = "#ffffffff";
-    statsBoxAnt.style.padding = "14px";
-    statsBoxAnt.style.margin = "12px";
-    statsBoxAnt.style.borderRadius = "10px";
-    statsBoxAnt.style.color = "#000";
-    statsBoxAnt.style.boxShadow = "-2px 2px 5px #b6b6b6";
-    statsBoxAnt.style.width = "94%";
+    if (ejercicioAnterior) {
+      console.log("📦 Ejercicio anterior más reciente:", ejercicioAnterior);
+      const statsBoxAnt = document.createElement('div');
+      statsBoxAnt.style.background = "#ffffffff";
+      statsBoxAnt.style.padding = "14px";
+      statsBoxAnt.style.margin = "12px";
+      statsBoxAnt.style.borderRadius = "10px";
+      statsBoxAnt.style.color = "#000";
+      statsBoxAnt.style.boxShadow = "-2px 2px 5px #b6b6b6";
+      statsBoxAnt.style.width = "94%";
 
-  let volumenAnt = 0;
-  let mejor1RMAnt = 0;
-  let pesoMax = 0;
+      let volumenAnt = 0, mejor1RMAnt = 0, pesoMax = 0;
+      ejercicioAnterior.series.forEach(serie => {
+        const peso = parseFloat(serie.peso) || 0;
+        const reps = parseInt(serie.reps) || 0;
+        volumenAnt += peso * reps;
+        const estimado = peso * (1 + reps / 30);
+        if (estimado > mejor1RMAnt) mejor1RMAnt = estimado;
+        if (peso > pesoMax) pesoMax = peso;
+      });
 
-  ejercicioAnterior.series.forEach(serie => {
-    const peso = parseFloat(serie.peso) || 0;
-    const reps = parseInt(serie.reps) || 0;
-    volumenAnt += peso * reps;
-    const estimado = peso * (1 + reps / 30);
-    if (estimado > mejor1RMAnt) mejor1RMAnt = estimado;
-    if (peso > pesoMax) pesoMax = peso;
-  });
-
-  statsBoxAnt.innerHTML = `
-    <p><b>📅 Anterior (${ejercicioAnterior._fecha}):</b></p>
-    <p><b>Volumen total:</b> ${volumenAnt.toFixed(2)} kg</p>
-    <p><b>1RM estimado:</b> ${mejor1RMAnt.toFixed(2)} kg</p>
-    <p><b>Peso máximo:</b> ${pesoMax.toFixed(2)} kg</p>
-  `;
-
-  contenido.appendChild(statsBoxAnt);
-}
-
+      statsBoxAnt.innerHTML = `
+        <p><b>📅 Anterior (${ejercicioAnterior._fecha}):</b></p>
+        <p><b>Volumen total:</b> ${volumenAnt.toFixed(2)} kg</p>
+        <p><b>1RM estimado:</b> ${mejor1RMAnt.toFixed(2)} kg</p>
+        <p><b>Peso máximo:</b> ${pesoMax.toFixed(2)} kg</p>
+      `;
+      contenido.appendChild(statsBoxAnt);
+    } else {
+      console.log("❌ No se encontró ningún ejercicio anterior con el mismo nombre y series.");
+    }
 
     const notas=document.createElement('textarea');
     notas.placeholder='Notas del ejercicio...';
@@ -672,10 +577,8 @@ if (ejercicioAnterior) {
   }
 
   addButton.onclick = () => {
-    // Solo mostrar confirmación si hay algo que pegar
     if (rutaActual.length >= 1 && rutaActual.length <= 4 && window.itemCopiado) {
       mostrarConfirmacion("¿Desea pegar el contenido aquí o desea crear un bloque nuevo?", () => {
-        // Pegar
         if (window.itemCopiado.nivel !== rutaActual.length) {
           mostrarConfirmacion(`El contenido se debe pegar en el nivel ${window.itemCopiado.nivel}`, () => {}, null, "Aceptar");
         } else {
@@ -685,19 +588,18 @@ if (ejercicioAnterior) {
           renderizar();
         }
       }, () => {
-        // Crear nuevo índice normal
         const nombreDefault = "Nuevo " + tituloNivel.textContent;
         nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
         guardarDatos(); renderizar();
       }, "Pegar", "Crear nuevo");
     } else {
-      // Crear nuevo índice normal directamente
       const nombreDefault = "Nuevo " + tituloNivel.textContent;
       nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
       guardarDatos(); renderizar();
     }
   };
 }
+
 
 // ==================== Crear índice ====================
 function crearIndice(item, index, nivel) {
@@ -718,30 +620,17 @@ function crearIndice(item, index, nivel) {
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-    // Foco inmediato tras renderizar el input, para iOS (setTimeout mejora compatibilidad)
+
     requestAnimationFrame(() => {
-      setTimeout(() => {
-        input.focus();
-        input.select();
-      }, 0);
+      setTimeout(() => { input.focus(); input.select(); }, 0);
     });
 
-    // IMPORTANTE: evitar que el evento suba desde el input hasta el div
-    // (para que el click en el input coloque el cursor y abra el teclado)
     ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
       input.addEventListener(evt, e => { e.stopPropagation(); })
     );
 
-    // Si por algún motivo hay otros controles dentro del div (fecha, botones),
-    // evitamos que su interacción burbujee también:
     div.addEventListener('click', function(e) {
-      // Si el click viene de dentro de un input/textarea/button/select, dejamos que funcione normalmente.
-      if (e.target.closest('input, textarea, button, select')) {
-        // No interferimos: el input ya paró la propagación y el foco funcionará.
-        return;
-      }
-      // Si no viene de un control de formulario, bloqueamos TODO (incluido el listener añadido
-      // desde fuera del div en renderizar), usando stopImmediatePropagation.
+      if (e.target.closest('input, textarea, button, select')) return;
       e.stopImmediatePropagation();
       e.preventDefault();
     });
@@ -755,31 +644,44 @@ function crearIndice(item, index, nivel) {
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         item.nombre = input.value || 'Sin nombre';
-        item.editando = false; guardarDatos(); renderizar();
+        item.editando = false; 
+        guardarDatos(); 
+        renderizar();
       }
     });
     input.addEventListener('blur', () => {
       item.nombre = input.value || 'Sin nombre';
-      item.editando = false; guardarDatos(); renderizar();
+      item.editando = false; 
+      guardarDatos(); 
+      renderizar();
     });
     div.appendChild(input);
 
-    // 👉 Si estamos en nivel 3, añadimos input de fecha (y protegemos igual)
+    // 👉 Nivel 3: input fecha
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
 
-      // Evitar que el click en la fecha burbujee
-      ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
+      ['pointerdown','mousedown','touchstart','click'].forEach(evt =>
         fechaInput.addEventListener(evt, e => { e.stopPropagation(); })
       );
 
-      fechaInput.addEventListener('input', e => {
+      fechaInput.addEventListener('input', async e => {
+        // Actualizar en memoria
         nivel.hijos[index].fecha = e.target.value;
-        console.log('[Input fecha nivel 3] sesión principal:', nivel.hijos[index]);
-        guardarDatos();
+        guardarDatos(); // para localStorage
+
+        // Guardar inmediatamente en Firestore
+        const user = auth.currentUser;
+        if (user) {
+          try {
+            await guardarDatosUsuario(user.uid, datos);
+            console.log('[Firestore] fecha actualizada nivel 3:', e.target.value);
+          } catch (err) { console.error(err); }
+        }
       });
+
       div.appendChild(fechaInput);
     }
 
@@ -791,7 +693,6 @@ function crearIndice(item, index, nivel) {
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
 
-    // Detectar tap vs swipe
     let touchStartXInput = null;
     let touchStartYInput = null;
 
@@ -808,7 +709,7 @@ function crearIndice(item, index, nivel) {
       const deltaY = e.changedTouches[0].clientY - touchStartYInput;
       const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
 
-      if (distancia < 10) { // Umbral: si no se mueve, es tap
+      if (distancia < 10) { // Umbral: tap
         rutaActual.push(index);
         renderizar();
       }
@@ -817,7 +718,6 @@ function crearIndice(item, index, nivel) {
       touchStartYInput = null;
     });
 
-    // También soporta click de mouse
     input.addEventListener('click', () => {
       rutaActual.push(index);
       renderizar();
@@ -825,29 +725,30 @@ function crearIndice(item, index, nivel) {
 
     div.appendChild(input);
 
-    // 👉 Nivel 3: input fecha
+    // Nivel 3: input fecha visual
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
 
-      // Mantener el mismo patrón de tap vs swipe para fechas si quieres, 
-      // o solo stopPropagation si no debe swiparse
-      ['mousedown', 'click'].forEach(evt => 
-        fechaInput.addEventListener(evt, e => e.stopPropagation())
-      );
+      ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
 
-      fechaInput.addEventListener('change', e => {
+      fechaInput.addEventListener('change', async e => {
         nivel.hijos[index].fecha = e.target.value;
-        console.log('[Input fecha nivel 3] sesión principal:', nivel.hijos[index]);
         guardarDatos();
-        renderizar();
+        const user = auth.currentUser;
+        if (user) {
+          try {
+            await guardarDatosUsuario(user.uid, datos);
+            console.log('[Firestore] fecha actualizada nivel 3 (visual):', e.target.value);
+          } catch(err){ console.error(err); }
+        }
       });
 
       div.appendChild(fechaInput);
     }
 
-    // Botón de opciones (niveles 1-4)
+    // Botón opciones (niveles 1-4)
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
@@ -882,10 +783,11 @@ function crearIndice(item, index, nivel) {
 
       div.appendChild(opcionesBtn);
     }
-
   }
+
   return div;
 }
+
 
 
 // ==================== Eventos ====================
