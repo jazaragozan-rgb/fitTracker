@@ -309,6 +309,24 @@ function renderizar() {
   contenido.innerHTML = '';
   let nivel = nivelActual();
 
+  // Función auxiliar para generar IDs únicos de sesión
+  function asignarSesionIds(datos, ruta = []) {
+    datos.forEach((meso, i) => {
+      (meso.hijos || []).forEach((micro, j) => {
+        (micro.hijos || []).forEach((sesion, k) => {
+          sesion.sesionId = `${ruta.join('-')}-${i}-${j}-${k}`;
+          (sesion.hijos || []).forEach(bloque => {
+            (bloque.hijos || []).forEach(ejerc => {
+              ejerc.sesionId = sesion.sesionId;
+            });
+          });
+        });
+      });
+    });
+  }
+
+  asignarSesionIds(datos);
+
   // Mostrar el nombre correcto en el header según el nivel
   if (menuTitulo) {
     if (rutaActual.length === 0) {
@@ -363,7 +381,7 @@ function renderizar() {
     }
   }
 
-  // Pantalla Seguimiento SOLO si estamos en la sección Seguimiento
+  // Pantalla Seguimiento
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
     const nivel = nivelActual();
     renderizarSeguimiento(nivel, contenido, subHeader, addButton);
@@ -452,7 +470,7 @@ function renderizar() {
     });
     contenido.appendChild(seriesContainer);
 
-    // 📊 Bloque Volumen y 1RM
+    // 📊 Bloque Volumen y 1RM de la sesión actual
     const statsBox = document.createElement('div');
     statsBox.style.background = "#ffffffff";
     statsBox.style.padding = "14px";
@@ -486,28 +504,24 @@ function renderizar() {
 
     function buscarEjercicioAnterior(datos, rutaActual, ejercicioActual) {
       if (!ejercicioActual || !datos) return null;
-
       const nombreEjercicioActual = ejercicioActual.nombre.trim().toLowerCase();
-      const fechaActualSesion = ejercicioActual._fecha || ejercicioActual.fecha;
-      const timestampActual = fechaATimestamp(fechaActualSesion);
+      const timestampActual = fechaATimestamp(ejercicioActual._fecha || ejercicioActual.fecha);
 
       let ejercicioAnterior = null;
 
       for (const meso of datos) {
         for (const micro of meso.hijos || []) {
           for (const sesion of micro.hijos || []) {
-            const tsSesion = fechaATimestamp(sesion.fecha);
+            const tsSesion = fechaATimestamp(sesion._fecha || sesion.fecha);
             if (tsSesion >= timestampActual) continue;
 
             for (const sesionInferior of sesion.hijos || []) {
               for (const ejerc of sesionInferior.hijos || []) {
                 if (ejerc === ejercicioActual) continue;
-                const nombreComparar = (ejerc.nombre || '').trim().toLowerCase();
-                if (nombreComparar !== nombreEjercicioActual) continue;
+                if ((ejerc.nombre || '').trim().toLowerCase() !== nombreEjercicioActual) continue;
                 if (!ejerc.series || ejerc.series.length === 0) continue;
-
-                if (!ejercicioAnterior || tsSesion > fechaATimestamp(ejercicioAnterior._fecha)) {
-                  ejercicioAnterior = { ...ejerc, _fecha: ejerc._fecha || ejerc.fecha || sesion.fecha };
+                if (!ejercicioAnterior || tsSesion > fechaATimestamp(ejercicioAnterior._fecha || ejercicioAnterior.fecha)) {
+                  ejercicioAnterior = ejerc;
                 }
               }
             }
@@ -517,13 +531,28 @@ function renderizar() {
       return ejercicioAnterior;
     }
 
-    // ==================== Uso ====================
+    // Asignar _fecha a todos los ejercicios de la sesión actual
     const nivel4 = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]]?.hijos?.[rutaActual[3]];
+    if (nivel4?.hijos) {
+      for (const bloque of nivel4.hijos) {
+        if (bloque.hijos) {
+          for (const ejerc of bloque.hijos) {
+            ejerc._fecha = nivel4.fecha;
+          }
+        }
+      }
+    }
     nivel._fecha = nivel4?.fecha || nivel._fecha || null;
+
+    // Buscar ejercicio anterior
     const ejercicioAnterior = buscarEjercicioAnterior(datos, rutaActual, nivel);
 
     if (ejercicioAnterior) {
       console.log("📦 Ejercicio anterior más reciente:", ejercicioAnterior);
+
+      // Obtener la fecha actual de la sesión anterior
+      let fechaMostrar = ejercicioAnterior._fecha || ejercicioAnterior.fecha;
+
       const statsBoxAnt = document.createElement('div');
       statsBoxAnt.style.background = "#ffffffff";
       statsBoxAnt.style.padding = "14px";
@@ -544,7 +573,7 @@ function renderizar() {
       });
 
       statsBoxAnt.innerHTML = `
-        <p><b>📅 Anterior (${ejercicioAnterior._fecha}):</b></p>
+        <p><b>📅 Anterior (${fechaMostrar}):</b></p>
         <p><b>Volumen total:</b> ${volumenAnt.toFixed(2)} kg</p>
         <p><b>1RM estimado:</b> ${mejor1RMAnt.toFixed(2)} kg</p>
         <p><b>Peso máximo:</b> ${pesoMax.toFixed(2)} kg</p>
@@ -599,6 +628,7 @@ function renderizar() {
     }
   };
 }
+
 
 
 // ==================== Crear índice ====================
