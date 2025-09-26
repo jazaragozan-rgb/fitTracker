@@ -455,3 +455,14 @@ main#contenido {
   border-radius: 8px;
   text-align: center;
 }
+
+#contenidoWrapper {
+  position: relative;
+  overflow: hidden;
+}
+
+#contenidoSwipe {
+  width: 100%;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  will-change: transform, opacity;
+}

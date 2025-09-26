@@ -828,60 +828,103 @@ function crearIndice(item, index, nivel) {
 // ==================== Init ====================
 // (Eliminado: ahora la inicialización está dentro de DOMContentLoaded)
 
-// Swipe para navegación entre niveles (touch y mouse drag en toda la pantalla)
-  let touchStartX = null;
-  let touchEndX = null;
-  let isMouseDown = false;
+// Swipe para navegación entre niveles (solo contenido)
+let touchStartX = null;
+let touchEndX = null;
+let isMouseDown = false;
 
-  function handleGesture() {
-    if (touchStartX === null || touchEndX === null) return;
-    const deltaX = touchEndX - touchStartX;
-    if (Math.abs(deltaX) < 50) return; // umbral mínimo
-    if (deltaX > 0) {
-      // Swipe derecha: volver nivel (en todos los niveles)
-      if (rutaActual.length > 0) {
-        rutaActual.pop();
-        renderizar();
-      }
-    } else {
-      // Swipe izquierda: avanzar solo en nivel 0 y 1
-      if (rutaActual.length === 0) {
-        let nivel = nivelActual();
-        if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
-          rutaActual.push(0); // avanzar al primer hijo
-          renderizar();
-        }
-      }
-    }
+function aplicarTransicion(direccion, callback) {
+  if (!contenido) return;
+
+  // mover nivel actual fuera
+  contenido.style.transition = "transform 0.3s ease, opacity 0.3s ease";
+  contenido.style.transform = direccion === "izquierda" ? "translateX(-100%)" : "translateX(100%)";
+  contenido.style.opacity = "0";
+
+  setTimeout(() => {
+    callback(); // cambia el nivel
+
+    // colocar siguiente nivel fuera de pantalla en lado opuesto
+    contenido.style.transition = "none";
+    contenido.style.transform = direccion === "izquierda" ? "translateX(100%)" : "translateX(-100%)";
+    contenido.style.opacity = "1";
+
+    // animar entrada del siguiente nivel
+    requestAnimationFrame(() => {
+      contenido.style.transition = "transform 0.3s ease, opacity 0.3s ease";
+      contenido.style.transform = "translateX(0)";
+    });
+  }, 300);
+}
+
+function handleGesture() {
+  if (touchStartX === null || touchEndX === null) return;
+  const deltaX = touchEndX - touchStartX;
+  if (Math.abs(deltaX) < 50) {
+    // volver a la posición original si el swipe fue corto
+    contenido.style.transition = "transform 0.2s ease";
+    contenido.style.transform = "translateX(0)";
     touchStartX = null;
     touchEndX = null;
     isMouseDown = false;
+    return;
   }
 
-  function onTouchStart(e) {
-    if (e.touches) {
-      touchStartX = e.touches[0].clientX;
-    } else {
-      isMouseDown = true;
-      touchStartX = e.clientX;
+  const direccion = deltaX > 0 ? "derecha" : "izquierda";
+  let avanzar = false, retroceder = false;
+
+  if (direccion === "derecha" && rutaActual.length > 0) {
+    retroceder = true; // swipe derecha funciona en todos los niveles
+  } else if (direccion === "izquierda" && (rutaActual.length === 0 || rutaActual.length === 1)) {
+    let nivel = nivelActual();
+    if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
+      avanzar = true; // swipe izquierda solo en niveles 0 y 1
     }
   }
-  function onTouchMove(e) {
-    if (isMouseDown && e.clientX !== undefined) {
-      touchEndX = e.clientX;
-    }
+
+  if (avanzar || retroceder) {
+    aplicarTransicion(direccion, () => {
+      if (retroceder) rutaActual.pop();
+      if (avanzar) rutaActual.push(0);
+      renderizar();
+    });
   }
-  function onTouchEnd(e) {
-    if (e.changedTouches) {
-      touchEndX = e.changedTouches[0].clientX;
-    } else if (isMouseDown) {
-      if (touchEndX === null) touchEndX = e.clientX;
-    }
-    handleGesture();
+
+  touchStartX = null;
+  touchEndX = null;
+  isMouseDown = false;
+}
+
+function onTouchStart(e) {
+  if (e.touches) {
+    touchStartX = e.touches[0].clientX;
+  } else {
+    isMouseDown = true;
+    touchStartX = e.clientX;
   }
-  // Usar document.body para toda la pantalla
-  document.body.addEventListener('touchstart', onTouchStart);
-  document.body.addEventListener('touchend', onTouchEnd);
-  document.body.addEventListener('mousedown', onTouchStart);
-  document.body.addEventListener('mousemove', onTouchMove);
-  document.body.addEventListener('mouseup', onTouchEnd);
+}
+function onTouchMove(e) {
+  if (isMouseDown && e.clientX !== undefined) {
+    touchEndX = e.clientX;
+    // mover contenido en tiempo real mientras arrastras
+    const deltaX = touchEndX - touchStartX;
+    contenido.style.transition = "none";
+    contenido.style.transform = `translateX(${deltaX}px)`;
+  }
+}
+function onTouchEnd(e) {
+  if (e.changedTouches) {
+    touchEndX = e.changedTouches[0].clientX;
+  } else if (isMouseDown) {
+    if (touchEndX === null) touchEndX = e.clientX;
+  }
+  handleGesture();
+}
+
+// Escuchar toda la pantalla
+document.body.addEventListener('touchstart', onTouchStart);
+document.body.addEventListener('touchmove', onTouchMove);
+document.body.addEventListener('touchend', onTouchEnd);
+document.body.addEventListener('mousedown', onTouchStart);
+document.body.addEventListener('mousemove', onTouchMove);
+document.body.addEventListener('mouseup', onTouchEnd);
