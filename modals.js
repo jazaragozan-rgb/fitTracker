@@ -43,9 +43,11 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   editarBtn.textContent = 'Editar';
   editarBtn.style.display = 'block';
   editarBtn.style.width = '100%';
+  editarBtn.style.height = '30px';
   editarBtn.style.border = 'none';
   editarBtn.style.background = 'none';
   editarBtn.style.padding = '8px';
+  editarBtn.style.margin = '2px';
   editarBtn.onclick = (e) => {
     e.stopPropagation();
     menu.remove();
@@ -58,9 +60,11 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   eliminarBtn.textContent = 'Eliminar';
   eliminarBtn.style.display = 'block';
   eliminarBtn.style.width = '100%';
+  eliminarBtn.style.height = '30px';
   eliminarBtn.style.border = 'none';
   eliminarBtn.style.background = 'none';
   eliminarBtn.style.padding = '8px';
+  eliminarBtn.style.margin = '2px';
   eliminarBtn.onclick = (e) => {
     e.stopPropagation();
     menu.remove();
@@ -73,9 +77,11 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   copiarBtn.textContent = 'Copiar';
   copiarBtn.style.display = 'block';
   copiarBtn.style.width = '100%';
+  copiarBtn.style.height = '30px';
   copiarBtn.style.border = 'none';
   copiarBtn.style.background = 'none';
   copiarBtn.style.padding = '8px';
+  copiarBtn.style.margin = '2px';
   copiarBtn.onclick = (e) => {
     e.stopPropagation();
     menu.remove();
