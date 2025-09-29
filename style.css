@@ -201,7 +201,7 @@ button { cursor:pointer; }
 
 /* Timer */
 #timerContainer {
-  position:fixed; bottom:80px; left:50%; transform:translateX(-50%);
+  position:fixed; bottom:40px; left:50%; transform:translateX(-50%);
   background:none; color:#3498f7;
   font-size:4rem; font-weight:bold;
   padding:15px 30px; border-radius:100px;

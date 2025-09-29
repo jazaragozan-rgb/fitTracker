@@ -448,7 +448,7 @@ function renderizar() {
         if (isTick) {
           temporizador.textContent = '🕔';
           serieDiv.style.backgroundColor = '';
-          serieDiv.style.borderColor = '#4d4d4d';
+          serieDiv.style.borderColor = '#afafaf';
         } else {
           temporizador.textContent = '✔️';
           serieDiv.style.backgroundColor = '#d4edda';
