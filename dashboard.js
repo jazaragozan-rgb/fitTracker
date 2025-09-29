@@ -130,47 +130,55 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
 
   renderDias();
 
-  // ==================== Ejercicios completados con gráfico dinámico ====================
-  const card2 = document.createElement('div');
-  card2.className = 'dashboard-card';
-  card2.style.flex = '1 1 300px';
-  card2.style.padding = '12px';
-  card2.style.border = '1px solid #ccc';
-  card2.style.borderRadius = '8px';
-  card2.style.background = '#fff';
+// ==================== Ejercicios completados con gráfico dinámico ====================
+const card2 = document.createElement('div');
+card2.className = 'dashboard-card';
+card2.style.flex = '1 1 300px';
+card2.style.padding = '12px';
+card2.style.border = '1px solid #ccc';
+card2.style.borderRadius = '8px';
+card2.style.background = '#fff';
 
-  const tituloCard2 = document.createElement('h3');
-  tituloCard2.textContent = 'Progreso de ejercicios';
-  card2.appendChild(tituloCard2);
+const tituloCard2 = document.createElement('h3');
+tituloCard2.textContent = 'Progreso de ejercicios';
+card2.appendChild(tituloCard2);
 
-  // 👇 Selector de rango
-  const filtroDias = document.createElement('select');
-  [30, 60, 90].forEach(rango => {
-    const option = document.createElement('option');
-    option.value = rango;
-    option.textContent = `Últimos ${rango} días`;
-    filtroDias.appendChild(option);
-  });
-  card2.appendChild(filtroDias);
+// 👇 Selector de rango
+const filtroDias = document.createElement('select');
+[30, 60, 90].forEach(rango => {
+  const option = document.createElement('option');
+  option.value = rango;
+  option.textContent = `Últimos ${rango} días`;
+  filtroDias.appendChild(option);
+});
+card2.appendChild(filtroDias);
 
-  const scrollContainer = document.createElement('div');
-  scrollContainer.style.display = 'flex';
-  scrollContainer.style.overflowX = 'auto';
-  scrollContainer.style.gap = '8px';
-  scrollContainer.style.padding = '4px 0';
-  scrollContainer.style.borderBottom = '1px solid #ccc';
-  // Deshabilitar swipe global solo en el área de scroll
-  ['touchstart', 'touchmove', 'touchend'].forEach(eventName => {
-    scrollContainer.addEventListener(eventName, e => e.stopPropagation());
-  });
-  card2.appendChild(scrollContainer);
+const scrollContainer = document.createElement('div');
+scrollContainer.style.display = 'flex';
+scrollContainer.style.overflowX = 'auto';
+scrollContainer.style.gap = '8px';
+scrollContainer.style.padding = '4px 0';
+scrollContainer.style.borderBottom = '1px solid #ccc';
+// Deshabilitar swipe global solo en el área de scroll
+['touchstart', 'touchmove', 'touchend'].forEach(eventName => {
+  scrollContainer.addEventListener(eventName, e => e.stopPropagation());
+});
+card2.appendChild(scrollContainer);
 
-  const chartContainer = document.createElement('canvas');
-  chartContainer.id = 'ejerciciosChart';
-  chartContainer.style.width = '100%';
-  chartContainer.style.height = '150px';
-  chartContainer.style.display = 'block';
-  card2.appendChild(chartContainer);
+// ✅ Contenedor para el gráfico (controla la altura)
+const chartWrapper = document.createElement('div');
+chartWrapper.style.width = '100%';
+chartWrapper.style.height = '180px'; // Ajusta este valor según necesites
+chartWrapper.style.position = 'relative';
+
+const chartContainer = document.createElement('canvas');
+chartContainer.id = 'ejerciciosChart';
+chartContainer.style.width = '100%';
+chartContainer.style.height = '100%';
+chartWrapper.appendChild(chartContainer);
+
+card2.appendChild(chartWrapper);
+
 
   // ==================== Recolectar datos de ejercicios ====================
   const hoy = Date.now();
@@ -238,7 +246,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
             datasets: [{
               label: nombre + ' - Peso máximo (kg)',
               data,
-              borderColor: 'rgb(75, 192, 192)',
+              borderColor: '#3498f7',
               backgroundColor: 'rgba(75, 192, 192, 0.2)',
               tension: 0.3,
               fill: true,
@@ -266,7 +274,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
                   tooltipFormat: 'dd/MM',
                   displayFormats: { day: 'dd/MM' }
                 },
-                title: { display: true, text: 'Día' },
+                title: { display: false },
                 min: new Date(Date.now() - rangoDias * 24 * 60 * 60 * 1000), // 👈 dinámico
                 max: new Date()
               },
