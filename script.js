@@ -442,15 +442,15 @@ function renderizar() {
       descanso.addEventListener('input',e=>{serie.descanso=e.target.value;guardarDatos();});
 
       const temporizador=document.createElement('button');
-      temporizador.className="btn-timer"; temporizador.textContent='⏱';
+      temporizador.className="btn-timer"; temporizador.textContent='🕔';
       temporizador.addEventListener('click', () => {
-        const isTick = temporizador.textContent === '🗸';
+        const isTick = temporizador.textContent === '✔️';
         if (isTick) {
-          temporizador.textContent = '⏱';
+          temporizador.textContent = '🕔';
           serieDiv.style.backgroundColor = '';
           serieDiv.style.borderColor = '#4d4d4d';
         } else {
-          temporizador.textContent = '🗸';
+          temporizador.textContent = '✔️';
           serieDiv.style.backgroundColor = '#d4edda';
           serieDiv.style.borderColor = '#6fbe82ff';
         }

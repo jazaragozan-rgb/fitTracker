@@ -35,8 +35,8 @@ header {
   border-bottom: none;
   z-index: 20;
 }
-#tituloNivel { flex:1; text-align:center; font-size:1.8rem; font-weight: 500; color: #000000;}
-#menuTitulo { flex:1; text-align:center; font-size:1.8rem; font-weight: bold; color: #000000; margin-top: 10px;height: 40px;width: 298px; }
+#tituloNivel { flex:1; text-align:center; font-size:1.3rem; font-weight: 500; color: #000000;}
+#menuTitulo { flex:1; text-align:center; font-size:1.8rem; font-weight: bold; color: #414141; margin-top: 10px;height: 40px;width: 298px; }
 
 #liveEntrenamiento.btn-primary {   
   width: 300px;
@@ -47,7 +47,7 @@ header {
   cursor: pointer;
   z-index: 20;
   align-self: center;
-  margin: 4px;
+  margin-top: 15px;
 }
 
 .header-btn {
@@ -88,17 +88,18 @@ header {
   align-items: stretch;
   padding: 8px 12px;
   background: #ffffff;
-  height: 90px;
+  height: 80px;
   border-bottom: 1px solid #ccc;
   z-index: 30;
 }
 #subHeader h2 {
   flex: none;
   text-align: center;
-  font-size: 1.5rem;
-  color: #000000;
-  margin: 0 0 8px 0;
+  font-size: 1.3rem;
+  color: #414141;
+  margin: 0px;
   z-index: 31;
+  height: 30px;
 }
 
 /* Botones dentro del subheader */
@@ -137,14 +138,14 @@ button { cursor:pointer; }
 /* === List Items === */
 .list-item {
   display:flex; align-items:center; vertical-align: text-top; gap:8px;
-  background:#ffffff; padding:10px; margin: 20px;
-  border-radius:8px; cursor:pointer;box-shadow: 0px 2px 10px #b6b6b6;width: 95%; margin-left: 2.5%; height: 80px;
+  background:#ffffff; padding:10px; margin: 10px;border-top: #afafaf solid 1px;border-bottom: #afafaf solid 1px;
+  border-radius:8px; cursor:pointer; width: 95%; margin-left: 2.5%; height: 50px;
 }
 .list-item input { background:transparent; border:none; color:#414141; flex:1; font-size: 1.2rem;text-align: left;}
 
 .btn-opciones {
   background:none; border:none; cursor:pointer; font-size:1.5rem; color:#000000;
-  height:38px; border-radius:8px;margin: 10px;
+  height:38px; border-radius:8px;margin: 10px; margin-right: 20px;
 }
 
 .list-item input[type="date"] {
@@ -165,7 +166,7 @@ button { cursor:pointer; }
 }
 .series-header { color:#000000; font-weight:bold; margin-bottom:10px; }
 .series-container input { background:none; color:#000;border: none; margin-inline: 1px;margin-top: 5px; padding: 4px;gap: 1px; font-size: 1.2rem;font-weight: bold; }
-.serie-row { background:#ffffff;border-radius: 10px; margin-bottom:5px; width: 94%;height: 40px; border-bottom: 1px solid #4d4d4d;border-top: 1px solid #4d4d4d;}
+.serie-row { background:#ffffff;border-radius: 10px; margin-bottom:5px; width: 94%;height: 40px; border-bottom: 1px solid #afafaf;border-top: 1px solid #afafaf;}
 
 /* Botones de series */
 .series-container button, .list-item button, #headerButtons button {
@@ -211,9 +212,16 @@ button { cursor:pointer; }
 #timerContainer.timer-active { display: block; }
 #timerContainer.timer-warning { background:var(--danger); }
 
+.btn-timer {
+  background:none; border:none; cursor:pointer;
+  font-size:1.5rem; color:#000000;
+  width:45px; height:35px; border-radius:8px;
+  margin-top: 0px;
+}
+
 /* Footer */
 #footerNav {
-  position:fixed; bottom:0; left:0; width:100%; height:60px;
+  position:fixed; bottom:0; left:0; width:100%; height:40px;
   display:flex; justify-content:space-around; align-items:center;
   background:#ffffff; border-top:1px solid #ccc; z-index:100;
 }
@@ -228,7 +236,7 @@ button { cursor:pointer; }
 
 #menuButton {
   background: none;
-  color: #000000;
+  color: #414141;
   border: none;
   border-radius: 10px;
   cursor: pointer;
