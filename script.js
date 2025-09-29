@@ -458,7 +458,8 @@ function renderizar() {
       });
 
       const borrar=document.createElement('button');
-      borrar.className="btn-delete"; borrar.textContent='🗑';
+      borrar.className="btn-delete"; borrar.textContent='❌';
+      borrar.style.fontSize='0.7rem';
       borrar.addEventListener('click',()=> {
         mostrarConfirmacion("¿Desea borrar esta serie?",()=> {
           nivel.series.splice(idx,1); guardarDatos(); renderizar();
