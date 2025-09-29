@@ -875,7 +875,7 @@ function handleGesture() {
 
   if (direccion === "derecha" && rutaActual.length > 0) {
     retroceder = true; // swipe derecha funciona en todos los niveles
-  } else if (direccion === "izquierda" && (rutaActual.length === 0 || rutaActual.length === 1)) {
+  } else if (direccion === "izquierda" && (rutaActual.length === 0)) {
     let nivel = nivelActual();
     if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
       avanzar = true; // swipe izquierda solo en niveles 0 y 1
