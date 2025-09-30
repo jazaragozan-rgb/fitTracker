@@ -332,7 +332,7 @@ button { cursor:pointer; }
 }
 
 
-.nombre-mes { font-size: 20px !important; font-weight: bold; margin-bottom: 7px; }
+.nombre-mes { font-size: 18px !important; font-weight: bold; margin-bottom: 7px; }
 
 /* Estilo base de todos los botones de los días */
 .day-btn {
@@ -355,7 +355,7 @@ button { cursor:pointer; }
 /* Efecto al pasar el ratón */
 .day-btn:hover {
   background: #e6e6e6;
-  transform: scale(1.30);
+  transform: scale(1.20);
 }
 
 .day-btn .num {
@@ -379,6 +379,22 @@ button { cursor:pointer; }
 .day-btn.done .letra {
   font-size: 12px;
   color: #e0e0e0;
+}
+
+.btn-sesion {
+  background-color: #3498f7; /* Azul */
+  color: white;
+  font-size: 15px;
+  border: none;
+  padding: 0px;
+  border-radius: 8px;
+  margin: 2px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+  width: 120px; height: 25px;
+  display: inline-block;
+  box-shadow: 0 0 20px 10px rgba(52, 152, 247, 0.3);
+  outline: none;
 }
 
 /* Estilos para el botón de pausa */
