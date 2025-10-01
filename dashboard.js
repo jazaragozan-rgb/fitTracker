@@ -164,7 +164,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   tituloCard2.textContent = 'Progreso de ejercicios';
   card2.appendChild(tituloCard2);
 
-  // 👇 Selector de rango
+  // 👇 Selector de rango de días
   const filtroDias = document.createElement('select');
   [30, 60, 90].forEach(rango => {
     const option = document.createElement('option');
@@ -173,6 +173,16 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     filtroDias.appendChild(option);
   });
   card2.appendChild(filtroDias);
+
+  // 👇 Selector de tipo de dato
+  const filtroTipoDato = document.createElement('select');
+  ['Peso máximo', '1RM', 'Volumen'].forEach(tipo => {
+    const option = document.createElement('option');
+    option.value = tipo;
+    option.textContent = tipo;
+    filtroTipoDato.appendChild(option);
+  });
+  card2.appendChild(filtroTipoDato);
 
   const scrollContainer = document.createElement('div');
   scrollContainer.style.display = 'flex';
@@ -217,7 +227,8 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
                   ejerciciosTodos.push({
                     nombre: ejercicio.nombre,
                     fecha: fechaSubSesion,
-                    pesoMax
+                    pesoMax,
+                    series: ejercicio.series
                   });
                 }
               });
@@ -240,70 +251,74 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     ejDiv.style.whiteSpace = 'nowrap';
     ejDiv.style.cursor = 'pointer';
 
-    ejDiv.addEventListener('click', () => {
-      const datosEjercicio = ejerciciosTodos
-        .filter(e => e.nombre === nombre)
-        .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
-
-      const data = datosEjercicio.map(e => ({
-        x: new Date(e.fecha),
-        y: e.pesoMax
-      }));
-
-      if (window.Chart) {
-        if (chartContainer.chartInstance) chartContainer.chartInstance.destroy();
-
-        const ctx = chartContainer.getContext('2d');
-        const rangoDias = parseInt(filtroDias.value);
-        chartContainer.chartInstance = new Chart(ctx, {
-          type: 'line',
-          data: {
-            datasets: [{
-              label: nombre + ' - Peso máximo (kg)',
-              data,
-              borderColor: '#3498f7',
-              backgroundColor: 'rgba(75, 192, 192, 0.2)',
-              tension: 0.3,
-              fill: true,
-              pointRadius: 5
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-              legend: { display: true },
-              tooltip: {
-                callbacks: {
-                  label: function(context) {
-                    return `${context.dataset.label}: ${context.parsed.y} kg`;
-                  }
-                }
-              }
-            },
-            scales: {
-              x: {
-                type: 'time',
-                time: {
-                  unit: 'day',
-                  tooltipFormat: 'dd/MM',
-                  displayFormats: { day: 'dd/MM' }
-                },
-                title: { display: false },
-                min: new Date(Date.now() - rangoDias * 24 * 60 * 60 * 1000),
-                max: new Date()
-              },
-              y: {
-                title: { display: true, text: 'Peso máximo (kg)' }
-              }
-            }
-          }
-        });
-      }
-    });
+    ejDiv.addEventListener('click', () => generarGrafico(nombre));
 
     scrollContainer.appendChild(ejDiv);
   });
+
+  // ==================== Función para generar gráfico según tipo de dato ====================
+  function generarGrafico(nombre) {
+    const tipoDato = filtroTipoDato.value; // Peso máximo, 1RM, Volumen
+    const datosEjercicio = ejerciciosTodos
+      .filter(e => e.nombre === nombre)
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+
+    const data = datosEjercicio.map(e => {
+      let y = e.pesoMax; // default
+      if (tipoDato === '1RM') y = e.pesoMax * 1.05; // ejemplo
+      if (tipoDato === 'Volumen') y = e.series?.reduce((sum, s) => sum + (s.peso * s.reps || 0), 0) || 0;
+      return { x: new Date(e.fecha), y };
+    });
+
+    if (window.Chart) {
+      if (chartContainer.chartInstance) chartContainer.chartInstance.destroy();
+      const ctx = chartContainer.getContext('2d');
+      const rangoDias = parseInt(filtroDias.value);
+      chartContainer.chartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+          datasets: [{
+            label: `${nombre} - ${tipoDato}`,
+            data,
+            borderColor: '#3498f7',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.3,
+            fill: true,
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: true },
+            tooltip: {
+              callbacks: {
+                label: function(context) {
+                  return `${context.dataset.label}: ${context.parsed.y} ${tipoDato === 'Volumen' ? 'kg·reps' : 'kg'}`;
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: {
+                unit: 'day',
+                tooltipFormat: 'dd/MM',
+                displayFormats: { day: 'dd/MM' }
+              },
+              min: new Date(Date.now() - rangoDias * 24 * 60 * 60 * 1000),
+              max: new Date()
+            },
+            y: {
+              title: { display: true, text: tipoDato }
+            }
+          }
+        }
+      });
+    }
+  }
 
   if (nombresUnicos.length > 0) {
     setTimeout(() => {
@@ -312,9 +327,11 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   }
 
   filtroDias.addEventListener('change', () => {
-    if (scrollContainer.firstChild) {
-      scrollContainer.firstChild.click();
-    }
+    if (scrollContainer.firstChild) generarGrafico(scrollContainer.firstChild.textContent);
+  });
+
+  filtroTipoDato.addEventListener('change', () => {
+    if (scrollContainer.firstChild) generarGrafico(scrollContainer.firstChild.textContent);
   });
 
   dashboard.appendChild(card2);
