@@ -910,6 +910,7 @@ function aplicarTransicion(direccion, callback) {
 }
 
 function handleGesture() {
+  if (!contenido) return; // evita el error si se llama accidentalmente
   if (touchStartX === null || touchEndX === null) return;
   const deltaX = touchEndX - touchStartX;
   if (Math.abs(deltaX) < 50) {
@@ -974,9 +975,13 @@ function onTouchEnd(e) {
 }
 
 // Escuchar toda la pantalla
-document.body.addEventListener('touchstart', onTouchStart);
-document.body.addEventListener('touchmove', onTouchMove);
-document.body.addEventListener('touchend', onTouchEnd);
-document.body.addEventListener('mousedown', onTouchStart);
-document.body.addEventListener('mousemove', onTouchMove);
-document.body.addEventListener('mouseup', onTouchEnd);
+// ==================== Swipe solo si existe el contenido ====================
+if (document.getElementById('contenido')) {
+  document.body.addEventListener('touchstart', onTouchStart);
+  document.body.addEventListener('touchmove', onTouchMove);
+  document.body.addEventListener('touchend', onTouchEnd);
+  document.body.addEventListener('mousedown', onTouchStart);
+  document.body.addEventListener('mousemove', onTouchMove);
+  document.body.addEventListener('mouseup', onTouchEnd);
+}
+
