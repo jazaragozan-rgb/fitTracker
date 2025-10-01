@@ -213,6 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 
 // ==================== Firestore ====================
+// ==================== Firestore (mejoradas) ====================
 async function cargarDatosUsuario(uid) {
   if (!uid) return null;
   try {
@@ -221,11 +222,15 @@ async function cargarDatosUsuario(uid) {
     if (snap.exists()) {
       const d = snap.data();
       if (d && Array.isArray(d.datos)) return structuredClone(d.datos);
+      // documento existe pero estructura inesperada:
+      return { __exists: true, __datosInvalidos: true };
     }
+    // NO existe el documento
     return null;
   } catch (e) {
-    console.error("Error al cargar datos:", e);
-    return null;
+    // Error de lectura (p.e. red/offline). Devolver un objeto que indique error
+    console.error("Error al cargar datos (network/other):", e);
+    return { __error: true, __message: e?.message || String(e) };
   }
 }
 
@@ -234,13 +239,26 @@ async function guardarDatosUsuario(uid, datosActuales) {
     console.warn('[guardarDatosUsuario] uid o datosActuales inválidos:', uid, datosActuales);
     return;
   }
+
+  // Guard para evitar escribir el DATOS_POR_DEFECTO por accidente
+  const isDefault = JSON.stringify(datosActuales) === JSON.stringify(DATOS_POR_DEFECTO);
+  if (isDefault) {
+    console.warn('[guardarDatosUsuario] datos son los por defecto; evitar guardado automático para prevenir sobrescrituras');
+    // Si realmente quieres forzar la creación la primera vez, podrías permitirlo con confirmación o flag.
+    // return; // <-- descomenta para impedir guardar defaults
+  }
+
   try {
     const ref = doc(db, "usuarios", uid);
-    console.log('[guardarDatosUsuario] datos que se guardan en Firestore:', datosActuales);
-    await setDoc(ref, { datos: structuredClone(datosActuales) });
-    console.log('[guardarDatosUsuario] guardado exitoso en Firestore');
-  } catch (e) { console.error("Error al guardar datos:", e); }
+    console.log('[guardarDatosUsuario] escribiendo en Firestore (merge):', datosActuales);
+    // usar merge para no sobrescribir todo el documento
+    await setDoc(ref, { datos: structuredClone(datosActuales) }, { merge: true });
+    console.log('[guardarDatosUsuario] guardado exitoso en Firestore (merge)');
+  } catch (e) {
+    console.error("Error al guardar datos:", e);
+  }
 }
+
 
 let saveTimer = null;
 function guardarDatos() {
@@ -265,6 +283,8 @@ onAuthStateChanged(auth, async (user) => {
   hide($('welcome')); hide($('verify-hint'));
 
   if (user) {
+    console.log("✅ Usuario logueado con UID:", user.uid);
+    console.log("📧 Email:", user.email);
     hide(authSec); 
     show(appSec); 
     show(contenido); 
@@ -279,10 +299,40 @@ onAuthStateChanged(auth, async (user) => {
     show(menuTitulo);
 
     const datosRemotos = await cargarDatosUsuario(user.uid);
-    datos = datosRemotos && Array.isArray(datosRemotos) ? datosRemotos : structuredClone(DATOS_POR_DEFECTO);
-    console.log('[Datos cargados Firestore] datos:', datos);
-    if (!datosRemotos) await guardarDatosUsuario(user.uid, datos);
+
+    if (datosRemotos && datosRemotos.__error) {
+      // Hubo un error (network, permisos, etc.) -> NO sobrescribir remoto
+      console.warn('[onAuthStateChanged] Error al leer remoto; manteniendo datos locales y evitando sobreescritura:', datosRemotos.__message);
+      // Si hay datos locales en localStorage los cargamos (o pedimos reintentar luego)
+      datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
+      // opcional: mostrar aviso al usuario
+      // mostrarToast('No se pudieron cargar tus datos remotos. Trabajando en local.');
+    } else if (datosRemotos === null) {
+      // No existe documento remoto -> crear solo si tenemos datos no-default
+      const local = JSON.parse(localStorage.getItem("misDatos"));
+      datos = Array.isArray(local) ? local : structuredClone(DATOS_POR_DEFECTO);
+      // Solo crear en Firestore si local tiene contenido real (no defaults)
+      const soloDefaults = JSON.stringify(datos) === JSON.stringify(DATOS_POR_DEFECTO);
+      if (!soloDefaults) {
+        console.log('[onAuthStateChanged] creando documento remoto con datos locales');
+        await guardarDatosUsuario(user.uid, datos); // usar merge dentro de la función
+      } else {
+        console.log('[onAuthStateChanged] documento remoto no existe y datos locales son defaults; no crear para evitar sobrescritura');
+      }
+    } else if (Array.isArray(datosRemotos)) {
+      // Documento existe y tiene datos válidos -> usar remoto
+      datos = datosRemotos;
+      console.log('[Datos cargados Firestore] datos:', datos);
+    } else if (datosRemotos && datosRemotos.__datosInvalidos) {
+      // Documento existe pero estructura distinta -> decidir estrategia
+      console.warn('[onAuthStateChanged] documento remoto con estructura inesperada; se cargan datos locales por seguridad.');
+      datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
+    }
+
+    // NOTA: evitamos forzar guardar si hubo error de lectura
+    // render y resto
   } else {
+    // usuario no autenticado: cargar desde localStorage
     show(authSec); 
     hide(appSec); 
     hide(contenido); 
@@ -302,6 +352,7 @@ onAuthStateChanged(auth, async (user) => {
   rutaActual = [];
   renderizar();
 });
+
 
 // ==================== Renderizado ====================
 function renderizar() {
