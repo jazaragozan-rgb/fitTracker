@@ -706,9 +706,12 @@ serieDiv.appendChild(temporizador);
 // ==================== Crear índice con drag & drop ====================
 let dragItem = null;          // Índice que estamos moviendo
 let dragStartY = 0;           // Posición Y inicial
-let dragTimer = null;         // Timer de 2 segundos
+let dragStartX = 0;           // Posición X inicial
+let dragTimer = null;         // Timer de 500 ms
 let placeholder = null;       // Marcador visual mientras arrastras
-let dragOffsetY = 0; // agregar variable global o dentro del closure
+let dragOffsetY = 0;
+let dragging = false;
+const dragThreshold = 10;     // tolerancia mínima en px para diferenciar swipe/drag
 
 function crearIndice(item, index, nivel) {
   const div = document.createElement('div');
@@ -718,7 +721,7 @@ function crearIndice(item, index, nivel) {
   div.style.gap = '4px';
   div.style.flexWrap = 'nowrap';
   div.style.overflow = 'hidden';
-  div.setAttribute('draggable', 'true'); // Habilita drag nativo
+  div.setAttribute('draggable', 'true');
 
   if (!item.editando) item.editando = false;
 
@@ -744,6 +747,7 @@ function crearIndice(item, index, nivel) {
         renderizar();
       }
     });
+
     input.addEventListener('blur', () => {
       item.nombre = input.value || 'Sin nombre';
       item.editando = false; 
@@ -780,28 +784,58 @@ function crearIndice(item, index, nivel) {
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
 
-    let touchStartXInput = null;
-    let touchStartYInput = null;
+    let startX = null;
+    let startY = null;
 
     input.addEventListener('touchstart', e => {
       if (e.touches.length === 1) {
-        touchStartXInput = e.touches[0].clientX;
-        touchStartYInput = e.touches[0].clientY;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        dragging = false;
       }
     });
 
-    input.addEventListener('touchend', e => {
-      if (!touchStartXInput || !touchStartYInput) return;
-      const deltaX = e.changedTouches[0].clientX - touchStartXInput;
-      const deltaY = e.changedTouches[0].clientY - touchStartYInput;
-      const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-      if (distancia < 10) {
-        e.stopImmediatePropagation();
-        rutaActual.push(index);
-        renderizar();
+    input.addEventListener('touchmove', e => {
+      if (startX === null || startY === null) return;
+      const currentX = e.touches[0].clientX;
+      const currentY = e.touches[0].clientY;
+      const deltaX = currentX - startX;
+      const deltaY = currentY - startY;
+
+      if (!dragging && Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
+        // Iniciar drag vertical
+        dragging = true;
+        startDrag(e);
       }
-      touchStartXInput = null;
-      touchStartYInput = null;
+
+      if (dragging) {
+        dragMove(e);
+        e.preventDefault(); // solo bloquear scroll mientras arrastramos
+      }
+      // Horizontal → swipe, no interferir
+    });
+
+    input.addEventListener('touchend', e => {
+      if (!dragging) {
+        // Detectar swipe horizontal
+        const endX = e.changedTouches[0].clientX;
+        const endY = e.changedTouches[0].clientY;
+        const deltaX = endX - startX;
+        const deltaY = endY - startY;
+        const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+        if (distancia < 10) {
+          // click/tap
+          e.stopImmediatePropagation();
+          rutaActual.push(index);
+          renderizar();
+        }
+        // swipe horizontal se maneja fuera
+      }
+
+      // Reset
+      startX = null;
+      startY = null;
+      clearTimeout(dragTimer);
     });
 
     input.addEventListener('click', (e) => {
@@ -829,6 +863,7 @@ function crearIndice(item, index, nivel) {
       div.appendChild(fechaInput);
     }
 
+    // Botón de opciones
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
@@ -854,17 +889,17 @@ function crearIndice(item, index, nivel) {
 
     // ----------- DRAG & DROP -----------
     div.addEventListener('mousedown', startDrag);
-    div.addEventListener('touchstart', startDrag);
+    div.addEventListener('touchstart', e => { /* ya manejado en input */ });
 
     function startDrag(e) {
       e.stopPropagation();
       dragItem = { div, index, nivel };
 
-      const y = e.clientY || e.touches[0].clientY;
+      const y = e.clientY || (e.touches && e.touches[0].clientY);
+      const x = e.clientX || (e.touches && e.touches[0].clientX);
       const rect = div.getBoundingClientRect();
       dragStartY = y;
-
-      // Offset entre cursor y top del div
+      dragStartX = x;
       dragOffsetY = y - rect.top;
 
       dragTimer = setTimeout(() => {
@@ -877,8 +912,6 @@ function crearIndice(item, index, nivel) {
         div.style.zIndex = '1000';
         div.style.width = div.offsetWidth + 'px';
         div.style.pointerEvents = 'none';
-
-        // Posicionar el div donde estaba exactamente
         div.style.top = rect.top + 'px';
         div.style.left = rect.left + 'px';
 
@@ -894,8 +927,6 @@ function crearIndice(item, index, nivel) {
     function dragMove(e) {
       if (!dragItem) return;
       const y = e.clientY || e.touches[0].clientY;
-
-      // Aplicar offset para que el div siga exactamente el cursor
       dragItem.div.style.top = (y - dragOffsetY) + 'px';
 
       const siblings = Array.from(placeholder.parentNode.children).filter(c => c !== dragItem.div && c !== placeholder);
@@ -912,16 +943,15 @@ function crearIndice(item, index, nivel) {
       clearTimeout(dragTimer);
       if (!dragItem) return;
 
-      placeholder.parentNode.insertBefore(div, placeholder);
-      div.style.position = '';
-      div.style.zIndex = '';
-      div.style.width = '';
-      div.style.pointerEvents = '';
+      placeholder.parentNode.insertBefore(dragItem.div, placeholder);
+      dragItem.div.style.position = '';
+      dragItem.div.style.zIndex = '';
+      dragItem.div.style.width = '';
+      dragItem.div.style.pointerEvents = '';
       placeholder.remove();
       placeholder = null;
 
-      // Reordenar array
-      const newIndex = Array.from(div.parentNode.children).indexOf(div);
+      const newIndex = Array.from(dragItem.div.parentNode.children).indexOf(dragItem.div);
       const arr = dragItem.nivel.hijos;
       arr.splice(newIndex, 0, arr.splice(dragItem.index, 1)[0]);
       guardarDatos();
@@ -932,6 +962,7 @@ function crearIndice(item, index, nivel) {
       document.removeEventListener('touchmove', dragMove);
       document.removeEventListener('touchend', dragEnd);
       dragItem = null;
+      dragging = false;
     }
 
     div.addEventListener('mouseup', () => clearTimeout(dragTimer));
@@ -940,6 +971,7 @@ function crearIndice(item, index, nivel) {
 
   return div;
 }
+
 
 
 // ==================== Eventos ====================
