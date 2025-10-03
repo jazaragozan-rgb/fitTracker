@@ -478,19 +478,19 @@ function renderizar() {
 
       const reps=document.createElement('input');
       reps.placeholder='Reps'; reps.value=serie.reps||'';
-      reps.addEventListener('input',e=>{serie.reps=e.target.value;guardarDatos();});
+      reps.addEventListener('blur',e=>{serie.reps=e.target.value;guardarDatos();renderizar();});
 
       const peso=document.createElement('input');
       peso.placeholder='Peso'; peso.value=serie.peso||'';
-      peso.addEventListener('input',e=>{serie.peso=e.target.value;guardarDatos();});
+      peso.addEventListener('blur',e=>{serie.peso=e.target.value;guardarDatos();renderizar();});
 
       const rir=document.createElement('input');
       rir.placeholder='RIR'; rir.value=serie.rir||'';
-      rir.addEventListener('input',e=>{serie.rir=e.target.value;guardarDatos();});
+      rir.addEventListener('blur',e=>{serie.rir=e.target.value;guardarDatos();renderizar();});
 
       const descanso=document.createElement('input');
       descanso.placeholder='Descanso'; descanso.value=serie.descanso||'';
-      descanso.addEventListener('input',e=>{serie.descanso=e.target.value;guardarDatos();});
+      descanso.addEventListener('blur',e=>{serie.descanso=e.target.value;guardarDatos();renderizar();});
 
 // ================== Temporizador con estado guardado ==================
 const temporizador = document.createElement('button');
