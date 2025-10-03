@@ -812,6 +812,7 @@ function crearIndice(item, index, nivel) {
       const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
 
       if (distancia < 10) { // Umbral: tap
+        e.stopImmediatePropagation();
         rutaActual.push(index);
         renderizar();
       }
@@ -821,6 +822,7 @@ function crearIndice(item, index, nivel) {
     });
 
     input.addEventListener('click', () => {
+      e.stopImmediatePropagation();
       rutaActual.push(index);
       renderizar();
     });
