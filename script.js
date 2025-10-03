@@ -492,21 +492,41 @@ function renderizar() {
       descanso.placeholder='Descanso'; descanso.value=serie.descanso||'';
       descanso.addEventListener('input',e=>{serie.descanso=e.target.value;guardarDatos();});
 
-      const temporizador=document.createElement('button');
-      temporizador.className="btn-timer"; temporizador.textContent='🕔';
-      temporizador.addEventListener('click', () => {
-        const isTick = temporizador.textContent === '✔️';
-        if (isTick) {
-          temporizador.textContent = '🕔';
-          serieDiv.style.backgroundColor = '';
-          serieDiv.style.borderColor = '#afafaf';
-        } else {
-          temporizador.textContent = '✔️';
-          serieDiv.style.backgroundColor = '#d4edda';
-          serieDiv.style.borderColor = '#6fbe82ff';
-        }
-        if (!isTick) iniciarTimer(serie.descanso);
-      });
+// ================== Temporizador con estado guardado ==================
+const temporizador = document.createElement('button');
+temporizador.className = "btn-timer";
+
+// Mostrar estado guardado (✔️ o 🕔)
+if (serie.completada) {
+  temporizador.textContent = '✔️';
+  serieDiv.style.backgroundColor = '#d4edda';
+  serieDiv.style.borderColor = '#6fbe82ff';
+} else {
+  temporizador.textContent = '🕔';
+  serieDiv.style.backgroundColor = '';
+  serieDiv.style.borderColor = '#afafaf';
+}
+
+temporizador.addEventListener('click', () => {
+  serie.completada = !serie.completada; // alternar estado
+
+  if (serie.completada) {
+    temporizador.textContent = '✔️';
+    serieDiv.style.backgroundColor = '#d4edda';
+    serieDiv.style.borderColor = '#6fbe82ff';
+    if (serie.descanso) iniciarTimer(serie.descanso); // 👈 solo si tiene descanso
+  } else {
+    temporizador.textContent = '🕔';
+    serieDiv.style.backgroundColor = '';
+    serieDiv.style.borderColor = '#afafaf';
+  }
+
+  guardarDatos(); // 🔥 se guarda en Firestore y en localStorage
+});
+
+serieDiv.appendChild(temporizador);
+
+
 
       const borrar=document.createElement('button');
       borrar.className="btn-delete"; borrar.textContent='❌';
@@ -858,7 +878,7 @@ function crearIndice(item, index, nivel) {
             });
           },
           onCopiar: () => {
-            window.itemCopiado = { nivel: rutaActual.length, datos: structuredClone(item) };
+            return { nivel: rutaActual.length, datos: structuredClone(item) };
           }
         });
       });

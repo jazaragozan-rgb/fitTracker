@@ -1,3 +1,20 @@
+// Función auxiliar: resetea todas las series a no completadas (completada = false)
+function resetCompletadas(nodo) {
+  if (!nodo) return;
+  // Si es array, recorrer
+  if (Array.isArray(nodo)) {
+    nodo.forEach(n => resetCompletadas(n));
+    return;
+  }
+  // nodo es objeto: mirar series e hijos
+  if (Array.isArray(nodo.series)) {
+    nodo.series.forEach(s => { s.completada = false; });
+  }
+  if (Array.isArray(nodo.hijos)) {
+    nodo.hijos.forEach(h => resetCompletadas(h));
+  }
+}
+
 // Muestra el menú de opciones (Editar, Eliminar, Copiar) como modal flotante
 export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCopiar }) {
   let anterior = document.getElementById('modalMenuOpciones');
@@ -20,34 +37,24 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   if (anchorElement) {
     const rect = anchorElement.getBoundingClientRect();
     menu.style.top = (rect.bottom + window.scrollY) + 'px';
-
-  // Establecer top
-  menu.style.top = (rect.bottom + window.scrollY) + 'px';
-
-  // Posicionar left usando un truco: calcular ancho sin necesidad de setTimeout
-  menu.style.visibility = 'hidden'; // ocultamos mientras calculamos
-  document.body.appendChild(menu); // añadir al DOM para medir offsetWidth
-  menu.style.left = (rect.right + window.scrollX - menu.offsetWidth) + 'px';
-  menu.style.visibility = 'visible'; // mostrar ya en posición correcta
-  
+    menu.style.visibility = 'hidden';
+    document.body.appendChild(menu);
+    menu.style.left = (rect.right + window.scrollX - menu.offsetWidth) + 'px';
+    menu.style.visibility = 'visible';
   } else {
     menu.style.top = '40px';
     menu.style.right = '10px';
     document.body.appendChild(menu);
   }
-  // Alinear textos a la izquierda
   menu.style.textAlign = 'left';
+
+  // Estilos comunes para botones
+  const btnStyle = { display:'block', width:'100%', height:'30px', border:'none', background:'none', padding:'8px', margin:'2px', textAlign:'left' };
 
   // Editar
   const editarBtn = document.createElement('button');
   editarBtn.textContent = 'Editar';
-  editarBtn.style.display = 'block';
-  editarBtn.style.width = '100%';
-  editarBtn.style.height = '30px';
-  editarBtn.style.border = 'none';
-  editarBtn.style.background = 'none';
-  editarBtn.style.padding = '8px';
-  editarBtn.style.margin = '2px';
+  Object.assign(editarBtn.style, btnStyle);
   editarBtn.onclick = (e) => {
     e.stopPropagation();
     menu.remove();
@@ -58,13 +65,7 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   // Eliminar
   const eliminarBtn = document.createElement('button');
   eliminarBtn.textContent = 'Eliminar';
-  eliminarBtn.style.display = 'block';
-  eliminarBtn.style.width = '100%';
-  eliminarBtn.style.height = '30px';
-  eliminarBtn.style.border = 'none';
-  eliminarBtn.style.background = 'none';
-  eliminarBtn.style.padding = '8px';
-  eliminarBtn.style.margin = '2px';
+  Object.assign(eliminarBtn.style, btnStyle);
   eliminarBtn.onclick = (e) => {
     e.stopPropagation();
     menu.remove();
@@ -72,20 +73,50 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
   };
   menu.appendChild(eliminarBtn);
 
-  // Copiar
+  // Copiar (robusta: maneja retorno directo, promise o asignación a window.itemCopiado)
   const copiarBtn = document.createElement('button');
   copiarBtn.textContent = 'Copiar';
-  copiarBtn.style.display = 'block';
-  copiarBtn.style.width = '100%';
-  copiarBtn.style.height = '30px';
-  copiarBtn.style.border = 'none';
-  copiarBtn.style.background = 'none';
-  copiarBtn.style.padding = '8px';
-  copiarBtn.style.margin = '2px';
-  copiarBtn.onclick = (e) => {
+  Object.assign(copiarBtn.style, btnStyle);
+  copiarBtn.onclick = async (e) => {
     e.stopPropagation();
     menu.remove();
-    if (onCopiar) onCopiar();
+    if (!onCopiar) return;
+
+    try {
+      const ret = onCopiar(); // puede devolver algo o asignar window.itemCopiado
+      const resolved = (ret && typeof ret.then === 'function') ? await ret : ret;
+
+      // prioridad: lo que retorne la función, si no -> window.itemCopiado
+      let resultado = resolved || window.itemCopiado || null;
+
+      if (!resultado) {
+        // nada devuelto ni window.itemCopiado definido: nada que resetear
+        return;
+      }
+
+      // Normalizar: resultado puede ser { nivel, datos } o puede ser directamente los datos.
+      let datosCopiados;
+      if (resultado && resultado.datos) datosCopiados = resultado.datos;
+      else datosCopiados = resultado;
+
+      if (!datosCopiados) return;
+
+      // Resetear recursivamente las series dentro de la copia
+      resetCompletadas(datosCopiados);
+
+      // Guardar la copia reseteada en window.itemCopiado (forma consistente)
+      if (resultado && resultado.datos) {
+        // resultado ya tenía la forma {nivel, datos}
+        resultado.datos = datosCopiados;
+        window.itemCopiado = resultado;
+      } else {
+        // no tenía nivel, intentar mantener nivel anterior si existía
+        const nivelPrev = window.itemCopiado ? window.itemCopiado.nivel : undefined;
+        window.itemCopiado = { nivel: nivelPrev, datos: datosCopiados };
+      }
+    } catch (err) {
+      console.error('Error en onCopiar:', err);
+    }
   };
   menu.appendChild(copiarBtn);
 
@@ -101,6 +132,8 @@ export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCop
 
   document.body.appendChild(menu);
 }
+
+
 // modals.js
 export function mostrarSelectorMarca(serie, index, onSelect) {
   let anterior = document.getElementById('modalSelector');
