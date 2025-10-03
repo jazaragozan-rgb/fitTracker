@@ -703,7 +703,13 @@ serieDiv.appendChild(temporizador);
 
 
 
-// ==================== Crear índice ====================
+// ==================== Crear índice con drag & drop ====================
+let dragItem = null;          // Índice que estamos moviendo
+let dragStartY = 0;           // Posición Y inicial
+let dragTimer = null;         // Timer de 2 segundos
+let placeholder = null;       // Marcador visual mientras arrastras
+let dragOffsetY = 0; // agregar variable global o dentro del closure
+
 function crearIndice(item, index, nivel) {
   const div = document.createElement('div');
   div.className = 'list-item';
@@ -712,36 +718,23 @@ function crearIndice(item, index, nivel) {
   div.style.gap = '4px';
   div.style.flexWrap = 'nowrap';
   div.style.overflow = 'hidden';
+  div.setAttribute('draggable', 'true'); // Habilita drag nativo
 
   if (!item.editando) item.editando = false;
 
+  // ----------- MODO EDICIÓN -----------
   if (item.editando) {
-    // ----------- MODO EDICIÓN -----------
     const input = document.createElement('input');
     input.value = item.nombre || '';
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
 
-    requestAnimationFrame(() => {
-      setTimeout(() => { input.focus(); input.select(); }, 0);
-    });
+    requestAnimationFrame(() => setTimeout(() => { input.focus(); input.select(); }, 0));
 
     ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
-      input.addEventListener(evt, e => { e.stopPropagation(); })
+      input.addEventListener(evt, e => e.stopPropagation())
     );
-
-    div.addEventListener('click', function(e) {
-      if (e.target.closest('input, textarea, button, select')) return;
-      e.stopImmediatePropagation();
-      e.preventDefault();
-    });
-
-    div.addEventListener('touchstart', function(e) {
-      if (e.target.closest('input, textarea, button, select')) return;
-      e.stopImmediatePropagation();
-      e.preventDefault();
-    });
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
@@ -757,38 +750,30 @@ function crearIndice(item, index, nivel) {
       guardarDatos(); 
       renderizar();
     });
+
     div.appendChild(input);
 
-    // 👉 Nivel 3: input fecha
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
-
       ['pointerdown','mousedown','touchstart','click'].forEach(evt =>
-        fechaInput.addEventListener(evt, e => { e.stopPropagation(); })
+        fechaInput.addEventListener(evt, e => e.stopPropagation())
       );
-
       fechaInput.addEventListener('input', async e => {
-        // Actualizar en memoria
         nivel.hijos[index].fecha = e.target.value;
-        guardarDatos(); // para localStorage
-
-        // Guardar inmediatamente en Firestore
+        guardarDatos();
         const user = auth.currentUser;
         if (user) {
-          try {
-            await guardarDatosUsuario(user.uid, datos);
-            console.log('[Firestore] fecha actualizada nivel 3:', e.target.value);
-          } catch (err) { console.error(err); }
+          try { await guardarDatosUsuario(user.uid, datos); } 
+          catch(err){ console.error(err); }
         }
       });
-
       div.appendChild(fechaInput);
     }
-
-  } else {
-    // ----------- MODO VISUAL -----------
+  } 
+  // ----------- MODO VISUAL -----------
+  else {
     const input = document.createElement('input');
     input.value = item.nombre;
     input.disabled = true;
@@ -810,18 +795,16 @@ function crearIndice(item, index, nivel) {
       const deltaX = e.changedTouches[0].clientX - touchStartXInput;
       const deltaY = e.changedTouches[0].clientY - touchStartYInput;
       const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-
-      if (distancia < 10) { // Umbral: tap
+      if (distancia < 10) {
         e.stopImmediatePropagation();
         rutaActual.push(index);
         renderizar();
       }
-
       touchStartXInput = null;
       touchStartYInput = null;
     });
 
-    input.addEventListener('click', () => {
+    input.addEventListener('click', (e) => {
       e.stopImmediatePropagation();
       rutaActual.push(index);
       renderizar();
@@ -829,30 +812,23 @@ function crearIndice(item, index, nivel) {
 
     div.appendChild(input);
 
-    // Nivel 3: input fecha visual
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
-
       ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
-
       fechaInput.addEventListener('change', async e => {
         nivel.hijos[index].fecha = e.target.value;
         guardarDatos();
         const user = auth.currentUser;
         if (user) {
-          try {
-            await guardarDatosUsuario(user.uid, datos);
-            console.log('[Firestore] fecha actualizada nivel 3 (visual):', e.target.value);
-          } catch(err){ console.error(err); }
+          try { await guardarDatosUsuario(user.uid, datos); } 
+          catch(err){ console.error(err); }
         }
       });
-
       div.appendChild(fechaInput);
     }
 
-    // Botón opciones (niveles 1-4)
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
@@ -867,31 +843,103 @@ function crearIndice(item, index, nivel) {
         document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
         mostrarMenuOpciones({
           anchorElement: opcionesBtn,
-          onEditar: () => {
-            item.editando = true;
-            guardarDatos();
-            renderizar();
-          },
-          onEliminar: () => {
-            mostrarConfirmacion(`¿Desea borrar "${item.nombre}"?`, () => {
-              nivel.hijos.splice(index, 1);
-              guardarDatos();
-              renderizar();
-            });
-          },
-          onCopiar: () => {
-            return { nivel: rutaActual.length, datos: structuredClone(item) };
-          }
+          onEditar: () => { item.editando = true; guardarDatos(); renderizar(); },
+          onEliminar: () => { mostrarConfirmacion(`¿Desea borrar "${item.nombre}"?`, () => { nivel.hijos.splice(index, 1); guardarDatos(); renderizar(); }); },
+          onCopiar: () => { return { nivel: rutaActual.length, datos: structuredClone(item) }; }
         });
       });
 
       div.appendChild(opcionesBtn);
     }
+
+    // ----------- DRAG & DROP -----------
+    div.addEventListener('mousedown', startDrag);
+    div.addEventListener('touchstart', startDrag);
+
+    function startDrag(e) {
+      e.stopPropagation();
+      dragItem = { div, index, nivel };
+
+      const y = e.clientY || e.touches[0].clientY;
+      const rect = div.getBoundingClientRect();
+      dragStartY = y;
+
+      // Offset entre cursor y top del div
+      dragOffsetY = y - rect.top;
+
+      dragTimer = setTimeout(() => {
+        placeholder = document.createElement('div');
+        placeholder.className = 'drag-placeholder';
+        placeholder.style.height = div.offsetHeight + 'px';
+        div.parentNode.insertBefore(placeholder, div.nextSibling);
+
+        div.style.position = 'absolute';
+        div.style.zIndex = '1000';
+        div.style.width = div.offsetWidth + 'px';
+        div.style.pointerEvents = 'none';
+
+        // Posicionar el div donde estaba exactamente
+        div.style.top = rect.top + 'px';
+        div.style.left = rect.left + 'px';
+
+        document.body.appendChild(div);
+
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('touchmove', dragMove);
+        document.addEventListener('touchend', dragEnd);
+      }, 500);
+    }
+
+    function dragMove(e) {
+      if (!dragItem) return;
+      const y = e.clientY || e.touches[0].clientY;
+
+      // Aplicar offset para que el div siga exactamente el cursor
+      dragItem.div.style.top = (y - dragOffsetY) + 'px';
+
+      const siblings = Array.from(placeholder.parentNode.children).filter(c => c !== dragItem.div && c !== placeholder);
+      for (let sib of siblings) {
+        const rect = sib.getBoundingClientRect();
+        if (y > rect.top && y < rect.bottom) {
+          sib.parentNode.insertBefore(placeholder, y < rect.top + rect.height/2 ? sib : sib.nextSibling);
+          break;
+        }
+      }
+    }
+
+    function dragEnd(e) {
+      clearTimeout(dragTimer);
+      if (!dragItem) return;
+
+      placeholder.parentNode.insertBefore(div, placeholder);
+      div.style.position = '';
+      div.style.zIndex = '';
+      div.style.width = '';
+      div.style.pointerEvents = '';
+      placeholder.remove();
+      placeholder = null;
+
+      // Reordenar array
+      const newIndex = Array.from(div.parentNode.children).indexOf(div);
+      const arr = dragItem.nivel.hijos;
+      arr.splice(newIndex, 0, arr.splice(dragItem.index, 1)[0]);
+      guardarDatos();
+      renderizar();
+
+      document.removeEventListener('mousemove', dragMove);
+      document.removeEventListener('mouseup', dragEnd);
+      document.removeEventListener('touchmove', dragMove);
+      document.removeEventListener('touchend', dragEnd);
+      dragItem = null;
+    }
+
+    div.addEventListener('mouseup', () => clearTimeout(dragTimer));
+    div.addEventListener('touchend', () => clearTimeout(dragTimer));
   }
 
   return div;
 }
-
 
 
 // ==================== Eventos ====================
