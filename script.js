@@ -787,33 +787,32 @@ function crearIndice(item, index, nivel) {
     let startX = null;
     let startY = null;
 
-    input.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        dragging = false;
-      }
-    });
-
     input.addEventListener('touchmove', e => {
       if (startX === null || startY === null) return;
+
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
       const deltaX = currentX - startX;
       const deltaY = currentY - startY;
 
-      if (!dragging && Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
-        // Iniciar drag vertical
-        dragging = true;
-        startDrag(e);
+      // Detectar gesto dominante
+      if (!dragging) {
+        if (Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
+          // 👉 Iniciar drag vertical
+          dragging = true;
+          startDrag(e);
+        } else if (Math.abs(deltaX) > Math.abs(deltaY) + dragThreshold) {
+          // 👉 Swipe horizontal, NO bloquear
+          return; // dejar que siga su curso
+        }
       }
 
       if (dragging) {
         dragMove(e);
-        e.preventDefault(); // solo bloquear scroll mientras arrastramos
+        e.preventDefault(); // ❗ solo bloquear scroll si estamos en drag vertical
       }
-      // Horizontal → swipe, no interferir
     });
+
 
     input.addEventListener('touchend', e => {
       if (!dragging) {
