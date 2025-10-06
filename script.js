@@ -986,24 +986,25 @@ function crearIndice(item, index, nivel) {
 let touchStartX = null;
 let touchEndX = null;
 let isMouseDown = false;
+let isSwiping = false;
+
+const umbral = 50; // distancia mínima en px para considerar swipe válido
+const contenido = document.getElementById("contenido");
 
 function aplicarTransicion(direccion, callback) {
   if (!contenido) return;
 
-  // mover nivel actual fuera
   contenido.style.transition = "transform 0.3s ease, opacity 0.3s ease";
   contenido.style.transform = direccion === "izquierda" ? "translateX(-100%)" : "translateX(100%)";
   contenido.style.opacity = "0";
 
   setTimeout(() => {
-    callback(); // cambia el nivel
+    callback(); // cambia nivel
 
-    // colocar siguiente nivel fuera de pantalla en lado opuesto
     contenido.style.transition = "none";
     contenido.style.transform = direccion === "izquierda" ? "translateX(100%)" : "translateX(-100%)";
     contenido.style.opacity = "1";
 
-    // animar entrada del siguiente nivel
     requestAnimationFrame(() => {
       contenido.style.transition = "transform 0.3s ease, opacity 0.3s ease";
       contenido.style.transform = "translateX(0)";
@@ -1012,62 +1013,71 @@ function aplicarTransicion(direccion, callback) {
 }
 
 function handleGesture() {
-  if (!contenido) return; // evita el error si se llama accidentalmente
+  if (!contenido) return;
   if (touchStartX === null || touchEndX === null) return;
+
   const deltaX = touchEndX - touchStartX;
-  if (Math.abs(deltaX) < 50) {
-    // volver a la posición original si el swipe fue corto
-    contenido.style.transition = "transform 0.2s ease";
+
+  if (Math.abs(deltaX) < umbral) {
+    // swipe demasiado corto → rebote al origen
+    contenido.style.transition = "transform 0.4s cubic-bezier(0.25, 1.5, 0.5, 1)";
     contenido.style.transform = "translateX(0)";
-    touchStartX = null;
-    touchEndX = null;
-    isMouseDown = false;
-    return;
-  }
+  } else {
+    const direccion = deltaX > 0 ? "derecha" : "izquierda";
+    let avanzar = false, retroceder = false;
 
-  const direccion = deltaX > 0 ? "derecha" : "izquierda";
-  let avanzar = false, retroceder = false;
-
-  if (direccion === "derecha" && rutaActual.length > 0) {
-    retroceder = true; // swipe derecha funciona en todos los niveles
-  } else if (direccion === "izquierda" && (rutaActual.length === 0)) {
-    let nivel = nivelActual();
-    if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
-      avanzar = true; // swipe izquierda solo en niveles 0 y 1
+    if (direccion === "derecha" && rutaActual.length > 0) {
+      retroceder = true;
+    } else if (direccion === "izquierda" && (rutaActual.length === 0)) {
+      let nivel = nivelActual();
+      if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
+        avanzar = true;
+      }
     }
-  }
 
-  if (avanzar || retroceder) {
-    aplicarTransicion(direccion, () => {
-      if (retroceder) rutaActual.pop();
-      if (avanzar) rutaActual.push(0);
-      renderizar();
-    });
+    if (avanzar || retroceder) {
+      aplicarTransicion(direccion, () => {
+        if (retroceder) rutaActual.pop();
+        if (avanzar) rutaActual.push(0);
+        renderizar();
+      });
+    } else {
+      // si no toca avanzar/retroceder → rebote igual
+      contenido.style.transition = "transform 0.4s cubic-bezier(0.25, 1.5, 0.5, 1)";
+      contenido.style.transform = "translateX(0)";
+    }
   }
 
   touchStartX = null;
   touchEndX = null;
   isMouseDown = false;
+  isSwiping = false;
 }
 
 function onTouchStart(e) {
-  if (e.touches) {
-    touchStartX = e.touches[0].clientX;
-  } else {
-    isMouseDown = true;
-    touchStartX = e.clientX;
-  }
+  if (!contenido) return;
+  touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
+  isMouseDown = !e.touches;
+  isSwiping = true;
+
+  contenido.style.transition = "none"; // quitar transición para arrastre libre
 }
+
 function onTouchMove(e) {
-  if (isMouseDown && e.clientX !== undefined) {
-    touchEndX = e.clientX;
-    // mover contenido en tiempo real mientras arrastras
-    const deltaX = touchEndX - touchStartX;
-    contenido.style.transition = "none";
-    contenido.style.transform = `translateX(${deltaX}px)`;
-  }
+  if (!isSwiping || !contenido) return;
+
+  const currentX = e.touches ? e.touches[0].clientX : e.clientX;
+  touchEndX = currentX;
+
+  const deltaX = touchEndX - touchStartX;
+
+  // mover el contenido en tiempo real
+  contenido.style.transform = `translateX(${deltaX}px)`;
 }
+
 function onTouchEnd(e) {
+  if (!isSwiping) return;
+
   if (e.changedTouches) {
     touchEndX = e.changedTouches[0].clientX;
   } else if (isMouseDown) {
@@ -1076,14 +1086,15 @@ function onTouchEnd(e) {
   handleGesture();
 }
 
-// Escuchar toda la pantalla
-// ==================== Swipe solo si existe el contenido ====================
-if (document.getElementById('contenido')) {
-  document.body.addEventListener('touchstart', onTouchStart);
-  document.body.addEventListener('touchmove', onTouchMove);
-  document.body.addEventListener('touchend', onTouchEnd);
-  document.body.addEventListener('mousedown', onTouchStart);
-  document.body.addEventListener('mousemove', onTouchMove);
-  document.body.addEventListener('mouseup', onTouchEnd);
+// Solo aplicar swipe en el contenido principal, no en header/footer
+if (contenido) {
+  contenido.addEventListener('touchstart', onTouchStart);
+  contenido.addEventListener('touchmove', onTouchMove);
+  contenido.addEventListener('touchend', onTouchEnd);
+
+  contenido.addEventListener('mousedown', onTouchStart);
+  contenido.addEventListener('mousemove', onTouchMove);
+  contenido.addEventListener('mouseup', onTouchEnd);
 }
+
 
