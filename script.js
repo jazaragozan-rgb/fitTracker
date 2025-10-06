@@ -989,7 +989,6 @@ let isMouseDown = false;
 let isSwiping = false;
 
 const umbral = 50; // distancia mínima en px para considerar swipe válido
-const contenido = document.getElementById("contenido");
 
 function aplicarTransicion(direccion, callback) {
   if (!contenido) return;
@@ -1053,6 +1052,7 @@ function handleGesture() {
   isMouseDown = false;
   isSwiping = false;
 }
+
 
 function onTouchStart(e) {
   if (!contenido) return;
