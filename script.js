@@ -787,32 +787,33 @@ function crearIndice(item, index, nivel) {
     let startX = null;
     let startY = null;
 
+    input.addEventListener('touchstart', e => {
+      if (e.touches.length === 1) {
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        dragging = false;
+      }
+    });
+
     input.addEventListener('touchmove', e => {
       if (startX === null || startY === null) return;
-
       const currentX = e.touches[0].clientX;
       const currentY = e.touches[0].clientY;
       const deltaX = currentX - startX;
       const deltaY = currentY - startY;
 
-      // Detectar gesto dominante
-      if (!dragging) {
-        if (Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
-          // 👉 Iniciar drag vertical
-          dragging = true;
-          startDrag(e);
-        } else if (Math.abs(deltaX) > Math.abs(deltaY) + dragThreshold) {
-          // 👉 Swipe horizontal, NO bloquear
-          return; // dejar que siga su curso
-        }
+      if (!dragging && Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
+        // Iniciar drag vertical
+        dragging = true;
+        startDrag(e);
       }
 
       if (dragging) {
         dragMove(e);
-        e.preventDefault(); // ❗ solo bloquear scroll si estamos en drag vertical
+        e.preventDefault(); // solo bloquear scroll mientras arrastramos
       }
+      // Horizontal → swipe, no interferir
     });
-
 
     input.addEventListener('touchend', e => {
       if (!dragging) {
@@ -981,119 +982,151 @@ function crearIndice(item, index, nivel) {
 // ==================== Init ====================
 // (Eliminado: ahora la inicialización está dentro de DOMContentLoaded)
 
-// Swipe para navegación entre niveles (solo contenido)
 let touchStartX = null;
 let touchEndX = null;
 let isMouseDown = false;
-let isSwiping = false;
+let duracion = 300;
+let clon = null;
+let direccionSwipe = null;
 
-const umbral = 50; // distancia mínima en px para considerar swipe válido
-
-function aplicarTransicion(direccion, callback) {
-  if (!contenido) return;
-
-  contenido.style.transition = "transform 0.3s ease, opacity 0.3s ease";
-  contenido.style.transform = direccion === "izquierda" ? "translateX(-100%)" : "translateX(100%)";
-  contenido.style.opacity = "0";
-
-  setTimeout(() => {
-    callback(); // cambia nivel
-
-    contenido.style.transition = "none";
-    contenido.style.transform = direccion === "izquierda" ? "translateX(100%)" : "translateX(-100%)";
-    contenido.style.opacity = "1";
-
-    requestAnimationFrame(() => {
-      contenido.style.transition = "transform 0.3s ease, opacity 0.3s ease";
-      contenido.style.transform = "translateX(0)";
-    });
-  }, 300);
-}
-
-function handleGesture() {
-  if (!contenido) return;
-  if (touchStartX === null || touchEndX === null) return;
-
-  const deltaX = touchEndX - touchStartX;
-
-  if (Math.abs(deltaX) < umbral) {
-    // swipe demasiado corto → rebote al origen
-    contenido.style.transition = "transform 0.4s cubic-bezier(0.25, 1.5, 0.5, 1)";
-    contenido.style.transform = "translateX(0)";
-  } else {
-    const direccion = deltaX > 0 ? "derecha" : "izquierda";
-    let avanzar = false, retroceder = false;
-
-    if (direccion === "derecha" && rutaActual.length > 0) {
-      retroceder = true;
-    } else if (direccion === "izquierda" && (rutaActual.length === 0)) {
-      let nivel = nivelActual();
-      if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
-        avanzar = true;
-      }
-    }
-
-    if (avanzar || retroceder) {
-      aplicarTransicion(direccion, () => {
-        if (retroceder) rutaActual.pop();
-        if (avanzar) rutaActual.push(0);
-        renderizar();
-      });
-    } else {
-      // si no toca avanzar/retroceder → rebote igual
-      contenido.style.transition = "transform 0.4s cubic-bezier(0.25, 1.5, 0.5, 1)";
-      contenido.style.transform = "translateX(0)";
-    }
-  }
-
+function resetTouch() {
   touchStartX = null;
   touchEndX = null;
   isMouseDown = false;
-  isSwiping = false;
+  direccionSwipe = null;
+  if (clon) {
+    clon.remove();
+    clon = null;
+  }
 }
 
+function handleGesture() {
+  if (!contenido || touchStartX === null || touchEndX === null) return;
+
+  const deltaX = touchEndX - touchStartX;
+  const ancho = contenido.offsetWidth;
+  const umbral = 80;
+
+  if (Math.abs(deltaX) < umbral) {
+    // swipe corto → volver atrás
+    contenido.style.transition = `transform ${duracion}ms ease`;
+    contenido.style.transform = "translateX(0)";
+    if (clon) {
+      clon.style.transition = `transform ${duracion}ms ease`;
+      clon.style.transform =
+        direccionSwipe === "izquierda"
+          ? `translateX(${ancho}px)`
+          : `translateX(${-ancho}px)`;
+    }
+    setTimeout(resetTouch, duracion);
+    return;
+  }
+
+  const direccion = deltaX > 0 ? "derecha" : "izquierda";
+  let avanzar = false,
+    retroceder = false;
+
+  if (direccion === "derecha" && rutaActual.length > 0) {
+    retroceder = true;
+  } else if (direccion === "izquierda" && rutaActual.length === 0) {
+    const nivel = nivelActual();
+    if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
+      avanzar = true;
+    }
+  }
+
+  if (avanzar || retroceder) {
+    contenido.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
+    clon.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
+
+    // animar salida y entrada
+    contenido.style.transform =
+      direccion === "izquierda"
+        ? `translateX(${-ancho}px)`
+        : `translateX(${ancho}px)`;
+    contenido.style.opacity = "0";
+
+    clon.style.transform = "translateX(0)";
+    clon.style.opacity = "1";
+
+    setTimeout(() => {
+      // cambiar el nivel una vez termina la animación
+      if (retroceder) rutaActual.pop();
+      if (avanzar) rutaActual.push(0);
+      renderizar();
+
+      // restablecer estado visual del contenedor real
+      contenido.style.transition = "none";
+      contenido.style.transform = "translateX(0)";
+      contenido.style.opacity = "1";
+
+      resetTouch();
+    }, duracion);
+  } else {
+    contenido.style.transition = `transform ${duracion}ms ease`;
+    contenido.style.transform = "translateX(0)";
+    resetTouch();
+  }
+}
 
 function onTouchStart(e) {
-  if (!contenido) return;
   touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
   isMouseDown = !e.touches;
-  isSwiping = true;
-
-  contenido.style.transition = "none"; // quitar transición para arrastre libre
 }
 
 function onTouchMove(e) {
-  if (!isSwiping || !contenido) return;
+  if (touchStartX === null) return;
 
-  const currentX = e.touches ? e.touches[0].clientX : e.clientX;
-  touchEndX = currentX;
-
+  touchEndX = e.touches ? e.touches[0].clientX : e.clientX;
   const deltaX = touchEndX - touchStartX;
+  const ancho = contenido.offsetWidth;
 
-  // mover el contenido en tiempo real
+  direccionSwipe = deltaX > 0 ? "derecha" : "izquierda";
+
+  contenido.style.transition = "none";
   contenido.style.transform = `translateX(${deltaX}px)`;
+
+  // crear el clon si no existe
+  if (!clon) {
+    clon = contenido.cloneNode(true);
+    const rect = contenido.getBoundingClientRect();
+    clon.style.position = "absolute";
+    clon.style.top = rect.top + "px";
+    clon.style.left = rect.left + "px";
+    clon.style.width = rect.width + "px";
+    clon.style.height = rect.height + "px";
+    clon.style.zIndex = "5";
+    clon.style.pointerEvents = "none";
+    clon.style.opacity = "0.8";
+    clon.style.transition = "none";
+    clon.style.transform =
+      direccionSwipe === "izquierda"
+        ? `translateX(${ancho}px)`
+        : `translateX(${-ancho}px)`;
+    contenido.parentNode.appendChild(clon);
+  }
+
+  // mover el clon en espejo
+  const desplazamiento =
+    direccionSwipe === "izquierda" ? deltaX + ancho : deltaX - ancho;
+  clon.style.transform = `translateX(${desplazamiento}px)`;
 }
 
 function onTouchEnd(e) {
-  if (!isSwiping) return;
-
-  if (e.changedTouches) {
-    touchEndX = e.changedTouches[0].clientX;
-  } else if (isMouseDown) {
-    if (touchEndX === null) touchEndX = e.clientX;
-  }
+  touchEndX =
+    e.changedTouches && e.changedTouches.length
+      ? e.changedTouches[0].clientX
+      : e.clientX;
   handleGesture();
 }
 
-// Solo aplicar swipe en el contenido principal, no en header/footer
-if (contenido) {
-  contenido.addEventListener('touchstart', onTouchStart);
-  contenido.addEventListener('touchmove', onTouchMove);
-  contenido.addEventListener('touchend', onTouchEnd);
-
-  contenido.addEventListener('mousedown', onTouchStart);
-  contenido.addEventListener('mousemove', onTouchMove);
-  contenido.addEventListener('mouseup', onTouchEnd);
+// listeners
+if (document.getElementById("contenido")) {
+  document.body.addEventListener("touchstart", onTouchStart);
+  document.body.addEventListener("touchmove", onTouchMove);
+  document.body.addEventListener("touchend", onTouchEnd);
+  document.body.addEventListener("mousedown", onTouchStart);
+  document.body.addEventListener("mousemove", onTouchMove);
+  document.body.addEventListener("mouseup", onTouchEnd);
 }
-
 
