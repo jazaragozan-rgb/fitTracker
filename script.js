@@ -685,13 +685,14 @@ function crearIndice(item, index, nivel) {
         const deltaX = endX - startX;
         const deltaY = endY - startY;
         const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-        if (distancia < 10) { e.stopImmediatePropagation(); rutaActual.push(index); renderizar(); }
+        if (distancia < 10) { 
+          rutaActual.push(index); renderizar(); }
       }
       startX = null; startY = null; clearTimeout(dragTimer);
     });
 
     input.addEventListener('click', (e) => {
-      e.stopImmediatePropagation();
+      //e.stopImmediatePropagation();
       if (clon) { clon.remove(); clon = null; }
       rutaActual.push(index);
       renderizar();
@@ -850,17 +851,13 @@ function crearClon(avanzar, retroceder) {
   nuevoClon.style.transition = "none";
   nuevoClon.style.overflow = "visible";
 
-  // construir ruta temporal
   const rutaTemp = avanzar ? [...rutaActual, 0] : retroceder ? rutaActual.slice(0, -1) : [...rutaActual];
-
-  // localizar nivel destino partiendo de { hijos: datos }
   let nivel = { hijos: datos };
   for (const idx of rutaTemp) {
     if (!nivel || !nivel.hijos || !nivel.hijos[idx]) { nivel = null; break; }
     nivel = nivel.hijos[idx];
   }
 
-  // renderizar destino en el clon
   if (nivel) {
     if (nivel.series && Array.isArray(nivel.series)) {
       const encabezados = document.createElement("div");
@@ -901,7 +898,6 @@ function crearClon(avanzar, retroceder) {
     aviso.textContent = "(nivel vacío)"; nuevoClon.appendChild(aviso);
   }
 
-  // posición inicial
   if (avanzar) nuevoClon.style.transform = `translateX(${ancho}px)`;
   else if (retroceder) nuevoClon.style.transform = `translateX(${-ancho}px)`;
   else nuevoClon.style.transform = `translateX(${ancho}px)`;
@@ -914,7 +910,10 @@ function crearClon(avanzar, retroceder) {
 
 // Eventos touch/mouse
 function onTouchStart(e) {
-  if (e.target.closest('.list-item input')) return; // bloquear inputs
+  const esInput = e.target.closest('.list-item input');
+  const modoVisual = esInput?.disabled; // deshabilitado = modo visual
+  if (esInput && !modoVisual) return; // bloquear solo inputs en modo edición
+
   touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
   isMouseDown = !e.touches;
   direccionSwipe = null;
@@ -922,9 +921,14 @@ function onTouchStart(e) {
 
 function onTouchMove(e) {
   if (touchStartX === null) return;
+
+  const esInput = e.target.closest('.list-item input');
+  const modoVisual = esInput?.disabled;
+  if (esInput && !modoVisual) return; // bloquear swipe solo en edición
+
   touchEndX = e.touches ? e.touches[0].clientX : e.clientX;
   const deltaX = touchEndX - touchStartX;
-  if (Math.abs(deltaX) < 5) return; // mínimo para activar swipe
+  if (Math.abs(deltaX) < 5) return;
   direccionSwipe = deltaX > 0 ? "derecha" : "izquierda";
   swipeActivado = true;
 
@@ -945,13 +949,17 @@ function onTouchMove(e) {
     const clonDesplazamiento = direccionSwipe === "izquierda" ? deltaX + ancho : deltaX - ancho;
     clon.style.transform = `translateX(${clonDesplazamiento}px)`;
   }
+
+  if (e.cancelable) e.preventDefault(); // bloquear scroll vertical
 }
 
 function onTouchEnd(e) {
-  if (!swipeActivado) { resetTouch(); return; } // si no fue swipe, no hacer nada
+  if (!swipeActivado) { resetTouch(); return; }
   touchEndX = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
   handleGestureFinish();
 }
+
+
 
 function handleGestureFinish() {
   if (!contenido || touchStartX === null || touchEndX === null) { resetTouch(); return; }
