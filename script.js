@@ -692,6 +692,7 @@ function crearIndice(item, index, nivel) {
 
     input.addEventListener('click', (e) => {
       e.stopImmediatePropagation();
+      if (clon) { clon.remove(); clon = null; }
       rutaActual.push(index);
       renderizar();
     });
@@ -816,9 +817,14 @@ let isMouseDown = false;
 let duracion = 300;
 let clon = null;
 let direccionSwipe = null;
+let swipeActivado = false; // <-- solo se activa en swipe, no clic
 
 function resetTouch() {
-  touchStartX = null; touchEndX = null; isMouseDown = false; direccionSwipe = null;
+  touchStartX = null; 
+  touchEndX = null; 
+  isMouseDown = false; 
+  direccionSwipe = null;
+  swipeActivado = false;
   if (clon) { clon.remove(); clon = null; }
 }
 
@@ -854,10 +860,9 @@ function crearClon(avanzar, retroceder) {
     nivel = nivel.hijos[idx];
   }
 
-  // renderizar destino en el clon (sin tocar rutaActual ni contenido real)
+  // renderizar destino en el clon
   if (nivel) {
     if (nivel.series && Array.isArray(nivel.series)) {
-      // series (render simplificado)
       const encabezados = document.createElement("div");
       encabezados.className = "series-header";
       ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt => {
@@ -883,7 +888,6 @@ function crearClon(avanzar, retroceder) {
       });
       nuevoClon.appendChild(seriesContainer);
     } else if (nivel.hijos && nivel.hijos.length > 0) {
-      // usar crearIndice para mantener estructura y listeners
       nivel.hijos.forEach((item, idx) => {
         const node = crearIndice(item, idx, nivel);
         nuevoClon.appendChild(node);
@@ -910,6 +914,7 @@ function crearClon(avanzar, retroceder) {
 
 // Eventos touch/mouse
 function onTouchStart(e) {
+  if (e.target.closest('.list-item input')) return; // bloquear inputs
   touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
   isMouseDown = !e.touches;
   direccionSwipe = null;
@@ -919,7 +924,9 @@ function onTouchMove(e) {
   if (touchStartX === null) return;
   touchEndX = e.touches ? e.touches[0].clientX : e.clientX;
   const deltaX = touchEndX - touchStartX;
+  if (Math.abs(deltaX) < 5) return; // mínimo para activar swipe
   direccionSwipe = deltaX > 0 ? "derecha" : "izquierda";
+  swipeActivado = true;
 
   contenido.style.transition = "none";
   contenido.style.transform = `translateX(${deltaX}px)`;
@@ -941,6 +948,7 @@ function onTouchMove(e) {
 }
 
 function onTouchEnd(e) {
+  if (!swipeActivado) { resetTouch(); return; } // si no fue swipe, no hacer nada
   touchEndX = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
   handleGestureFinish();
 }
