@@ -1,11 +1,8 @@
-//llamada a modulo dashboard.js
+// ==================== IMPORTS ====================
 import { renderizarDashboard } from "./dashboard.js";
-
 import { renderizarSeguimiento } from "./seguimiento.js";
-
 import { iniciarEntrenamiento } from './live.js';
 
-// ==================== Firebase Auth + Firestore ====================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { 
   getAuth, onAuthStateChanged, 
@@ -19,7 +16,7 @@ import {
 import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
 import { iniciarTimer, restaurarTimer } from "./timer.js";
 
-// ⚡ Configuración Firebase
+// ==================== FIREBASE CONFIG ====================
 const firebaseConfig = {
   apiKey: "AIzaSyBYQPw0eoEtCZQ5NHYKHgXfcHpaW_ySzKU",
   authDomain: "sesionmientreno.firebaseapp.com",
@@ -34,10 +31,11 @@ const auth = getAuth(app);
 setPersistence(auth, browserSessionPersistence);
 const db = getFirestore(app);
 
-// ==================== Helpers ====================
-const $ = (id) => document.getElementById(id);
-const show = (el) => el && el.classList.remove('hidden');
-const hide = (el) => el && el.classList.add('hidden');
+// ==================== HELPERS DOM / UTIL ====================
+const $ = id => document.getElementById(id);
+const show = el => el && el.classList.remove('hidden');
+const hide = el => el && el.classList.add('hidden');
+
 function getErrorMessage(error) {
   const map = {
     'auth/email-already-in-use': 'Ese email ya está registrado.',
@@ -50,7 +48,7 @@ function getErrorMessage(error) {
   return map[error.code] || error.message;
 }
 
-// ==================== Registro / Login / Logout ====================
+// ==================== AUTH (REGISTER / LOGIN / LOGOUT) ====================
 window.register = async function () {
   const email = $('reg-email').value.trim();
   const pass  = $('reg-pass').value;
@@ -59,7 +57,7 @@ window.register = async function () {
   msg.textContent = ''; msg.className = 'hint';
 
   if (pass !== pass2) {
-    msg.textContent = 'Las contraseñas no coinciden.'; 
+    msg.textContent = 'Las contraseñas no coinciden.';
     msg.classList.add('err');
     return;
   }
@@ -83,13 +81,11 @@ window.login = async function () {
   try {
     await signInWithEmailAndPassword(auth, email, pass);
     $('log-email').value = $('log-pass').value = '';
-    // Forzar ejecución de redirección, log y fallback
     try {
       console.log('Login exitoso, redirigiendo a subindex.html');
       if (typeof window.onLoginSuccess === 'function') {
         window.onLoginSuccess();
       } else {
-        console.log('window.onLoginSuccess no está definida');
         window.location.href = './subindex.html';
       }
     } catch (e) {
@@ -103,14 +99,15 @@ window.login = async function () {
 };
 
 window.salir = async function () {
-  try { await signOut(auth); 
-        // Redirigir a la página de autenticación
-    window.location.href = "./auth.html"; 
+  try {
+    await signOut(auth);
+    window.location.href = "./auth.html";
+  } catch (err) {
+    console.error("Error al cerrar sesión:", err);
   }
-  catch (err) { console.error("Error al cerrar sesión:", err); }
 };
 
-// ==================== Datos por defecto ====================
+// ==================== DATOS INICIALES / LOCAL ====================
 const DATOS_POR_DEFECTO = [
   { nombre: 'Entrenamiento', hijos: [] },
   { nombre: 'Seguimiento', hijos: [] },
@@ -119,15 +116,14 @@ const DATOS_POR_DEFECTO = [
 let datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
 console.log('[Datos iniciales] datos:', datos);
 
-// Referencias UI
+// ==================== ESTADO / REFERENCIAS UI ====================
 let rutaActual = [];
-let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay;
+let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay, subHeader;
 let menuTitulo;
-
 let ultimoMenuSeleccionado = 'Dashboard';
 
+// ==================== DOMContentLoaded: inicialización UI ====================
 document.addEventListener("DOMContentLoaded", () => {
-  // Inicializar referencias UI globales
   contenido = $('contenido');
   tituloNivel = $('tituloNivel');
   headerButtons = $('headerButtons');
@@ -140,38 +136,22 @@ document.addEventListener("DOMContentLoaded", () => {
   sideMenu = $('sideMenu');
   menuOverlay = $('menuOverlay');
   menuTitulo = $('menuTitulo');
+  subHeader = $('subHeader');
 
-  // Eventos principales de botones
-  if (backButton) {
-    backButton.addEventListener("click", () => {
-      if (rutaActual.length > 0) {
-        rutaActual.pop();   // ← sube un nivel en la jerarquía
-        renderizar();
-      }
-    });
-  }
-  if (homeButton) {
-    homeButton.addEventListener("click", () => {
-      rutaActual = [];
-      renderizar();
-    });
-  }
-  if (logoutButton) {
-    logoutButton.addEventListener("click", () => salir());
-  }
-  if (menuButton) {
-    menuButton.addEventListener("click", () => {
-      sideMenu.style.left = "0";
-      menuOverlay.classList.remove("hidden");
-    });
-  }
-  if (menuOverlay) {
-    menuOverlay.addEventListener("click", () => {
-      sideMenu.style.left = "-70%";
-      menuOverlay.classList.add("hidden");
-    });
-  }
-  document.querySelectorAll(".sideMenu-btn").forEach((btn) => {
+  // Botones principales
+  if (backButton) backButton.addEventListener("click", () => {
+    if (rutaActual.length > 0) { rutaActual.pop(); renderizar(); }
+  });
+  if (homeButton) homeButton.addEventListener("click", () => { rutaActual = []; renderizar(); });
+  if (logoutButton) logoutButton.addEventListener("click", () => salir());
+  if (menuButton) menuButton.addEventListener("click", () => {
+    sideMenu.style.left = "0"; menuOverlay.classList.remove("hidden");
+  });
+  if (menuOverlay) menuOverlay.addEventListener("click", () => {
+    sideMenu.style.left = "-70%"; menuOverlay.classList.add("hidden");
+  });
+
+  document.querySelectorAll(".sideMenu-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const seccion = btn.dataset.seccion;
       if (seccion === "entrenamiento") { rutaActual = [0]; ultimoMenuSeleccionado = 'Entrenamiento'; }
@@ -183,37 +163,27 @@ document.addEventListener("DOMContentLoaded", () => {
       menuOverlay.classList.add("hidden");
     });
   });
+
   // Toggle Login/Register
   const formLogin = $("form-login");
   const formRegister = $("form-register");
   const showRegisterBtn = $("showRegisterBtn");
   const showLoginBtn = $("showLoginBtn");
 
-  if (showRegisterBtn) {
-    showRegisterBtn.addEventListener("click", () => {
-      hide(formLogin);
-      show(formRegister);
-      $("log-msg").textContent = "";
-    });
-  }
+  if (showRegisterBtn) showRegisterBtn.addEventListener("click", () => {
+    hide(formLogin); show(formRegister); $("log-msg").textContent = "";
+  });
+  if (showLoginBtn) showLoginBtn.addEventListener("click", () => {
+    hide(formRegister); show(formLogin); $("reg-msg").textContent = "";
+  });
 
-  if (showLoginBtn) {
-    showLoginBtn.addEventListener("click", () => {
-      hide(formRegister);
-      show(formLogin);
-      $("reg-msg").textContent = "";
-    });
-  }
-
-  // Inicialización final
   window.renderizar = renderizar;
   window.guardarDatos = guardarDatos;
   renderizar();
   restaurarTimer();
 });
 
-// ==================== Firestore ====================
-// ==================== Firestore (mejoradas) ====================
+// ==================== FIRESTORE HELPERS ====================
 async function cargarDatosUsuario(uid) {
   if (!uid) return null;
   try {
@@ -222,13 +192,10 @@ async function cargarDatosUsuario(uid) {
     if (snap.exists()) {
       const d = snap.data();
       if (d && Array.isArray(d.datos)) return structuredClone(d.datos);
-      // documento existe pero estructura inesperada:
       return { __exists: true, __datosInvalidos: true };
     }
-    // NO existe el documento
     return null;
   } catch (e) {
-    // Error de lectura (p.e. red/offline). Devolver un objeto que indique error
     console.error("Error al cargar datos (network/other):", e);
     return { __error: true, __message: e?.message || String(e) };
   }
@@ -239,27 +206,19 @@ async function guardarDatosUsuario(uid, datosActuales) {
     console.warn('[guardarDatosUsuario] uid o datosActuales inválidos:', uid, datosActuales);
     return;
   }
-
-  // Guard para evitar escribir el DATOS_POR_DEFECTO por accidente
   const isDefault = JSON.stringify(datosActuales) === JSON.stringify(DATOS_POR_DEFECTO);
   if (isDefault) {
-    console.warn('[guardarDatosUsuario] datos son los por defecto; evitar guardado automático para prevenir sobrescrituras');
-    // Si realmente quieres forzar la creación la primera vez, podrías permitirlo con confirmación o flag.
-    // return; // <-- descomenta para impedir guardar defaults
+    console.warn('[guardarDatosUsuario] datos son los por defecto; evitar guardado automático');
   }
-
   try {
     const ref = doc(db, "usuarios", uid);
-    console.log('[guardarDatosUsuario] escribiendo en Firestore (merge):', datosActuales);
-    // usar merge para no sobrescribir todo el documento
     await setDoc(ref, { datos: structuredClone(datosActuales) }, { merge: true });
-    console.log('[guardarDatosUsuario] guardado exitoso en Firestore (merge)');
   } catch (e) {
     console.error("Error al guardar datos:", e);
   }
 }
 
-
+// ==================== GUARDADO LOCAL + REMOTO ====================
 let saveTimer = null;
 function guardarDatos() {
   console.log('[guardarDatos] datos a guardar:', datos);
@@ -270,82 +229,47 @@ function guardarDatos() {
   saveTimer = setTimeout(() => { guardarDatosUsuario(user.uid, datos); }, 300);
 }
 
+// ==================== UTILITY: nivelActual ====================
 function nivelActual() {
   let nivel = { hijos: datos };
   for (let i of rutaActual) nivel = nivel.hijos[i];
   return nivel;
 }
 
-// ==================== Estado de sesión ====================
+// ==================== AUTH STATE ====================
 onAuthStateChanged(auth, async (user) => {
   const authSec = $('auth');
   const appSec  = $('app');
   hide($('welcome')); hide($('verify-hint'));
 
   if (user) {
-    console.log("✅ Usuario logueado con UID:", user.uid);
-    console.log("📧 Email:", user.email);
-    hide(authSec); 
-    show(appSec); 
-    show(contenido); 
-    show(timerContainer);
-    show(headerButtons); 
-    show(homeButton); 
-    show(logoutButton);
-    show(addButton); 
-    show(backButton);
-    show(menuButton);
-    show(tituloNivel);
-    show(menuTitulo);
+    hide(authSec);
+    show(appSec);
+    show(contenido);
+    show(timerContainer); show(headerButtons); show(homeButton); show(logoutButton);
+    show(addButton); show(backButton); show(menuButton); show(tituloNivel); show(menuTitulo);
 
     const datosRemotos = await cargarDatosUsuario(user.uid);
 
     if (datosRemotos && datosRemotos.__error) {
-      // Hubo un error (network, permisos, etc.) -> NO sobrescribir remoto
-      console.warn('[onAuthStateChanged] Error al leer remoto; manteniendo datos locales y evitando sobreescritura:', datosRemotos.__message);
-      // Si hay datos locales en localStorage los cargamos (o pedimos reintentar luego)
+      console.warn('[onAuthStateChanged] Error al leer remoto; manteniendo datos locales', datosRemotos.__message);
       datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
-      // opcional: mostrar aviso al usuario
-      // mostrarToast('No se pudieron cargar tus datos remotos. Trabajando en local.');
     } else if (datosRemotos === null) {
-      // No existe documento remoto -> crear solo si tenemos datos no-default
       const local = JSON.parse(localStorage.getItem("misDatos"));
       datos = Array.isArray(local) ? local : structuredClone(DATOS_POR_DEFECTO);
-      // Solo crear en Firestore si local tiene contenido real (no defaults)
       const soloDefaults = JSON.stringify(datos) === JSON.stringify(DATOS_POR_DEFECTO);
-      if (!soloDefaults) {
-        console.log('[onAuthStateChanged] creando documento remoto con datos locales');
-        await guardarDatosUsuario(user.uid, datos); // usar merge dentro de la función
-      } else {
-        console.log('[onAuthStateChanged] documento remoto no existe y datos locales son defaults; no crear para evitar sobrescritura');
-      }
+      if (!soloDefaults) await guardarDatosUsuario(user.uid, datos);
     } else if (Array.isArray(datosRemotos)) {
-      // Documento existe y tiene datos válidos -> usar remoto
       datos = datosRemotos;
       console.log('[Datos cargados Firestore] datos:', datos);
     } else if (datosRemotos && datosRemotos.__datosInvalidos) {
-      // Documento existe pero estructura distinta -> decidir estrategia
-      console.warn('[onAuthStateChanged] documento remoto con estructura inesperada; se cargan datos locales por seguridad.');
+      console.warn('[onAuthStateChanged] documento remoto con estructura inesperada; usando local');
       datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
     }
-
-    // NOTA: evitamos forzar guardar si hubo error de lectura
-    // render y resto
   } else {
-    // usuario no autenticado: cargar desde localStorage
-    show(authSec); 
-    hide(appSec); 
-    hide(contenido); 
-    hide(timerContainer);
-    hide(headerButtons); 
-    hide(homeButton); 
-    hide(logoutButton); 
-    hide(addButton); 
-    hide(backButton);
-    hide(menuButton);
-    hide(tituloNivel);
-    hide(menuTitulo);
-
+    show(authSec); hide(appSec); hide(contenido); hide(timerContainer); hide(headerButtons);
+    hide(homeButton); hide(logoutButton); hide(addButton); hide(backButton); hide(menuButton);
+    hide(tituloNivel); hide(menuTitulo);
     datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
     console.log('[Datos cargados localStorage] datos:', datos);
   }
@@ -353,16 +277,15 @@ onAuthStateChanged(auth, async (user) => {
   renderizar();
 });
 
-
-// ==================== Renderizado ====================
+// ==================== RENDERIZADO PRINCIPAL ====================
 function renderizar() {
   if (!contenido) return;
   contenido.innerHTML = '';
   let nivel = nivelActual();
 
-  // Función auxiliar para generar IDs únicos de sesión
-  function asignarSesionIds(datos, ruta = []) {
-    datos.forEach((meso, i) => {
+  // Asignar ids de sesión (mantenimiento)
+  (function asignarSesionIds(datosArray, ruta = []) {
+    datosArray.forEach((meso, i) => {
       (meso.hijos || []).forEach((micro, j) => {
         (micro.hijos || []).forEach((sesion, k) => {
           sesion.sesionId = `${ruta.join('-')}-${i}-${j}-${k}`;
@@ -374,22 +297,16 @@ function renderizar() {
         });
       });
     });
-  }
+  })(datos);
 
-  asignarSesionIds(datos);
-
-  // Mostrar el nombre correcto en el header según el nivel
+  // Header/menu title
   if (menuTitulo) {
-    if (rutaActual.length === 0) {
-      menuTitulo.textContent = 'Dashboard';
-    } else if (rutaActual.length >= 1 && rutaActual.length <= 5) {
-      menuTitulo.textContent = 'Entrenamiento';
-    } else {
-      menuTitulo.textContent = ultimoMenuSeleccionado;
-    }
+    if (rutaActual.length === 0) menuTitulo.textContent = 'Dashboard';
+    else if (rutaActual.length >= 1 && rutaActual.length <= 5) menuTitulo.textContent = 'Entrenamiento';
+    else menuTitulo.textContent = ultimoMenuSeleccionado;
   }
 
-  // Subheader: ocultar en nivel 0
+  // Subheader
   if (rutaActual.length === 0) {
     tituloNivel.style.display = 'none';
     subHeader.style.display = 'flex';
@@ -398,20 +315,14 @@ function renderizar() {
     btnEntreno.id = 'liveEntrenamiento';
     btnEntreno.textContent = 'Empezar entrenamiento';
     btnEntreno.className = 'btn-primary';
+    btnEntreno.addEventListener('click', iniciarEntrenamiento);
     subHeader.appendChild(btnEntreno);
-    btnEntreno.addEventListener('click', () => {
-      iniciarEntrenamiento();
-    });
   } else {
     subHeader.style.display = '';
     subHeader.innerHTML = '';
     const h2Nivel = document.createElement('h2');
     h2Nivel.id = 'tituloNivel';
-    if (rutaActual.length === 1) {
-      h2Nivel.textContent = 'Bloques';
-    } else {
-      h2Nivel.textContent = nivel.nombre || ultimoMenuSeleccionado;
-    }
+    h2Nivel.textContent = rutaActual.length === 1 ? 'Bloques' : (nivel.nombre || ultimoMenuSeleccionado);
     subHeader.appendChild(h2Nivel);
 
     if (rutaActual.length !== 5) {
@@ -432,9 +343,8 @@ function renderizar() {
     }
   }
 
-  // Pantalla Seguimiento
+  // Pantalla seguimiento y dashboard
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
-    const nivel = nivelActual();
     renderizarSeguimiento(nivel, contenido, subHeader, addButton);
     return;
   }
@@ -443,7 +353,7 @@ function renderizar() {
     return;
   }
 
-  // Nivel de series
+  // Nivel series (5)
   if (rutaActual.length === 5) {
     backButton.style.visibility = 'visible';
     addButton.style.visibility = 'hidden';
@@ -451,9 +361,9 @@ function renderizar() {
 
     const encabezados = document.createElement('div');
     encabezados.className = 'series-header';
-    ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt=>{
-      const col=document.createElement('div');
-      col.textContent=txt;
+    ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt => {
+      const col = document.createElement('div');
+      col.textContent = txt;
       encabezados.appendChild(col);
     });
     contenido.appendChild(encabezados);
@@ -463,86 +373,73 @@ function renderizar() {
     nivel.series = nivel.series || [];
     nivel.series.forEach((serie, idx) => {
       const serieDiv = document.createElement('div');
-      serieDiv.className="serie-row";
+      serieDiv.className = "serie-row";
 
-      const numBtn=document.createElement('button');
-      numBtn.className="serie-num";
-      numBtn.textContent=serie.marca|| (idx+1);
-      numBtn.addEventListener('click',e=>{
+      const numBtn = document.createElement('button');
+      numBtn.className = "serie-num";
+      numBtn.textContent = serie.marca || (idx + 1);
+      numBtn.addEventListener('click', e => {
         e.stopPropagation();
-        mostrarSelectorMarca(serie,idx,()=>{
-          guardarDatos();
-          renderizar();
+        mostrarSelectorMarca(serie, idx, () => { guardarDatos(); renderizar(); });
+      });
+
+      const reps = document.createElement('input');
+      reps.placeholder = 'Reps'; reps.value = serie.reps || '';
+      reps.addEventListener('blur', e => { serie.reps = e.target.value; guardarDatos(); renderizar(); });
+
+      const peso = document.createElement('input');
+      peso.placeholder = 'Peso'; peso.value = serie.peso || '';
+      peso.addEventListener('blur', e => { serie.peso = e.target.value; guardarDatos(); renderizar(); });
+
+      const rir = document.createElement('input');
+      rir.placeholder = 'RIR'; rir.value = serie.rir || '';
+      rir.addEventListener('blur', e => { serie.rir = e.target.value; guardarDatos(); renderizar(); });
+
+      const descanso = document.createElement('input');
+      descanso.placeholder = 'Descanso'; descanso.value = serie.descanso || '';
+      descanso.addEventListener('blur', e => { serie.descanso = e.target.value; guardarDatos(); renderizar(); });
+
+      const temporizador = document.createElement('button');
+      temporizador.className = "btn-timer";
+      if (serie.completada) {
+        temporizador.textContent = '✔️';
+        serieDiv.style.backgroundColor = '#d4edda';
+        serieDiv.style.borderColor = '#6fbe82ff';
+      } else {
+        temporizador.textContent = '🕔';
+        serieDiv.style.backgroundColor = '';
+        serieDiv.style.borderColor = '#afafaf';
+      }
+      temporizador.addEventListener('click', () => {
+        serie.completada = !serie.completada;
+        if (serie.completada) {
+          temporizador.textContent = '✔️';
+          serieDiv.style.backgroundColor = '#d4edda';
+          serieDiv.style.borderColor = '#6fbe82ff';
+          if (serie.descanso) iniciarTimer(serie.descanso);
+        } else {
+          temporizador.textContent = '🕔';
+          serieDiv.style.backgroundColor = '';
+          serieDiv.style.borderColor = '#afafaf';
+        }
+        guardarDatos();
+      });
+
+      const borrar = document.createElement('button');
+      borrar.className = "btn-delete"; borrar.textContent = '❌';
+      borrar.style.fontSize = '0.7rem';
+      borrar.addEventListener('click', () => {
+        mostrarConfirmacion("¿Desea borrar esta serie?", () => {
+          nivel.series.splice(idx, 1); guardarDatos(); renderizar();
         });
       });
 
-      const reps=document.createElement('input');
-      reps.placeholder='Reps'; reps.value=serie.reps||'';
-      reps.addEventListener('blur',e=>{serie.reps=e.target.value;guardarDatos();renderizar();});
-
-      const peso=document.createElement('input');
-      peso.placeholder='Peso'; peso.value=serie.peso||'';
-      peso.addEventListener('blur',e=>{serie.peso=e.target.value;guardarDatos();renderizar();});
-
-      const rir=document.createElement('input');
-      rir.placeholder='RIR'; rir.value=serie.rir||'';
-      rir.addEventListener('blur',e=>{serie.rir=e.target.value;guardarDatos();renderizar();});
-
-      const descanso=document.createElement('input');
-      descanso.placeholder='Descanso'; descanso.value=serie.descanso||'';
-      descanso.addEventListener('blur',e=>{serie.descanso=e.target.value;guardarDatos();renderizar();});
-
-// ================== Temporizador con estado guardado ==================
-const temporizador = document.createElement('button');
-temporizador.className = "btn-timer";
-
-// Mostrar estado guardado (✔️ o 🕔)
-if (serie.completada) {
-  temporizador.textContent = '✔️';
-  serieDiv.style.backgroundColor = '#d4edda';
-  serieDiv.style.borderColor = '#6fbe82ff';
-} else {
-  temporizador.textContent = '🕔';
-  serieDiv.style.backgroundColor = '';
-  serieDiv.style.borderColor = '#afafaf';
-}
-
-temporizador.addEventListener('click', () => {
-  serie.completada = !serie.completada; // alternar estado
-
-  if (serie.completada) {
-    temporizador.textContent = '✔️';
-    serieDiv.style.backgroundColor = '#d4edda';
-    serieDiv.style.borderColor = '#6fbe82ff';
-    if (serie.descanso) iniciarTimer(serie.descanso); // 👈 solo si tiene descanso
-  } else {
-    temporizador.textContent = '🕔';
-    serieDiv.style.backgroundColor = '';
-    serieDiv.style.borderColor = '#afafaf';
-  }
-
-  guardarDatos(); // 🔥 se guarda en Firestore y en localStorage
-});
-
-serieDiv.appendChild(temporizador);
-
-
-
-      const borrar=document.createElement('button');
-      borrar.className="btn-delete"; borrar.textContent='❌';
-      borrar.style.fontSize='0.7rem';
-      borrar.addEventListener('click',()=> {
-        mostrarConfirmacion("¿Desea borrar esta serie?",()=> {
-          nivel.series.splice(idx,1); guardarDatos(); renderizar();
-        });
-      });
-
-      [numBtn,reps,peso,rir,descanso,temporizador,borrar].forEach(el=>serieDiv.appendChild(el));
+      [numBtn, reps, peso, rir, descanso, temporizador, borrar].forEach(el => serieDiv.appendChild(el));
       seriesContainer.appendChild(serieDiv);
     });
     contenido.appendChild(seriesContainer);
 
-    // 📊 Bloque Volumen y 1RM de la sesión actual
+    // Stats box (volumen y 1RM)
     const statsBox = document.createElement('div');
     statsBox.style.background = "#ffffffff";
     statsBox.style.padding = "14px";
@@ -568,29 +465,25 @@ serieDiv.appendChild(temporizador);
     `;
     contenido.appendChild(statsBox);
 
-    // ==================== Funciones auxiliares ====================
+    // buscar ejercicio anterior y mostrar
     function fechaATimestamp(fechaStr) {
       if (!fechaStr || typeof fechaStr !== "string") return 0;
       return new Date(fechaStr).getTime() || 0;
     }
-
-    function buscarEjercicioAnterior(datos, rutaActual, ejercicioActual) {
-      if (!ejercicioActual || !datos) return null;
-      const nombreEjercicioActual = ejercicioActual.nombre.trim().toLowerCase();
+    function buscarEjercicioAnterior(datosArg, rutaArg, ejercicioActual) {
+      if (!ejercicioActual || !datosArg) return null;
+      const nombreEjercicioActual = (ejercicioActual.nombre || '').trim().toLowerCase();
       const timestampActual = fechaATimestamp(ejercicioActual._fecha || ejercicioActual.fecha);
-
       let ejercicioAnterior = null;
-
-      for (const meso of datos) {
+      for (const meso of datosArg) {
         for (const micro of meso.hijos || []) {
           for (const sesion of micro.hijos || []) {
             const tsSesion = fechaATimestamp(sesion._fecha || sesion.fecha);
             if (tsSesion >= timestampActual) continue;
-
             for (const sesionInferior of sesion.hijos || []) {
               for (const ejerc of sesionInferior.hijos || []) {
                 if (ejerc === ejercicioActual) continue;
-                if ((ejerc.nombre || '').trim().toLowerCase() !== nombreEjercicioActual) continue;
+                if (((ejerc.nombre || '').trim().toLowerCase()) !== nombreEjercicioActual) continue;
                 if (!ejerc.series || ejerc.series.length === 0) continue;
                 if (!ejercicioAnterior || tsSesion > fechaATimestamp(ejercicioAnterior._fecha || ejercicioAnterior.fecha)) {
                   ejercicioAnterior = ejerc;
@@ -603,7 +496,6 @@ serieDiv.appendChild(temporizador);
       return ejercicioAnterior;
     }
 
-    // Asignar _fecha a todos los ejercicios de la sesión actual
     const nivel4 = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]]?.hijos?.[rutaActual[3]];
     if (nivel4?.hijos) {
       for (const bloque of nivel4.hijos) {
@@ -616,15 +508,9 @@ serieDiv.appendChild(temporizador);
     }
     nivel._fecha = nivel4?.fecha || nivel._fecha || null;
 
-    // Buscar ejercicio anterior
     const ejercicioAnterior = buscarEjercicioAnterior(datos, rutaActual, nivel);
-
     if (ejercicioAnterior) {
-      console.log("📦 Ejercicio anterior más reciente:", ejercicioAnterior);
-
-      // Obtener la fecha actual de la sesión anterior
       let fechaMostrar = ejercicioAnterior._fecha || ejercicioAnterior.fecha;
-
       const statsBoxAnt = document.createElement('div');
       statsBoxAnt.style.background = "#ffffffff";
       statsBoxAnt.style.padding = "14px";
@@ -651,28 +537,27 @@ serieDiv.appendChild(temporizador);
         <p><b>Peso máximo:</b> ${pesoMax.toFixed(2)} kg</p>
       `;
       contenido.appendChild(statsBoxAnt);
-    } else {
-      console.log("❌ No se encontró ningún ejercicio anterior con el mismo nombre y series.");
     }
 
-    const notas=document.createElement('textarea');
-    notas.placeholder='Notas del ejercicio...';
-    notas.value=nivel.notas||''; notas.className='notes';
-    notas.addEventListener('input',e=>{nivel.notas=e.target.value;guardarDatos();});
+    const notas = document.createElement('textarea');
+    notas.placeholder = 'Notas del ejercicio...';
+    notas.value = nivel.notas || '';
+    notas.className = 'notes';
+    notas.addEventListener('input', e => { nivel.notas = e.target.value; guardarDatos(); });
     contenido.appendChild(notas);
     return;
   }
 
-  // Otros niveles
+  // Otros niveles (lista de hijos)
   backButton.style.visibility = 'visible';
   addButton.style.visibility  = 'visible';
   const nombres = ['Mesociclos','Microciclos','Sesiones','Ejercicios'];
-  tituloNivel.textContent = nombres[rutaActual.length-1] || nivel.nombre;
+  tituloNivel.textContent = nombres[rutaActual.length - 1] || nivel.nombre;
 
   if (nivel.hijos && nivel.hijos.length) {
     nivel.hijos.forEach((item, index) => {
-      const div=crearIndice(item,index,nivel);
-      div.addEventListener('click',()=>{ rutaActual.push(index); renderizar(); });
+      const div = crearIndice(item, index, nivel);
+      div.addEventListener('click', () => { rutaActual.push(index); renderizar(); });
       contenido.appendChild(div);
     });
   }
@@ -701,16 +586,15 @@ serieDiv.appendChild(temporizador);
   };
 }
 
-
-// ==================== Crear índice con drag & drop ====================
-let dragItem = null;          // Índice que estamos moviendo
-let dragStartY = 0;           // Posición Y inicial
-let dragStartX = 0;           // Posición X inicial
-let dragTimer = null;         // Timer de 500 ms
-let placeholder = null;       // Marcador visual mientras arrastras
+// ==================== CREAR INDICE (DRAG & DROP + UI ITEM) ====================
+let dragItem = null;
+let dragStartY = 0;
+let dragStartX = 0;
+let dragTimer = null;
+let placeholder = null;
 let dragOffsetY = 0;
 let dragging = false;
-const dragThreshold = 10;     // tolerancia mínima en px para diferenciar swipe/drag
+const dragThreshold = 10;
 
 function crearIndice(item, index, nivel) {
   const div = document.createElement('div');
@@ -724,34 +608,26 @@ function crearIndice(item, index, nivel) {
 
   if (!item.editando) item.editando = false;
 
-  // ----------- MODO EDICIÓN -----------
+  // MODO EDICIÓN
   if (item.editando) {
     const input = document.createElement('input');
     input.value = item.nombre || '';
     input.placeholder = item.placeholder || '';
     input.style.flex = '1 1 auto';
     input.style.minWidth = '40px';
-
     requestAnimationFrame(() => setTimeout(() => { input.focus(); input.select(); }, 0));
 
-    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
-      input.addEventListener(evt, e => e.stopPropagation())
-    );
+    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt => input.addEventListener(evt, e => e.stopPropagation()));
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
         item.nombre = input.value || 'Sin nombre';
-        item.editando = false; 
-        guardarDatos(); 
-        renderizar();
+        item.editando = false; guardarDatos(); renderizar();
       }
     });
-
     input.addEventListener('blur', () => {
       item.nombre = input.value || 'Sin nombre';
-      item.editando = false; 
-      guardarDatos(); 
-      renderizar();
+      item.editando = false; guardarDatos(); renderizar();
     });
 
     div.appendChild(input);
@@ -760,22 +636,18 @@ function crearIndice(item, index, nivel) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
-      ['pointerdown','mousedown','touchstart','click'].forEach(evt =>
-        fechaInput.addEventListener(evt, e => e.stopPropagation())
-      );
+      ['pointerdown','mousedown','touchstart','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('input', async e => {
-        nivel.hijos[index].fecha = e.target.value;
-        guardarDatos();
+        nivel.hijos[index].fecha = e.target.value; guardarDatos();
         const user = auth.currentUser;
         if (user) {
-          try { await guardarDatosUsuario(user.uid, datos); } 
-          catch(err){ console.error(err); }
+          try { await guardarDatosUsuario(user.uid, datos); } catch(err){ console.error(err); }
         }
       });
       div.appendChild(fechaInput);
     }
-  } 
-  // ----------- MODO VISUAL -----------
+  }
+  // MODO VISUAL
   else {
     const input = document.createElement('input');
     input.value = item.nombre;
@@ -800,41 +672,22 @@ function crearIndice(item, index, nivel) {
       const currentY = e.touches[0].clientY;
       const deltaX = currentX - startX;
       const deltaY = currentY - startY;
-
       if (!dragging && Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
-        // Iniciar drag vertical
-        dragging = true;
-        startDrag(e);
+        dragging = true; startDrag(e);
       }
-
-      if (dragging) {
-        dragMove(e);
-        e.preventDefault(); // solo bloquear scroll mientras arrastramos
-      }
-      // Horizontal → swipe, no interferir
+      if (dragging) { dragMove(e); e.preventDefault(); } // bloquear scroll vertical
     });
 
     input.addEventListener('touchend', e => {
       if (!dragging) {
-        // Detectar swipe horizontal
         const endX = e.changedTouches[0].clientX;
         const endY = e.changedTouches[0].clientY;
         const deltaX = endX - startX;
         const deltaY = endY - startY;
         const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-        if (distancia < 10) {
-          // click/tap
-          e.stopImmediatePropagation();
-          rutaActual.push(index);
-          renderizar();
-        }
-        // swipe horizontal se maneja fuera
+        if (distancia < 10) { e.stopImmediatePropagation(); rutaActual.push(index); renderizar(); }
       }
-
-      // Reset
-      startX = null;
-      startY = null;
-      clearTimeout(dragTimer);
+      startX = null; startY = null; clearTimeout(dragTimer);
     });
 
     input.addEventListener('click', (e) => {
@@ -851,18 +704,16 @@ function crearIndice(item, index, nivel) {
       fechaInput.value = nivel.hijos[index].fecha || '';
       ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('change', async e => {
-        nivel.hijos[index].fecha = e.target.value;
-        guardarDatos();
+        nivel.hijos[index].fecha = e.target.value; guardarDatos();
         const user = auth.currentUser;
         if (user) {
-          try { await guardarDatosUsuario(user.uid, datos); } 
-          catch(err){ console.error(err); }
+          try { await guardarDatosUsuario(user.uid, datos); } catch(err){ console.error(err); }
         }
       });
       div.appendChild(fechaInput);
     }
 
-    // Botón de opciones
+    // opciones botón
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
@@ -871,7 +722,6 @@ function crearIndice(item, index, nivel) {
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
         <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
       </span>`;
-
       opcionesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
@@ -882,23 +732,19 @@ function crearIndice(item, index, nivel) {
           onCopiar: () => { return { nivel: rutaActual.length, datos: structuredClone(item) }; }
         });
       });
-
       div.appendChild(opcionesBtn);
     }
 
-    // ----------- DRAG & DROP -----------
+    // DRAG & DROP
     div.addEventListener('mousedown', startDrag);
-    div.addEventListener('touchstart', e => { /* ya manejado en input */ });
+    div.addEventListener('touchstart', e => { /* manejado en input */ });
 
     function startDrag(e) {
       e.stopPropagation();
       dragItem = { div, index, nivel };
-
       const y = e.clientY || (e.touches && e.touches[0].clientY);
-      const x = e.clientX || (e.touches && e.touches[0].clientX);
       const rect = div.getBoundingClientRect();
-      dragStartY = y;
-      dragStartX = x;
+      dragStartY = y; dragStartX = e.clientX || 0;
       dragOffsetY = y - rect.top;
 
       dragTimer = setTimeout(() => {
@@ -927,7 +773,6 @@ function crearIndice(item, index, nivel) {
       if (!dragItem) return;
       const y = e.clientY || e.touches[0].clientY;
       dragItem.div.style.top = (y - dragOffsetY) + 'px';
-
       const siblings = Array.from(placeholder.parentNode.children).filter(c => c !== dragItem.div && c !== placeholder);
       for (let sib of siblings) {
         const rect = sib.getBoundingClientRect();
@@ -941,15 +786,9 @@ function crearIndice(item, index, nivel) {
     function dragEnd(e) {
       clearTimeout(dragTimer);
       if (!dragItem) return;
-
       placeholder.parentNode.insertBefore(dragItem.div, placeholder);
-      dragItem.div.style.position = '';
-      dragItem.div.style.zIndex = '';
-      dragItem.div.style.width = '';
-      dragItem.div.style.pointerEvents = '';
-      placeholder.remove();
-      placeholder = null;
-
+      dragItem.div.style.position = ''; dragItem.div.style.zIndex = ''; dragItem.div.style.width = ''; dragItem.div.style.pointerEvents = '';
+      placeholder.remove(); placeholder = null;
       const newIndex = Array.from(dragItem.div.parentNode.children).indexOf(dragItem.div);
       const arr = dragItem.nivel.hijos;
       arr.splice(newIndex, 0, arr.splice(dragItem.index, 1)[0]);
@@ -960,8 +799,7 @@ function crearIndice(item, index, nivel) {
       document.removeEventListener('mouseup', dragEnd);
       document.removeEventListener('touchmove', dragMove);
       document.removeEventListener('touchend', dragEnd);
-      dragItem = null;
-      dragging = false;
+      dragItem = null; dragging = false;
     }
 
     div.addEventListener('mouseup', () => clearTimeout(dragTimer));
@@ -971,16 +809,7 @@ function crearIndice(item, index, nivel) {
   return div;
 }
 
-
-
-// ==================== Eventos ====================
-// Modal para añadir medidas corporales
-// ...el resto del código...
-// (Eliminado bloque duplicado de DOMContentLoaded)
-
-// ==================== Init ====================
-// (Eliminado: ahora la inicialización está dentro de DOMContentLoaded)
-
+// ==================== GESTOS / SWIPE CON CLON ====================
 let touchStartX = null;
 let touchEndX = null;
 let isMouseDown = false;
@@ -989,22 +818,20 @@ let clon = null;
 let direccionSwipe = null;
 
 function resetTouch() {
-  touchStartX = null;
-  touchEndX = null;
-  isMouseDown = false;
-  direccionSwipe = null;
-  if (clon) {
-    clon.remove();
-    clon = null;
-  }
+  touchStartX = null; touchEndX = null; isMouseDown = false; direccionSwipe = null;
+  if (clon) { clon.remove(); clon = null; }
 }
 
+/**
+ * crearClon(avanzar, retroceder)
+ * - Avanzar = nivel 0 swipe izquierda -> mostrar clon del siguiente nivel (rutaActual + 0)
+ * - Retroceder = nivel >0 swipe derecha -> mostrar clon del nivel anterior (rutaActual.slice(0,-1))
+ * Esta versión crea nodos con crearIndice (no innerHTML) y mantiene listeners.
+ */
 function crearClon(avanzar, retroceder) {
   if (!contenido) return null;
-
   const ancho = contenido.offsetWidth;
 
-  // Crear el contenedor absoluto del clon (cubrirá el contenedor padre)
   const nuevoClon = document.createElement("div");
   nuevoClon.style.position = "absolute";
   nuevoClon.style.top = "0px";
@@ -1016,130 +843,72 @@ function crearClon(avanzar, retroceder) {
   nuevoClon.style.opacity = "0.95";
   nuevoClon.style.transition = "none";
   nuevoClon.style.overflow = "visible";
-  // opcional: background para debug (descomenta si quieres ver el contenedor)
-  // nuevoClon.style.background = "rgba(255,255,255,0.01)";
 
-  // Construir la ruta temporal (siguiente o anterior)
-  const rutaTemp = avanzar
-    ? [...rutaActual, 0]
-    : retroceder
-    ? rutaActual.slice(0, -1)
-    : [...rutaActual];
+  // construir ruta temporal
+  const rutaTemp = avanzar ? [...rutaActual, 0] : retroceder ? rutaActual.slice(0, -1) : [...rutaActual];
 
-  // --- localizar el nivel destino partiendo de { hijos: datos } (coincide con tu lógica) ---
+  // localizar nivel destino partiendo de { hijos: datos }
   let nivel = { hijos: datos };
   for (const idx of rutaTemp) {
-    if (!nivel || !nivel.hijos || !nivel.hijos[idx]) {
-      nivel = null;
-      break;
-    }
+    if (!nivel || !nivel.hijos || !nivel.hijos[idx]) { nivel = null; break; }
     nivel = nivel.hijos[idx];
   }
 
-  // Si existe el nivel destino, renderizarlo dentro del clon
+  // renderizar destino en el clon (sin tocar rutaActual ni contenido real)
   if (nivel) {
-    // Nivel de series (o caso donde tenga .series) -> renderizamos encabezados y filas
     if (nivel.series && Array.isArray(nivel.series)) {
+      // series (render simplificado)
       const encabezados = document.createElement("div");
       encabezados.className = "series-header";
-      ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt=>{
-        const col = document.createElement("div");
-        col.textContent = txt;
-        encabezados.appendChild(col);
+      ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt => {
+        const col = document.createElement("div"); col.textContent = txt; encabezados.appendChild(col);
       });
       nuevoClon.appendChild(encabezados);
 
       const seriesContainer = document.createElement("div");
       seriesContainer.className = "series-container";
       nivel.series.forEach((serie, idx) => {
-        const serieDiv = document.createElement("div");
-        serieDiv.className = "serie-row";
+        const serieDiv = document.createElement("div"); serieDiv.className = "serie-row";
+        const numBtn = document.createElement("button"); numBtn.className = "serie-num";
+        numBtn.textContent = serie.marca || (idx + 1); serieDiv.appendChild(numBtn);
 
-        const numBtn = document.createElement("button");
-        numBtn.className = "serie-num";
-        numBtn.textContent = serie.marca || (idx + 1);
-        serieDiv.appendChild(numBtn);
-
-        const reps = document.createElement("div");
-        reps.textContent = serie.reps ?? "";
-        reps.className = "serie-cell";
-        serieDiv.appendChild(reps);
-
-        const peso = document.createElement("div");
-        peso.textContent = serie.peso ?? "";
-        peso.className = "serie-cell";
-        serieDiv.appendChild(peso);
-
-        const rir = document.createElement("div");
-        rir.textContent = serie.rir ?? "";
-        rir.className = "serie-cell";
-        serieDiv.appendChild(rir);
-
-        const descanso = document.createElement("div");
-        descanso.textContent = serie.descanso ?? "";
-        descanso.className = "serie-cell";
-        serieDiv.appendChild(descanso);
-
-        // temporizador / borrar (representación simple)
-        const tmp = document.createElement("div");
-        tmp.textContent = serie.completada ? "✔️" : "🕔";
-        tmp.className = "serie-cell";
-        serieDiv.appendChild(tmp);
-
-        const borrar = document.createElement("div");
-        borrar.textContent = "❌";
-        borrar.className = "serie-cell";
-        serieDiv.appendChild(borrar);
-
+        ['reps','peso','rir','descanso'].forEach(key => {
+          const cell = document.createElement("div"); cell.className = "serie-cell";
+          cell.textContent = serie[key] ?? "";
+          serieDiv.appendChild(cell);
+        });
+        const tmp = document.createElement("div"); tmp.className = "serie-cell"; tmp.textContent = serie.completada ? "✔️" : "🕔"; serieDiv.appendChild(tmp);
+        const borrar = document.createElement("div"); borrar.className = "serie-cell"; borrar.textContent = "❌"; serieDiv.appendChild(borrar);
         seriesContainer.appendChild(serieDiv);
       });
       nuevoClon.appendChild(seriesContainer);
-
-    // Si el nivel tiene hijos -> usar crearIndice para generar los list-items tal y como en renderizar()
     } else if (nivel.hijos && nivel.hijos.length > 0) {
-      nivel.hijos.forEach((item, index) => {
-        // crearIndice devuelve un elemento DOM con listeners; lo añadimos al clon
-        const div = crearIndice(item, index, nivel);
-        // IMPORTANT: crearIndice puede hacer cosas que asuman que el elemento está en el DOM.
-        // Aun así, agregarlo al clon mantendrá los event listeners creados.
-        nuevoClon.appendChild(div);
+      // usar crearIndice para mantener estructura y listeners
+      nivel.hijos.forEach((item, idx) => {
+        const node = crearIndice(item, idx, nivel);
+        nuevoClon.appendChild(node);
       });
-
-    // Si no tiene hijos -> mostrar nombre u otra info del nivel
     } else {
-      const texto = document.createElement("div");
-      texto.className = "nivel-empty";
-      texto.textContent = nivel.nombre || "(sin contenido)";
-      nuevoClon.appendChild(texto);
+      const txt = document.createElement("div"); txt.className = "nivel-empty";
+      txt.textContent = nivel.nombre || "(sin contenido)"; nuevoClon.appendChild(txt);
     }
   } else {
-    // Ruta inválida -> aviso simple
-    const aviso = document.createElement("div");
-    aviso.className = "nivel-empty";
-    aviso.textContent = "(nivel vacío)";
-    nuevoClon.appendChild(aviso);
+    const aviso = document.createElement("div"); aviso.className = "nivel-empty";
+    aviso.textContent = "(nivel vacío)"; nuevoClon.appendChild(aviso);
   }
 
-  // Posicionar inicialmente fuera de la vista según la dirección (entrará con transform)
-  if (avanzar) {
-    nuevoClon.style.transform = `translateX(${ancho}px)`;
-  } else if (retroceder) {
-    nuevoClon.style.transform = `translateX(${-ancho}px)`;
-  } else {
-    nuevoClon.style.transform = `translateX(${ancho}px)`;
-  }
+  // posición inicial
+  if (avanzar) nuevoClon.style.transform = `translateX(${ancho}px)`;
+  else if (retroceder) nuevoClon.style.transform = `translateX(${-ancho}px)`;
+  else nuevoClon.style.transform = `translateX(${ancho}px)`;
 
-  // Asegurarnos que el padre del contenido es position: relative para posicionado absoluto
   const padre = contenido.parentNode;
-  if (padre && getComputedStyle(padre).position === "static") {
-    padre.style.position = "relative";
-  }
-
+  if (padre && getComputedStyle(padre).position === "static") padre.style.position = "relative";
   padre.appendChild(nuevoClon);
   return nuevoClon;
 }
 
-
+// Eventos touch/mouse
 function onTouchStart(e) {
   touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
   isMouseDown = !e.touches;
@@ -1148,53 +917,42 @@ function onTouchStart(e) {
 
 function onTouchMove(e) {
   if (touchStartX === null) return;
-
   touchEndX = e.touches ? e.touches[0].clientX : e.clientX;
   const deltaX = touchEndX - touchStartX;
-
   direccionSwipe = deltaX > 0 ? "derecha" : "izquierda";
+
   contenido.style.transition = "none";
   contenido.style.transform = `translateX(${deltaX}px)`;
 
   const nivel = nivelActual();
   const nivel0 = rutaActual.length === 0;
-
   let avanzar = false, retroceder = false;
 
-  if (nivel0 && direccionSwipe === "izquierda" && nivel.hijos?.length > 0) {
-    avanzar = true;
-  } else if (!nivel0 && direccionSwipe === "derecha") {
-    retroceder = true;
-  }
+  if (nivel0 && direccionSwipe === "izquierda" && nivel.hijos?.length > 0) avanzar = true;
+  else if (!nivel0 && direccionSwipe === "derecha") retroceder = true;
 
-  // Crear clon si corresponde y aún no existe
-  if ((avanzar || retroceder) && !clon) {
-    clon = crearClon(avanzar, retroceder);
-  }
+  if ((avanzar || retroceder) && !clon) clon = crearClon(avanzar, retroceder);
 
-  // Mover clon en tiempo real
   if (clon) {
     const ancho = contenido.offsetWidth;
-    const clonDesplazamiento = direccionSwipe === "izquierda"
-      ? deltaX + ancho
-      : deltaX - ancho;
+    const clonDesplazamiento = direccionSwipe === "izquierda" ? deltaX + ancho : deltaX - ancho;
     clon.style.transform = `translateX(${clonDesplazamiento}px)`;
   }
 }
 
 function onTouchEnd(e) {
-  touchEndX =
-    e.changedTouches && e.changedTouches.length
-      ? e.changedTouches[0].clientX
-      : e.clientX;
+  touchEndX = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
+  handleGestureFinish();
+}
 
+function handleGestureFinish() {
+  if (!contenido || touchStartX === null || touchEndX === null) { resetTouch(); return; }
   const deltaX = touchEndX - touchStartX;
   const ancho = contenido.offsetWidth;
   const umbral = 80;
   const nivel = nivelActual();
   const nivel0 = rutaActual.length === 0;
 
-  // swipe corto → rebote
   if (Math.abs(deltaX) < umbral) {
     contenido.style.transition = `transform ${duracion}ms ease`;
     contenido.style.transform = "translateX(0)";
@@ -1206,13 +964,11 @@ function onTouchEnd(e) {
     return;
   }
 
+  const direccion = deltaX > 0 ? "derecha" : "izquierda";
   let avanzar = false, retroceder = false;
 
-  if (nivel0 && direccionSwipe === "izquierda" && nivel.hijos?.length > 0) {
-    avanzar = true;
-  } else if (!nivel0 && direccionSwipe === "derecha") {
-    retroceder = true;
-  }
+  if (nivel0 && direccion === "izquierda" && nivel.hijos?.length > 0) avanzar = true;
+  else if (!nivel0 && direccion === "derecha") retroceder = true;
 
   if (!avanzar && !retroceder) {
     contenido.style.transition = `transform ${duracion}ms ease`;
@@ -1221,35 +977,28 @@ function onTouchEnd(e) {
     return;
   }
 
-  // Animación final
   contenido.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
   if (clon) clon.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
 
-  contenido.style.transform = direccionSwipe === "izquierda"
-    ? `translateX(${-ancho}px)`
-    : `translateX(${ancho}px)`;
+  contenido.style.transform = direccion === "izquierda" ? `translateX(${-ancho}px)` : `translateX(${ancho}px)`;
   contenido.style.opacity = "0";
-
   if (clon) clon.style.transform = "translateX(0)";
 
   setTimeout(() => {
     if (retroceder) rutaActual.pop();
     if (avanzar) rutaActual.push(0);
-
     renderizar();
-
     contenido.style.transition = "none";
     contenido.style.transform = "translateX(0)";
     contenido.style.opacity = "1";
-
     resetTouch();
   }, duracion);
 }
 
 // listeners
 if (document.getElementById("contenido")) {
-  document.body.addEventListener("touchstart", onTouchStart);
-  document.body.addEventListener("touchmove", onTouchMove);
+  document.body.addEventListener("touchstart", onTouchStart, {passive: true});
+  document.body.addEventListener("touchmove", onTouchMove, {passive: false});
   document.body.addEventListener("touchend", onTouchEnd);
   document.body.addEventListener("mousedown", onTouchStart);
   document.body.addEventListener("mousemove", onTouchMove);
