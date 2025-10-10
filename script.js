@@ -702,7 +702,6 @@ serieDiv.appendChild(temporizador);
 }
 
 
-
 // ==================== Crear índice con drag & drop ====================
 let dragItem = null;          // Índice que estamos moviendo
 let dragStartY = 0;           // Posición Y inicial
@@ -1000,78 +999,151 @@ function resetTouch() {
   }
 }
 
-function handleGesture() {
-  if (!contenido || touchStartX === null || touchEndX === null) return;
+function crearClon(avanzar, retroceder) {
+  if (!contenido) return null;
 
-  const deltaX = touchEndX - touchStartX;
   const ancho = contenido.offsetWidth;
-  const umbral = 80;
 
-  if (Math.abs(deltaX) < umbral) {
-    // swipe corto → volver atrás
-    contenido.style.transition = `transform ${duracion}ms ease`;
-    contenido.style.transform = "translateX(0)";
-    if (clon) {
-      clon.style.transition = `transform ${duracion}ms ease`;
-      clon.style.transform =
-        direccionSwipe === "izquierda"
-          ? `translateX(${ancho}px)`
-          : `translateX(${-ancho}px)`;
+  // Crear el contenedor absoluto del clon (cubrirá el contenedor padre)
+  const nuevoClon = document.createElement("div");
+  nuevoClon.style.position = "absolute";
+  nuevoClon.style.top = "0px";
+  nuevoClon.style.left = "0px";
+  nuevoClon.style.width = "100%";
+  nuevoClon.style.height = "100%";
+  nuevoClon.style.zIndex = "10000";
+  nuevoClon.style.pointerEvents = "none";
+  nuevoClon.style.opacity = "0.95";
+  nuevoClon.style.transition = "none";
+  nuevoClon.style.overflow = "visible";
+  // opcional: background para debug (descomenta si quieres ver el contenedor)
+  // nuevoClon.style.background = "rgba(255,255,255,0.01)";
+
+  // Construir la ruta temporal (siguiente o anterior)
+  const rutaTemp = avanzar
+    ? [...rutaActual, 0]
+    : retroceder
+    ? rutaActual.slice(0, -1)
+    : [...rutaActual];
+
+  // --- localizar el nivel destino partiendo de { hijos: datos } (coincide con tu lógica) ---
+  let nivel = { hijos: datos };
+  for (const idx of rutaTemp) {
+    if (!nivel || !nivel.hijos || !nivel.hijos[idx]) {
+      nivel = null;
+      break;
     }
-    setTimeout(resetTouch, duracion);
-    return;
+    nivel = nivel.hijos[idx];
   }
 
-  const direccion = deltaX > 0 ? "derecha" : "izquierda";
-  let avanzar = false,
-    retroceder = false;
+  // Si existe el nivel destino, renderizarlo dentro del clon
+  if (nivel) {
+    // Nivel de series (o caso donde tenga .series) -> renderizamos encabezados y filas
+    if (nivel.series && Array.isArray(nivel.series)) {
+      const encabezados = document.createElement("div");
+      encabezados.className = "series-header";
+      ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt=>{
+        const col = document.createElement("div");
+        col.textContent = txt;
+        encabezados.appendChild(col);
+      });
+      nuevoClon.appendChild(encabezados);
 
-  if (direccion === "derecha" && rutaActual.length > 0) {
-    retroceder = true;
-  } else if (direccion === "izquierda" && rutaActual.length === 0) {
-    const nivel = nivelActual();
-    if (nivel.hijos && Array.isArray(nivel.hijos) && nivel.hijos.length > 0) {
-      avanzar = true;
+      const seriesContainer = document.createElement("div");
+      seriesContainer.className = "series-container";
+      nivel.series.forEach((serie, idx) => {
+        const serieDiv = document.createElement("div");
+        serieDiv.className = "serie-row";
+
+        const numBtn = document.createElement("button");
+        numBtn.className = "serie-num";
+        numBtn.textContent = serie.marca || (idx + 1);
+        serieDiv.appendChild(numBtn);
+
+        const reps = document.createElement("div");
+        reps.textContent = serie.reps ?? "";
+        reps.className = "serie-cell";
+        serieDiv.appendChild(reps);
+
+        const peso = document.createElement("div");
+        peso.textContent = serie.peso ?? "";
+        peso.className = "serie-cell";
+        serieDiv.appendChild(peso);
+
+        const rir = document.createElement("div");
+        rir.textContent = serie.rir ?? "";
+        rir.className = "serie-cell";
+        serieDiv.appendChild(rir);
+
+        const descanso = document.createElement("div");
+        descanso.textContent = serie.descanso ?? "";
+        descanso.className = "serie-cell";
+        serieDiv.appendChild(descanso);
+
+        // temporizador / borrar (representación simple)
+        const tmp = document.createElement("div");
+        tmp.textContent = serie.completada ? "✔️" : "🕔";
+        tmp.className = "serie-cell";
+        serieDiv.appendChild(tmp);
+
+        const borrar = document.createElement("div");
+        borrar.textContent = "❌";
+        borrar.className = "serie-cell";
+        serieDiv.appendChild(borrar);
+
+        seriesContainer.appendChild(serieDiv);
+      });
+      nuevoClon.appendChild(seriesContainer);
+
+    // Si el nivel tiene hijos -> usar crearIndice para generar los list-items tal y como en renderizar()
+    } else if (nivel.hijos && nivel.hijos.length > 0) {
+      nivel.hijos.forEach((item, index) => {
+        // crearIndice devuelve un elemento DOM con listeners; lo añadimos al clon
+        const div = crearIndice(item, index, nivel);
+        // IMPORTANT: crearIndice puede hacer cosas que asuman que el elemento está en el DOM.
+        // Aun así, agregarlo al clon mantendrá los event listeners creados.
+        nuevoClon.appendChild(div);
+      });
+
+    // Si no tiene hijos -> mostrar nombre u otra info del nivel
+    } else {
+      const texto = document.createElement("div");
+      texto.className = "nivel-empty";
+      texto.textContent = nivel.nombre || "(sin contenido)";
+      nuevoClon.appendChild(texto);
     }
-  }
-
-  if (avanzar || retroceder) {
-    contenido.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
-    clon.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
-
-    // animar salida y entrada
-    contenido.style.transform =
-      direccion === "izquierda"
-        ? `translateX(${-ancho}px)`
-        : `translateX(${ancho}px)`;
-    contenido.style.opacity = "0";
-
-    clon.style.transform = "translateX(0)";
-    clon.style.opacity = "1";
-
-    setTimeout(() => {
-      // cambiar el nivel una vez termina la animación
-      if (retroceder) rutaActual.pop();
-      if (avanzar) rutaActual.push(0);
-      renderizar();
-
-      // restablecer estado visual del contenedor real
-      contenido.style.transition = "none";
-      contenido.style.transform = "translateX(0)";
-      contenido.style.opacity = "1";
-
-      resetTouch();
-    }, duracion);
   } else {
-    contenido.style.transition = `transform ${duracion}ms ease`;
-    contenido.style.transform = "translateX(0)";
-    resetTouch();
+    // Ruta inválida -> aviso simple
+    const aviso = document.createElement("div");
+    aviso.className = "nivel-empty";
+    aviso.textContent = "(nivel vacío)";
+    nuevoClon.appendChild(aviso);
   }
+
+  // Posicionar inicialmente fuera de la vista según la dirección (entrará con transform)
+  if (avanzar) {
+    nuevoClon.style.transform = `translateX(${ancho}px)`;
+  } else if (retroceder) {
+    nuevoClon.style.transform = `translateX(${-ancho}px)`;
+  } else {
+    nuevoClon.style.transform = `translateX(${ancho}px)`;
+  }
+
+  // Asegurarnos que el padre del contenido es position: relative para posicionado absoluto
+  const padre = contenido.parentNode;
+  if (padre && getComputedStyle(padre).position === "static") {
+    padre.style.position = "relative";
+  }
+
+  padre.appendChild(nuevoClon);
+  return nuevoClon;
 }
+
 
 function onTouchStart(e) {
   touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
   isMouseDown = !e.touches;
+  direccionSwipe = null;
 }
 
 function onTouchMove(e) {
@@ -1079,37 +1151,35 @@ function onTouchMove(e) {
 
   touchEndX = e.touches ? e.touches[0].clientX : e.clientX;
   const deltaX = touchEndX - touchStartX;
-  const ancho = contenido.offsetWidth;
 
   direccionSwipe = deltaX > 0 ? "derecha" : "izquierda";
-
   contenido.style.transition = "none";
   contenido.style.transform = `translateX(${deltaX}px)`;
 
-  // crear el clon si no existe
-  if (!clon) {
-    clon = contenido.cloneNode(true);
-    const rect = contenido.getBoundingClientRect();
-    clon.style.position = "absolute";
-    clon.style.top = rect.top + "px";
-    clon.style.left = rect.left + "px";
-    clon.style.width = rect.width + "px";
-    clon.style.height = rect.height + "px";
-    clon.style.zIndex = "5";
-    clon.style.pointerEvents = "none";
-    clon.style.opacity = "0.8";
-    clon.style.transition = "none";
-    clon.style.transform =
-      direccionSwipe === "izquierda"
-        ? `translateX(${ancho}px)`
-        : `translateX(${-ancho}px)`;
-    contenido.parentNode.appendChild(clon);
+  const nivel = nivelActual();
+  const nivel0 = rutaActual.length === 0;
+
+  let avanzar = false, retroceder = false;
+
+  if (nivel0 && direccionSwipe === "izquierda" && nivel.hijos?.length > 0) {
+    avanzar = true;
+  } else if (!nivel0 && direccionSwipe === "derecha") {
+    retroceder = true;
   }
 
-  // mover el clon en espejo
-  const desplazamiento =
-    direccionSwipe === "izquierda" ? deltaX + ancho : deltaX - ancho;
-  clon.style.transform = `translateX(${desplazamiento}px)`;
+  // Crear clon si corresponde y aún no existe
+  if ((avanzar || retroceder) && !clon) {
+    clon = crearClon(avanzar, retroceder);
+  }
+
+  // Mover clon en tiempo real
+  if (clon) {
+    const ancho = contenido.offsetWidth;
+    const clonDesplazamiento = direccionSwipe === "izquierda"
+      ? deltaX + ancho
+      : deltaX - ancho;
+    clon.style.transform = `translateX(${clonDesplazamiento}px)`;
+  }
 }
 
 function onTouchEnd(e) {
@@ -1117,7 +1187,63 @@ function onTouchEnd(e) {
     e.changedTouches && e.changedTouches.length
       ? e.changedTouches[0].clientX
       : e.clientX;
-  handleGesture();
+
+  const deltaX = touchEndX - touchStartX;
+  const ancho = contenido.offsetWidth;
+  const umbral = 80;
+  const nivel = nivelActual();
+  const nivel0 = rutaActual.length === 0;
+
+  // swipe corto → rebote
+  if (Math.abs(deltaX) < umbral) {
+    contenido.style.transition = `transform ${duracion}ms ease`;
+    contenido.style.transform = "translateX(0)";
+    if (clon) {
+      clon.style.transition = `transform ${duracion}ms ease`;
+      clon.style.transform = `translateX(${direccionSwipe === "izquierda" ? ancho : -ancho}px)`;
+    }
+    setTimeout(resetTouch, duracion);
+    return;
+  }
+
+  let avanzar = false, retroceder = false;
+
+  if (nivel0 && direccionSwipe === "izquierda" && nivel.hijos?.length > 0) {
+    avanzar = true;
+  } else if (!nivel0 && direccionSwipe === "derecha") {
+    retroceder = true;
+  }
+
+  if (!avanzar && !retroceder) {
+    contenido.style.transition = `transform ${duracion}ms ease`;
+    contenido.style.transform = "translateX(0)";
+    setTimeout(resetTouch, duracion);
+    return;
+  }
+
+  // Animación final
+  contenido.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
+  if (clon) clon.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
+
+  contenido.style.transform = direccionSwipe === "izquierda"
+    ? `translateX(${-ancho}px)`
+    : `translateX(${ancho}px)`;
+  contenido.style.opacity = "0";
+
+  if (clon) clon.style.transform = "translateX(0)";
+
+  setTimeout(() => {
+    if (retroceder) rutaActual.pop();
+    if (avanzar) rutaActual.push(0);
+
+    renderizar();
+
+    contenido.style.transition = "none";
+    contenido.style.transform = "translateX(0)";
+    contenido.style.opacity = "1";
+
+    resetTouch();
+  }, duracion);
 }
 
 // listeners
@@ -1129,4 +1255,3 @@ if (document.getElementById("contenido")) {
   document.body.addEventListener("mousemove", onTouchMove);
   document.body.addEventListener("mouseup", onTouchEnd);
 }
-
