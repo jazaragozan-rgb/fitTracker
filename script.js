@@ -467,50 +467,147 @@ function renderizar() {
 
     // buscar ejercicio anterior y mostrar
     function fechaATimestamp(fechaStr) {
-      if (!fechaStr || typeof fechaStr !== "string") return 0;
-      return new Date(fechaStr).getTime() || 0;
+      if (!fechaStr || typeof fechaStr !== "string") return null;
+      // Aceptar formatos YYYY-MM-DD y YYYY-MM-DDTHH:mm:ss... -> normalizar a ISO
+      const simpleDate = /^\d{4}-\d{2}-\d{2}$/.test(fechaStr);
+      const input = simpleDate ? (fechaStr + 'T00:00:00Z') : fechaStr;
+      const ts = Date.parse(input);
+      if (Number.isNaN(ts)) return null;
+      return ts;
     }
     function buscarEjercicioAnterior(datosArg, rutaArg, ejercicioActual) {
       if (!ejercicioActual || !datosArg) return null;
       const nombreEjercicioActual = (ejercicioActual.nombre || '').trim().toLowerCase();
-      const timestampActual = fechaATimestamp(ejercicioActual._fecha || ejercicioActual.fecha);
-      let ejercicioAnterior = null;
-      for (const meso of datosArg) {
-        for (const micro of meso.hijos || []) {
-          for (const sesion of micro.hijos || []) {
-            const tsSesion = fechaATimestamp(sesion._fecha || sesion.fecha);
-            if (tsSesion >= timestampActual) continue;
-            for (const sesionInferior of sesion.hijos || []) {
-              for (const ejerc of sesionInferior.hijos || []) {
-                if (ejerc === ejercicioActual) continue;
-                if (((ejerc.nombre || '').trim().toLowerCase()) !== nombreEjercicioActual) continue;
-                if (!ejerc.series || ejerc.series.length === 0) continue;
-                if (!ejercicioAnterior || tsSesion > fechaATimestamp(ejercicioAnterior._fecha || ejercicioAnterior.fecha)) {
-                  ejercicioAnterior = ejerc;
+
+      console.log('[buscarEjercicioAnterior] inicio:', { nombreEjercicioActual, rutaArg, ejercicioActual });
+
+      // Determinar la sesión actual a partir de la ruta (si está disponible)
+      let sesionActual = null;
+      if (Array.isArray(rutaArg) && rutaArg.length >= 3) {
+        const m = rutaArg[0];
+        const mi = rutaArg[1];
+        const s = rutaArg[2];
+        sesionActual = datosArg?.[m]?.hijos?.[mi]?.hijos?.[s] || null;
+      }
+
+      // Timestamp de la sesión actual (fallback a la fecha del ejercicio si no hay sesión)
+      const fechaReferencia = (sesionActual && (sesionActual._fecha || sesionActual.fecha)) || ejercicioActual._fecha || ejercicioActual.fecha;
+      const timestampActual = fechaATimestamp(fechaReferencia);
+      console.log('[buscarEjercicioAnterior] timestampActual:', { fechaReferencia, timestampActual });
+
+      // Recolectar sesiones en recorrido (con índice lineal) para poder usar orden estructural
+      const sesionesPlan = [];
+      let linearIndex = 0;
+      for (let mi = 0; mi < datosArg.length; mi++) {
+        const meso = datosArg[mi];
+        for (let mj = 0; mj < (meso.hijos || []).length; mj++) {
+          const micro = meso.hijos[mj];
+          for (let sk = 0; sk < (micro.hijos || []).length; sk++) {
+            const ses = micro.hijos[sk];
+            // Intentar obtener la fecha de la sesión; si no existe, buscar en los bloques o ejercicios dentro
+            let fechaSesion = ses._fecha || ses.fecha || null;
+            if (!fechaSesion) {
+              // buscar en bloques
+              for (const b of ses.hijos || []) {
+                if (b._fecha || b.fecha) { fechaSesion = b._fecha || b.fecha; break; }
+                // buscar en ejercicios dentro del bloque
+                for (const e of b.hijos || []) {
+                  if (e._fecha || e.fecha) { fechaSesion = e._fecha || e.fecha; break; }
+                }
+                if (fechaSesion) break;
+              }
+            }
+            const tsSesion = fechaATimestamp(fechaSesion);
+            sesionesPlan.push({ mesoIdx: mi, microIdx: mj, sesionIdx: sk, sesion: ses, fechaSesion, tsSesion, linearIndex });
+            linearIndex++;
+          }
+        }
+      }
+
+      // Encontrar índice lineal de la sesión actual (si existe)
+      let actualLinear = null;
+      if (sesionActual) {
+        for (const s of sesionesPlan) {
+          if (s.sesion === sesionActual) { actualLinear = s.linearIndex; break; }
+        }
+      }
+
+      // Buscamos la sesión anterior más cercana que contenga el ejercicio
+      let mejor = null; // { ejerc, fechaTs, fechaRaw }
+
+      for (const sInfo of sesionesPlan) {
+        const sesion = sInfo.sesion;
+        // Excluir la misma sesión actual por referencia
+        if (sesionActual && sesion === sesionActual) continue;
+
+        // Si tenemos timestampActual válido, priorizar sesiones con tsSesion no nulo
+        if (timestampActual !== null) {
+          if (sInfo.tsSesion === null) {
+            console.log('[buscarEjercicioAnterior] ignorando sesión sin fecha al comparar por fecha:', sInfo);
+            continue;
+          }
+          if (sInfo.tsSesion >= timestampActual) continue;
+        } else if (actualLinear !== null) {
+          // Si no hay fechas, usar orden lineal: queremos solo sesiones anteriores en orden
+          if (sInfo.linearIndex >= actualLinear) continue;
+        } else {
+          // Sin referencia de fecha ni sesión actual, no podemos comparar
+          continue;
+        }
+
+        // buscar el ejercicio dentro de esta sesión
+        for (const bloque of sesion.hijos || []) {
+          for (const ejerc of bloque.hijos || []) {
+            if (((ejerc.nombre || '').trim().toLowerCase()) !== nombreEjercicioActual) continue;
+            if (!ejerc.series || ejerc.series.length === 0) continue;
+            // Seleccionar mejor: si usamos fechas, comparar tsSesion; si no, usar linearIndex
+            if (!mejor) {
+              mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
+            } else {
+              if (timestampActual !== null) {
+                if ((sInfo.tsSesion || 0) > (mejor.fechaTs || 0)) {
+                  mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
+                }
+              } else {
+                if (sInfo.linearIndex > (mejor.linearIndex || 0)) {
+                  mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
                 }
               }
             }
+            console.log('[buscarEjercicioAnterior] candidato válido encontrado:', { sesionIndex: sInfo.linearIndex, fechaSesion: sInfo.fechaSesion });
           }
         }
       }
-      return ejercicioAnterior;
+
+      if (!mejor) console.log('[buscarEjercicioAnterior] no se encontró sesión anterior');
+      else console.log('[buscarEjercicioAnterior] resultado:', mejor);
+      return mejor;
     }
 
-    const nivel4 = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]]?.hijos?.[rutaActual[3]];
-    if (nivel4?.hijos) {
-      for (const bloque of nivel4.hijos) {
+    // La fecha de sesión está guardada en el objeto "sesión" (nivel índice 2).
+    // Cuando estamos viendo series (rutaActual.length === 5), la ruta es:
+    // [meso, micro, sesion, bloque, ejercicio]
+    const sesionObj = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]];
+    if (sesionObj?.hijos) {
+      for (const bloque of sesionObj.hijos) {
+        // Determinar la fecha aplicable para este bloque: preferir fecha del bloque, si no usar la de la sesión
+        const bloqueFecha = bloque._fecha || bloque.fecha || sesionObj._fecha || sesionObj?.fecha || null;
         if (bloque.hijos) {
           for (const ejerc of bloque.hijos) {
-            ejerc._fecha = nivel4.fecha;
+            // Si el ejercicio ya tiene _fecha respetarla, si no usar la fecha del bloque/sesión
+            ejerc._fecha = ejerc._fecha || bloqueFecha || null;
           }
         }
       }
     }
-    nivel._fecha = nivel4?.fecha || nivel._fecha || null;
+    // nivel es el ejercicio actual; priorizar la fecha del propio ejercicio, luego bloque/sesión
+    nivel._fecha = nivel._fecha || sesionObj?.fecha || sesionObj?._fecha || null;
 
-    const ejercicioAnterior = buscarEjercicioAnterior(datos, rutaActual, nivel);
-    if (ejercicioAnterior) {
-      let fechaMostrar = ejercicioAnterior._fecha || ejercicioAnterior.fecha;
+    // const ejercicioAnterior = buscarEjercicioAnterior(datos, rutaActual, nivel);
+    const ejercicioAnteriorObj = buscarEjercicioAnterior(datos, rutaActual, nivel);
+    if (ejercicioAnteriorObj) {
+      const ejercicioAnterior = ejercicioAnteriorObj.ejerc;
+      let fechaMostrar = ejercicioAnteriorObj.fechaRaw || ejercicioAnterior._fecha || ejercicioAnterior.fecha || '';
       const statsBoxAnt = document.createElement('div');
       statsBoxAnt.style.background = "#ffffffff";
       statsBoxAnt.style.padding = "14px";
@@ -521,7 +618,7 @@ function renderizar() {
       statsBoxAnt.style.width = "94%";
 
       let volumenAnt = 0, mejor1RMAnt = 0, pesoMax = 0;
-      ejercicioAnterior.series.forEach(serie => {
+      (ejercicioAnterior.series || []).forEach(serie => {
         const peso = parseFloat(serie.peso) || 0;
         const reps = parseInt(serie.reps) || 0;
         volumenAnt += peso * reps;
@@ -638,7 +735,13 @@ function crearIndice(item, index, nivel) {
       fechaInput.value = nivel.hijos[index].fecha || '';
       ['pointerdown','mousedown','touchstart','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('input', async e => {
-        nivel.hijos[index].fecha = e.target.value; guardarDatos();
+        // Normalizar la fecha a ISO y guardar en `fecha` y `_fecha`
+        const raw = e.target.value; // formato YYYY-MM-DD desde el input
+        const iso = raw ? new Date(raw + 'T00:00:00').toISOString() : '';
+        nivel.hijos[index].fecha = iso;
+        nivel.hijos[index]._fecha = iso;
+        console.log('[fechaInput] guardada sesión:', { raw, iso, index, sesion: nivel.hijos[index] });
+        guardarDatos();
         const user = auth.currentUser;
         if (user) {
           try { await guardarDatosUsuario(user.uid, datos); } catch(err){ console.error(err); }
@@ -706,7 +809,13 @@ function crearIndice(item, index, nivel) {
       fechaInput.value = nivel.hijos[index].fecha || '';
       ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('change', async e => {
-        nivel.hijos[index].fecha = e.target.value; guardarDatos();
+        // Normalizar la fecha a ISO y guardar en `fecha` y `_fecha`
+        const raw = e.target.value;
+        const iso = raw ? new Date(raw + 'T00:00:00').toISOString() : '';
+        nivel.hijos[index].fecha = iso;
+        nivel.hijos[index]._fecha = iso;
+        console.log('[fechaInput change] guardada sesión:', { raw, iso, index, sesion: nivel.hijos[index] });
+        guardarDatos();
         const user = auth.currentUser;
         if (user) {
           try { await guardarDatosUsuario(user.uid, datos); } catch(err){ console.error(err); }
