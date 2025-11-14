@@ -385,19 +385,60 @@ function renderizar() {
 
       const reps = document.createElement('input');
       reps.placeholder = 'Reps'; reps.value = serie.reps || '';
-      reps.addEventListener('blur', e => { serie.reps = e.target.value; guardarDatos(); renderizar(); });
+      reps.addEventListener('blur', e => {
+        serie.reps = e.target.value;
+        guardarDatos();
+        setTimeout(() => {
+          const active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
+            // Si el foco se movió a otro input dentro de las series, evitar re-render para no perder foco
+            return;
+          }
+          renderizar();
+        }, 0);
+      });
 
       const peso = document.createElement('input');
       peso.placeholder = 'Peso'; peso.value = serie.peso || '';
-      peso.addEventListener('blur', e => { serie.peso = e.target.value; guardarDatos(); renderizar(); });
+      peso.addEventListener('blur', e => {
+        serie.peso = e.target.value;
+        guardarDatos();
+        setTimeout(() => {
+          const active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
+            return;
+          }
+          renderizar();
+        }, 0);
+      });
 
       const rir = document.createElement('input');
       rir.placeholder = 'RIR'; rir.value = serie.rir || '';
-      rir.addEventListener('blur', e => { serie.rir = e.target.value; guardarDatos(); renderizar(); });
+      rir.addEventListener('blur', e => {
+        serie.rir = e.target.value;
+        guardarDatos();
+        setTimeout(() => {
+          const active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
+            return;
+          }
+          renderizar();
+        }, 0);
+      });
 
       const descanso = document.createElement('input');
       descanso.placeholder = 'Descanso'; descanso.value = serie.descanso || '';
-      descanso.addEventListener('blur', e => { serie.descanso = e.target.value; guardarDatos(); renderizar(); });
+      descanso.addEventListener('blur', e => {
+        serie.descanso = e.target.value;
+        guardarDatos();
+        setTimeout(() => {
+          const active = document.activeElement;
+          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
+            return;
+          }
+          renderizar();
+        }, 0);
+      });
 
       const temporizador = document.createElement('button');
       temporizador.className = "btn-timer";
@@ -690,6 +731,8 @@ let dragStartX = 0;
 let dragTimer = null;
 let placeholder = null;
 let dragOffsetY = 0;
+let dragOffsetX = 0;
+let dragGhost = null;
 let dragging = false;
 const dragThreshold = 10;
 
@@ -853,38 +896,121 @@ function crearIndice(item, index, nivel) {
     function startDrag(e) {
       e.stopPropagation();
       dragItem = { div, index, nivel };
-      const y = e.clientY || (e.touches && e.touches[0].clientY);
+      const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
+      const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
       const rect = div.getBoundingClientRect();
-      dragStartY = y; dragStartX = e.clientX || 0;
+      dragStartY = y; dragStartX = x;
       dragOffsetY = y - rect.top;
-
-      dragTimer = setTimeout(() => {
+      dragOffsetX = x - rect.left;
+      // Crear ghost/placeholder: en touch queremos creación inmediata, en mouse mantener pequeño retardo
+      function createGhost() {
+        // si ya existe placeholder/ghost salir
+        if (placeholder || dragItem.ghost) return;
+        // placeholder mantiene espacio en la lista
         placeholder = document.createElement('div');
         placeholder.className = 'drag-placeholder';
         placeholder.style.height = div.offsetHeight + 'px';
         div.parentNode.insertBefore(placeholder, div.nextSibling);
 
-        div.style.position = 'absolute';
-        div.style.zIndex = '1000';
-        div.style.width = div.offsetWidth + 'px';
-        div.style.pointerEvents = 'none';
-        div.style.top = rect.top + 'px';
-        div.style.left = rect.left + 'px';
+        // ocultar el original (mantiene el layout)
+        div.style.visibility = 'hidden';
 
-        document.body.appendChild(div);
+        // Crear (o reusar) un overlay fijo en el body para el ghost.
+        let overlay = document.getElementById('ghost-overlay');
+        if (!overlay) {
+          overlay = document.createElement('div');
+          overlay.id = 'ghost-overlay';
+          overlay.style.position = 'fixed';
+          overlay.style.top = '0';
+          overlay.style.left = '0';
+          overlay.style.width = '100%';
+          overlay.style.height = '100%';
+          overlay.style.pointerEvents = 'none';
+          overlay.style.zIndex = '2147483647';
+          overlay.style.overflow = 'visible';
+          overlay.style.transform = 'none';
+          document.body.appendChild(overlay);
+        }
+
+        dragGhost = div.cloneNode(true);
+        dragGhost.classList.add('drag-ghost');
+        // posicionamos dentro del overlay usando coordenadas de client (overlay es fixed)
+        dragGhost.style.position = 'absolute';
+        dragGhost.style.pointerEvents = 'none';
+        dragGhost.style.display = 'block';
+        dragGhost.style.boxSizing = 'border-box';
+
+        // estilos visuales fuertes para depuración en móviles
+        try {
+          const cs = getComputedStyle(div);
+          dragGhost.style.background = cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' ? cs.backgroundColor : '#fff';
+          dragGhost.style.color = cs.color || '#000';
+          dragGhost.style.boxShadow = '0 12px 34px rgba(0,0,0,0.28)';
+          dragGhost.style.opacity = '0.98';
+          dragGhost.style.borderRadius = cs.borderRadius || '8px';
+          dragGhost.style.transition = 'none';
+          dragGhost.style.margin = '0';
+          dragGhost.style.padding = cs.padding || '8px';
+          dragGhost.style.border = '3px solid magenta';
+          dragGhost.style.willChange = 'transform';
+          dragGhost.style.backfaceVisibility = 'hidden';
+        } catch (err) {}
+
+        // copiar valores de inputs/textarea al clon
+        try {
+          const origInputs = div.querySelectorAll('input,textarea');
+          const cloneInputs = dragGhost.querySelectorAll('input,textarea');
+          for (let i = 0; i < cloneInputs.length; i++) {
+            if (origInputs[i]) cloneInputs[i].value = origInputs[i].value;
+          }
+        } catch (err) {}
+
+        // calcular posicion inicial usando coords del viewport
+        const startLeft = Math.round(rect.left);
+        const startTop = Math.round(rect.top);
+        dragGhost.style.width = rect.width + 'px';
+        dragGhost.style.height = rect.height + 'px';
+        dragGhost.style.transform = `translate3d(${startLeft}px, ${startTop}px, 0) scale(1.02)`;
+
+        console.log('[createGhost] overlay approach, rect:', rect, 'start', startLeft, startTop, 'index', index);
+
+        overlay.appendChild(dragGhost);
+
+        // store ghost ref on dragItem
+        dragItem.ghost = dragGhost;
+        dragItem._ghostOverlay = overlay;
+        // marcar que entramos en modo arrastre (evita que el handler de swipe horizontal actúe)
+        dragging = true;
 
         document.addEventListener('mousemove', dragMove);
         document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('touchmove', dragMove);
+        document.addEventListener('touchmove', dragMove, {passive:false});
         document.addEventListener('touchend', dragEnd);
-      }, 500);
+      }
+
+      // si el evento es táctil (touch) iniciamos ghost inmediatamente
+      if (e.touches && e.touches.length) {
+        createGhost();
+      } else {
+        dragTimer = setTimeout(createGhost, 200);
+      }
     }
 
     function dragMove(e) {
-      if (!dragItem) return;
-      const y = e.clientY || e.touches[0].clientY;
-      dragItem.div.style.top = (y - dragOffsetY) + 'px';
-      const siblings = Array.from(placeholder.parentNode.children).filter(c => c !== dragItem.div && c !== placeholder);
+      if (!dragItem || !placeholder) return;
+      const x = e.clientX || (e.touches && e.touches[0].clientX) || dragStartX;
+      const y = e.clientY || (e.touches && e.touches[0].clientY) || dragStartY;
+      if (!dragItem.ghost) return;
+      // overlay is fixed; use viewport/client coords and translate3d for smooth GPU movement
+      const tx = Math.round(x - dragOffsetX);
+      const ty = Math.round(y - dragOffsetY);
+      try {
+        dragItem.ghost.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(1.02)`;
+      } catch (err) {
+        dragItem.ghost.style.left = (x - dragOffsetX) + 'px';
+        dragItem.ghost.style.top = (y - dragOffsetY) + 'px';
+      }
+      const siblings = Array.from(placeholder.parentNode.children).filter(c => c !== placeholder);
       for (let sib of siblings) {
         const rect = sib.getBoundingClientRect();
         if (y > rect.top && y < rect.bottom) {
@@ -897,10 +1023,26 @@ function crearIndice(item, index, nivel) {
     function dragEnd(e) {
       clearTimeout(dragTimer);
       if (!dragItem) return;
-      placeholder.parentNode.insertBefore(dragItem.div, placeholder);
-      dragItem.div.style.position = ''; dragItem.div.style.zIndex = ''; dragItem.div.style.width = ''; dragItem.div.style.pointerEvents = '';
+      // insertar el original en la posición del placeholder
+      const original = dragItem.div;
+      placeholder.parentNode.insertBefore(original, placeholder);
+      original.style.visibility = '';
+      // limpiar ghost
+      if (dragItem.ghost) {
+        // quitar del overlay
+        try { dragItem.ghost.remove(); } catch (err) {}
+        dragItem.ghost = null;
+      }
+      if (dragItem._ghostOverlay) {
+        try {
+          if (dragItem._ghostOverlay.children.length === 0) dragItem._ghostOverlay.remove();
+        } catch (err) {}
+        dragItem._ghostOverlay = null;
+      }
+      // compatibilidad: limpiar variable global si existe
+      if (dragGhost) { try { dragGhost.remove(); } catch (err) {} dragGhost = null; }
       placeholder.remove(); placeholder = null;
-      const newIndex = Array.from(dragItem.div.parentNode.children).indexOf(dragItem.div);
+      const newIndex = Array.from(original.parentNode.children).indexOf(original);
       const arr = dragItem.nivel.hijos;
       arr.splice(newIndex, 0, arr.splice(dragItem.index, 1)[0]);
       guardarDatos();
@@ -1030,6 +1172,12 @@ function onTouchStart(e) {
 
 function onTouchMove(e) {
   if (touchStartX === null) return;
+
+  // Si estamos en modo arrastre vertical, ignorar la lógica de swipe horizontal
+  if (dragging) {
+    if (e.cancelable) e.preventDefault();
+    return;
+  }
 
   const esInput = e.target.closest('.list-item input');
   const modoVisual = esInput?.disabled;
