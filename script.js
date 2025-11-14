@@ -734,6 +734,7 @@ let dragOffsetY = 0;
 let dragOffsetX = 0;
 let dragGhost = null;
 let dragging = false;
+let dragPressPending = false;
 const dragThreshold = 10;
 
 function crearIndice(item, index, nivel) {
@@ -809,6 +810,8 @@ function crearIndice(item, index, nivel) {
         startX = e.touches[0].clientX;
         startY = e.touches[0].clientY;
         dragging = false;
+        // preparar arrastre por pulsación prolongada
+        try { startDrag(e); } catch (err) { /* no bloquear si falla */ }
       }
     });
 
@@ -818,10 +821,19 @@ function crearIndice(item, index, nivel) {
       const currentY = e.touches[0].clientY;
       const deltaX = currentX - startX;
       const deltaY = currentY - startY;
-      if (!dragging && Math.abs(deltaY) > Math.abs(deltaX) + dragThreshold) {
-        dragging = true; startDrag(e);
+      const moveDist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
+      // Si el usuario se mueve ligeramente antes de que termine el long-press, cancelar el pending
+      if (dragPressPending && moveDist > 6) {
+        clearTimeout(dragTimer);
+        dragPressPending = false;
       }
-      if (dragging) { dragMove(e); e.preventDefault(); } // bloquear scroll vertical
+
+      // No iniciar arrastre por movimiento. Solo permitir movimiento si el ghost ya existe.
+      if (dragItem && dragItem.ghost) {
+        dragging = true;
+        dragMove(e);
+        if (e.cancelable) e.preventDefault(); // bloquear scroll vertical durante arrastre
+      }
     });
 
     input.addEventListener('touchend', e => {
@@ -834,7 +846,7 @@ function crearIndice(item, index, nivel) {
         if (distancia < 10) { 
           rutaActual.push(index); renderizar(); }
       }
-      startX = null; startY = null; clearTimeout(dragTimer);
+      startX = null; startY = null; clearTimeout(dragTimer); dragPressPending = false;
     });
 
     input.addEventListener('click', (e) => {
@@ -895,6 +907,8 @@ function crearIndice(item, index, nivel) {
 
     function startDrag(e) {
       e.stopPropagation();
+      // Si ya hemos preparado este elemento y tiene createGhost, no re-preparar
+      if (dragItem && dragItem.div === div && dragItem.createGhost) return;
       dragItem = { div, index, nivel };
       const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
       const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
@@ -988,12 +1002,14 @@ function crearIndice(item, index, nivel) {
         document.addEventListener('touchend', dragEnd);
       }
 
-      // si el evento es táctil (touch) iniciamos ghost inmediatamente
-      if (e.touches && e.touches.length) {
-        createGhost();
-      } else {
-        dragTimer = setTimeout(createGhost, 200);
-      }
+      // Exponer createGhost para poder invocarlo desde touchmove (inicio por movimiento)
+      dragItem.createGhost = createGhost;
+
+      // Siempre esperar 1000ms antes de crear el ghost (evitar arranques inmediatos)
+      const delayMs = 1000;
+      if (dragTimer) clearTimeout(dragTimer);
+      dragPressPending = true;
+      dragTimer = setTimeout(() => { dragPressPending = false; createGhost(); }, delayMs);
     }
 
     function dragMove(e) {
@@ -1056,7 +1072,7 @@ function crearIndice(item, index, nivel) {
     }
 
     div.addEventListener('mouseup', () => clearTimeout(dragTimer));
-    div.addEventListener('touchend', () => clearTimeout(dragTimer));
+    div.addEventListener('touchend', () => { clearTimeout(dragTimer); dragPressPending = false; });
   }
 
   return div;
