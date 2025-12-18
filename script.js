@@ -649,6 +649,9 @@ function renderizar() {
     if (ejercicioAnteriorObj) {
       const ejercicioAnterior = ejercicioAnteriorObj.ejerc;
       let fechaMostrar = ejercicioAnteriorObj.fechaRaw || ejercicioAnterior._fecha || ejercicioAnterior.fecha || '';
+      if (fechaMostrar && fechaMostrar.includes('T')) {
+        fechaMostrar = fechaMostrar.split('T')[0];
+      }
       const statsBoxAnt = document.createElement('div');
       statsBoxAnt.style.background = "#ffffffff";
       statsBoxAnt.style.padding = "14px";
@@ -778,13 +781,12 @@ function crearIndice(item, index, nivel) {
       fechaInput.type = 'date';
       fechaInput.value = nivel.hijos[index].fecha || '';
       ['pointerdown','mousedown','touchstart','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
-      fechaInput.addEventListener('input', async e => {
-        // Normalizar la fecha a ISO y guardar en `fecha` y `_fecha`
+      fechaInput.addEventListener('change', async e => {
+        // Guardar la fecha en formato YYYY-MM-DD
         const raw = e.target.value; // formato YYYY-MM-DD desde el input
-        const iso = raw ? new Date(raw + 'T00:00:00').toISOString() : '';
-        nivel.hijos[index].fecha = iso;
-        nivel.hijos[index]._fecha = iso;
-        console.log('[fechaInput] guardada sesión:', { raw, iso, index, sesion: nivel.hijos[index] });
+        nivel.hijos[index].fecha = raw;
+        nivel.hijos[index]._fecha = raw;
+        console.log('[fechaInput] guardada sesión:', { raw, index, sesion: nivel.hijos[index] });
         guardarDatos();
         const user = auth.currentUser;
         if (user) {
@@ -861,15 +863,14 @@ function crearIndice(item, index, nivel) {
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
       fechaInput.type = 'date';
-      fechaInput.value = nivel.hijos[index].fecha || '';
+      fechaInput.value = nivel.hijos[index].fecha ? nivel.hijos[index].fecha.slice(0,10) : '';
       ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('change', async e => {
-        // Normalizar la fecha a ISO y guardar en `fecha` y `_fecha`
-        const raw = e.target.value;
-        const iso = raw ? new Date(raw + 'T00:00:00').toISOString() : '';
-        nivel.hijos[index].fecha = iso;
-        nivel.hijos[index]._fecha = iso;
-        console.log('[fechaInput change] guardada sesión:', { raw, iso, index, sesion: nivel.hijos[index] });
+        // Guardar la fecha en formato YYYY-MM-DD
+        const raw = e.target.value; // formato YYYY-MM-DD desde el input
+        nivel.hijos[index].fecha = raw;
+        nivel.hijos[index]._fecha = raw;
+        console.log('[fechaInput] guardada sesión:', { raw, index, sesion: nivel.hijos[index] });
         guardarDatos();
         const user = auth.currentUser;
         if (user) {

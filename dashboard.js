@@ -85,13 +85,14 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     const meses = ['ENERO','FEBRERO','MARZO','ABRIL','MAYO','JUNIO','JULIO','AGOSTO','SEPTIEMBRE','OCTUBRE','NOVIEMBRE','DICIEMBRE'];
     mesNombre.textContent = meses[mesActual];
 
-    const hoyStr = new Date().toISOString().split("T")[0];
+    const hoy = new Date();
+    const hoyStr = hoy.getFullYear() + '-' + String(hoy.getMonth() + 1).padStart(2, '0') + '-' + String(hoy.getDate()).padStart(2, '0');
     let btnHoy = null;
 
     for (let i = 0; i < 7; i++) {
       const fechaDia = new Date(primerDiaSemana);
       fechaDia.setDate(primerDiaSemana.getDate() + i);
-      const fechaStr = fechaDia.toISOString().split("T")[0];
+      const fechaStr = fechaDia.getFullYear() + '-' + String(fechaDia.getMonth() + 1).padStart(2, '0') + '-' + String(fechaDia.getDate()).padStart(2, '0');
       const sesionDia = sesiones.find(s => s.fecha === fechaStr);
 
       const btn = document.createElement('button');
