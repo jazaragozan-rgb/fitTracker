@@ -636,7 +636,7 @@ function renderizar() {
         if (bloque.hijos) {
           for (const ejerc of bloque.hijos) {
             // Si el ejercicio ya tiene _fecha respetarla, si no usar la fecha del bloque/sesión
-            ejerc._fecha = ejerc._fecha || bloqueFecha || null;
+            ejerc._fecha = bloqueFecha || ejerc._fecha;
           }
         }
       }
@@ -649,8 +649,12 @@ function renderizar() {
     if (ejercicioAnteriorObj) {
       const ejercicioAnterior = ejercicioAnteriorObj.ejerc;
       let fechaMostrar = ejercicioAnteriorObj.fechaRaw || ejercicioAnterior._fecha || ejercicioAnterior.fecha || '';
-      if (fechaMostrar && fechaMostrar.includes('T')) {
-        fechaMostrar = fechaMostrar.split('T')[0];
+      if (fechaMostrar) {
+        if (fechaMostrar.includes('T')) {
+          fechaMostrar = fechaMostrar.split('T')[0];
+        }
+        const d = new Date(fechaMostrar + 'T00:00:00');
+        fechaMostrar = d.toLocaleDateString('es-ES'); // Formato DD/MM/YYYY
       }
       const statsBoxAnt = document.createElement('div');
       statsBoxAnt.style.background = "#ffffffff";
