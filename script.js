@@ -907,16 +907,17 @@ function crearIndice(item, index, nivel) {
     }
 
     // DRAG & DROP
-    div.addEventListener('mousedown', startDrag);
-    div.addEventListener('touchstart', e => { /* manejado en input */ });
+    // Escuchar en fase de captura para recibir el evento incluso si el objetivo
+    // es un input/botón interno que podría detener la propagación.
+    div.addEventListener('mousedown', startDrag, {capture: true});
+    div.addEventListener('touchstart', startDrag, {passive: false, capture: true});
 
     function startDrag(e) {
-      e.stopPropagation();
       // Si ya hemos preparado este elemento y tiene createGhost, no re-preparar
       if (dragItem && dragItem.div === div && dragItem.createGhost) return;
       dragItem = { div, index, nivel };
-      const x = e.clientX || (e.touches && e.touches[0].clientX) || 0;
-      const y = e.clientY || (e.touches && e.touches[0].clientY) || 0;
+      const x = e.clientX || (e.touches && e.touches[0].clientX) || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || 0;
+      const y = e.clientY || (e.touches && e.touches[0].clientY) || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY) || 0;
       const rect = div.getBoundingClientRect();
       dragStartY = y; dragStartX = x;
       dragOffsetY = y - rect.top;
