@@ -121,6 +121,25 @@ let rutaActual = [];
 let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay, subHeader;
 let menuTitulo;
 let ultimoMenuSeleccionado = 'Dashboard';
+// Evitar que un clic/tap "pegado" tras navegar dispare acciones en el nuevo nivel.
+let suppressClicksUntil = 0;
+function navigatePush(index) {
+  suppressClicksUntil = Date.now() + 600; // bloquear clicks inmediatos durante 600ms
+  rutaActual.push(index);
+  renderizar();
+  suppressPointerEvents(600);
+}
+
+let _pointerSuppressTimer = null;
+function suppressPointerEvents(ms = 600) {
+  if (!contenido) return;
+  contenido.style.pointerEvents = 'none';
+  if (_pointerSuppressTimer) clearTimeout(_pointerSuppressTimer);
+  _pointerSuppressTimer = setTimeout(() => {
+    try { contenido.style.pointerEvents = ''; } catch (e) {}
+    _pointerSuppressTimer = null;
+  }, ms);
+}
 
 // ==================== DOMContentLoaded: inicialización UI ====================
 document.addEventListener("DOMContentLoaded", () => {
@@ -699,10 +718,13 @@ function renderizar() {
   const nombres = ['Mesociclos','Microciclos','Sesiones','Ejercicios'];
   tituloNivel.textContent = nombres[rutaActual.length - 1] || nivel.nombre;
 
-  if (nivel.hijos && nivel.hijos.length) {
+    if (nivel.hijos && nivel.hijos.length) {
     nivel.hijos.forEach((item, index) => {
       const div = crearIndice(item, index, nivel);
-      div.addEventListener('click', () => { rutaActual.push(index); renderizar(); });
+      div.addEventListener('click', (e) => {
+        if (Date.now() < suppressClicksUntil) { e.stopPropagation(); return; }
+        navigatePush(index);
+      });
       contenido.appendChild(div);
     });
   }
@@ -843,6 +865,10 @@ function crearIndice(item, index, nivel) {
     });
 
     input.addEventListener('touchend', e => {
+      if (Date.now() < suppressClicksUntil) {
+        startX = null; startY = null; clearTimeout(dragTimer); dragPressPending = false;
+        return;
+      }
       if (!dragging) {
         const endX = e.changedTouches[0].clientX;
         const endY = e.changedTouches[0].clientY;
@@ -850,16 +876,16 @@ function crearIndice(item, index, nivel) {
         const deltaY = endY - startY;
         const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
         if (distancia < 10) { 
-          rutaActual.push(index); renderizar(); }
+          navigatePush(index);
+        }
       }
       startX = null; startY = null; clearTimeout(dragTimer); dragPressPending = false;
     });
 
     input.addEventListener('click', (e) => {
-      //e.stopImmediatePropagation();
+      if (Date.now() < suppressClicksUntil) { e.stopPropagation(); e.preventDefault(); return; }
       if (clon) { clon.remove(); clon = null; }
-      rutaActual.push(index);
-      renderizar();
+      navigatePush(index);
     });
 
     div.appendChild(input);
@@ -1280,9 +1306,13 @@ function handleGestureFinish() {
   if (clon) clon.style.transform = "translateX(0)";
 
   setTimeout(() => {
-    if (retroceder) rutaActual.pop();
-    if (avanzar) rutaActual.push(0);
-    renderizar();
+    if (retroceder) {
+      suppressClicksUntil = Date.now() + 600;
+      rutaActual.pop();
+    }
+    if (avanzar) navigatePush(0);
+    else renderizar();
+    if (retroceder) suppressPointerEvents(600);
     contenido.style.transition = "none";
     contenido.style.transform = "translateX(0)";
     contenido.style.opacity = "1";
