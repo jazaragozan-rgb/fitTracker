@@ -774,7 +774,8 @@ function crearIndice(item, index, nivel) {
   div.style.gap = '4px';
   div.style.flexWrap = 'nowrap';
   div.style.overflow = 'hidden';
-  div.setAttribute('draggable', 'true');
+  // Evitar el drag nativo HTML5 en móviles; usamos nuestro propio manejo táctil.
+  div.style.touchAction = 'none';
 
   if (!item.editando) item.editando = false;
 
@@ -839,7 +840,7 @@ function crearIndice(item, index, nivel) {
         startY = e.touches[0].clientY;
         dragging = false;
         // preparar arrastre por pulsación prolongada
-        try { startDrag(e); } catch (err) { /* no bloquear si falla */ }
+        try { if (e.cancelable) e.preventDefault(); startDrag(e); } catch (err) { /* no bloquear si falla */ }
       }
     });
 
@@ -939,6 +940,10 @@ function crearIndice(item, index, nivel) {
     div.addEventListener('touchstart', startDrag, {passive: false, capture: true});
 
     function startDrag(e) {
+      // Evitar que el evento táctil haga focus en inputs o active comportamiento nativo
+      if ((e.touches && e.touches.length) || (e.changedTouches && e.changedTouches.length)) {
+        try { if (e.cancelable) e.preventDefault(); } catch (err) {}
+      }
       // Si ya hemos preparado este elemento y tiene createGhost, no re-preparar
       if (dragItem && dragItem.div === div && dragItem.createGhost) return;
       dragItem = { div, index, nivel };
@@ -1322,7 +1327,7 @@ function handleGestureFinish() {
 
 // listeners
 if (document.getElementById("contenido")) {
-  document.body.addEventListener("touchstart", onTouchStart, {passive: true});
+  document.body.addEventListener("touchstart", onTouchStart, {passive: false});
   document.body.addEventListener("touchmove", onTouchMove, {passive: false});
   document.body.addEventListener("touchend", onTouchEnd);
   document.body.addEventListener("mousedown", onTouchStart);
