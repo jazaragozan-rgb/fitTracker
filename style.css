@@ -398,6 +398,46 @@ button { cursor:pointer; }
 }
 
 /* Estilos para el botón de pausa */
+
+/* Drag ghost & placeholder */
+.drag-ghost {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card);
+  color: var(--text-dark);
+  padding: 10px;
+  margin: 10px 0;
+  border-radius: 8px;
+  box-shadow: 0 12px 34px rgba(0,0,0,0.08);
+  opacity: 0.5; /* 50% de opacidad pedido */
+  transform-origin: 0 0;
+  transition: transform 80ms linear, opacity 120ms linear;
+  will-change: transform;
+}
+
+.drag-placeholder {
+  height: 50px; /* valor por defecto, se sobrescribe desde JS al crear */
+  background: rgba(0,0,0,0.03);
+  border-radius: 8px;
+  margin: 10px 0;
+  border: 1px dashed rgba(0,0,0,0.06);
+}
+
+.drag-ghost-text {
+  flex: 1 1 auto;
+  min-width: 40px;
+  text-align: left;
+  font-size: 1.2rem;
+  color: #414141;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  line-height: 1;
+}
 .btn-pause {
   background-color: #c2c2c2; /* Verde */
   color: white;

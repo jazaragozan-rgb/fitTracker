@@ -991,18 +991,9 @@ function crearIndice(item, index, nivel) {
         dragGhost.style.display = 'block';
         dragGhost.style.boxSizing = 'border-box';
 
-        // estilos visuales fuertes para depuración en móviles
+        // Dejar la apariencia al CSS en `style.css` mediante la clase `.drag-ghost`.
+        // Conservamos solo propiedades necesarias para posicionamiento/performace.
         try {
-          const cs = getComputedStyle(div);
-          dragGhost.style.background = cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' ? cs.backgroundColor : '#fff';
-          dragGhost.style.color = cs.color || '#000';
-          dragGhost.style.boxShadow = '0 12px 34px rgba(0,0,0,0.28)';
-          dragGhost.style.opacity = '0.98';
-          dragGhost.style.borderRadius = cs.borderRadius || '8px';
-          dragGhost.style.transition = 'none';
-          dragGhost.style.margin = '0';
-          dragGhost.style.padding = cs.padding || '8px';
-          dragGhost.style.border = '3px solid magenta';
           dragGhost.style.willChange = 'transform';
           dragGhost.style.backfaceVisibility = 'hidden';
         } catch (err) {}
@@ -1013,6 +1004,23 @@ function crearIndice(item, index, nivel) {
           const cloneInputs = dragGhost.querySelectorAll('input,textarea');
           for (let i = 0; i < cloneInputs.length; i++) {
             if (origInputs[i]) cloneInputs[i].value = origInputs[i].value;
+          }
+        } catch (err) {}
+
+        // Reemplazar inputs/textarea en el clon por elementos de texto
+        try {
+          const cloneControls = dragGhost.querySelectorAll('input,textarea,button');
+          for (let c of Array.from(cloneControls)) {
+            const text = (c.value !== undefined && c.value !== null && c.value !== '') ? c.value : (c.textContent || c.getAttribute('placeholder') || '');
+            const span = document.createElement('div');
+            span.className = 'drag-ghost-text';
+            span.textContent = String(text);
+            // copy width/height if needed
+            span.style.display = 'flex';
+            span.style.alignItems = 'center';
+            span.style.justifyContent = 'flex-start';
+            // replace control with span
+            try { c.parentNode.replaceChild(span, c); } catch (e) {}
           }
         } catch (err) {}
 
