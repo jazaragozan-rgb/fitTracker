@@ -940,6 +940,16 @@ function crearIndice(item, index, nivel) {
     div.addEventListener('touchstart', startDrag, {passive: false, capture: true});
 
     function startDrag(e) {
+      const t = e.target;
+
+      if (
+        t.tagName === 'INPUT' ||
+        t.tagName === 'BUTTON' ||
+        t.tagName === 'TEXTAREA' ||
+        t.closest('.btn-opciones')
+      ) {
+        return; // dejar que el navegador haga lo suyo
+      }
       // Evitar que el evento táctil haga focus en inputs o active comportamiento nativo
       if ((e.touches && e.touches.length) || (e.changedTouches && e.changedTouches.length)) {
         try { if (e.cancelable) e.preventDefault(); } catch (err) {}
