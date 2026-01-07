@@ -104,7 +104,7 @@ header {
 
 /* Botones dentro del subheader */
 #subHeader .header-btn {
-  width: 300px;
+  width: 200px;
   height: 30px;
   font-size: 1rem; 
   color: #ffffff;
@@ -542,4 +542,27 @@ main#contenido {
   width: 100%;
   transition: transform 0.3s ease, opacity 0.3s ease;
   will-change: transform, opacity;
+}
+
+#subHeaderButtons {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Botón buscar ejercicios (lupa) */
+.btn-search {
+  width: 35px;
+  height: 35px;
+  border: none;
+  border-radius: 8px;
+  background: none;
+  font-size: 1.3rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 6px;
+  gap: 6px;
 }

@@ -16,6 +16,8 @@ import {
 import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
 import { iniciarTimer, restaurarTimer } from "./timer.js";
 
+import exercises from "./exercises.js";
+
 // ==================== FIREBASE CONFIG ====================
 const firebaseConfig = {
   apiKey: "AIzaSyBYQPw0eoEtCZQ5NHYKHgXfcHpaW_ySzKU",
@@ -296,6 +298,55 @@ onAuthStateChanged(auth, async (user) => {
   renderizar();
 });
 
+// ==================== funcion buscador ejercicios de biblioteca ====================
+
+function abrirBuscadorEjercicios() {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+
+  const input = document.createElement('input');
+  input.placeholder = 'Buscar ejercicio...';
+
+  const list = document.createElement('div');
+  list.className = 'exercise-list';
+
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase();
+    list.innerHTML = '';
+    exercises
+      .filter(e => e.nombre.toLowerCase().includes(q))
+      .slice(0, 50)
+      .forEach(ej => {
+        const item = document.createElement('div');
+        item.className = 'exercise-item';
+        item.textContent = ej.nombre;
+        item.onclick = () => {
+          añadirEjercicioDesdeBiblioteca(ej.nombre);
+          overlay.remove();
+        };
+        list.appendChild(item);
+      });
+  });
+
+  modal.append(input, list);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
+function añadirEjercicioDesdeBiblioteca(nombre) {
+  const nivel = nivelActual(); // ← ya la tienes
+  nivel.hijos.push({
+    nombre,
+    hijos: []
+  });
+  guardarDatos();
+  renderizar();
+}
+
+
 // ==================== RENDERIZADO PRINCIPAL ====================
 function renderizar() {
   if (!contenido) return;
@@ -360,6 +411,15 @@ function renderizar() {
       };
       subHeader.appendChild(addSerieBtn);
     }
+
+    if (rutaActual.length === 4) {
+      const searchBtn = document.createElement('button');
+      searchBtn.textContent = '🔍';
+      searchBtn.className = 'btn-search';
+      searchBtn.onclick = abrirBuscadorEjercicios;
+      subHeader.appendChild(searchBtn);
+    }
+
   }
 
   // Pantalla seguimiento y dashboard
