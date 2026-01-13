@@ -1,146 +1,41 @@
 // ==================== IMPORTS ====================
+import { auth, db, onAuthStateChanged } from './auth.js';
+import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { renderizarDashboard } from "./dashboard.js";
 import { renderizarSeguimiento } from "./seguimiento.js";
 import { iniciarEntrenamiento } from './live.js';
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { 
-  getAuth, onAuthStateChanged, 
-  createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
-  sendEmailVerification, setPersistence, browserSessionPersistence
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import {
-  getFirestore, doc, getDoc, setDoc
-} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
 import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
 import { iniciarTimer, restaurarTimer } from "./timer.js";
-
 import exercises from "./exercises.js";
-
-// ==================== FIREBASE CONFIG ====================
-const firebaseConfig = {
-  apiKey: "AIzaSyBYQPw0eoEtCZQ5NHYKHgXfcHpaW_ySzKU",
-  authDomain: "sesionmientreno.firebaseapp.com",
-  projectId: "sesionmientreno",
-  storageBucket: "sesionmientreno.firebasestorage.app",
-  messagingSenderId: "730288236333",
-  appId: "1:730288236333:web:e4418ca39ffcd48f47d5a4",
-  measurementId: "G-T8QZ7WZT5Y"
-};
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-setPersistence(auth, browserSessionPersistence);
-const db = getFirestore(app);
 
 // ==================== HELPERS DOM / UTIL ====================
 const $ = id => document.getElementById(id);
 const show = el => el && el.classList.remove('hidden');
 const hide = el => el && el.classList.add('hidden');
 
-function getErrorMessage(error) {
-  const map = {
-    'auth/email-already-in-use': 'Ese email ya está registrado.',
-    'auth/invalid-email': 'El email no es válido.',
-    'auth/weak-password': 'Contraseña demasiado débil.',
-    'auth/wrong-password': 'Contraseña incorrecta.',
-    'auth/user-not-found': 'No existe un usuario con ese email.',
-    'auth/too-many-requests': 'Demasiados intentos, espera un momento.'
-  };
-  return map[error.code] || error.message;
+// ==================== CONTEXTO DE PÁGINA ====================
+function isAppPage() {
+  return !!document.getElementById("app") && !!document.getElementById("contenido");
 }
 
-// ==================== AUTH (REGISTER / LOGIN / LOGOUT) ====================
-window.register = async function () {
-  const email = $('reg-email').value.trim();
-  const pass  = $('reg-pass').value;
-  const pass2 = $('reg-pass2').value;
-  const msg   = $('reg-msg');
-  msg.textContent = ''; msg.className = 'hint';
-
-  if (pass !== pass2) {
-    msg.textContent = 'Las contraseñas no coinciden.';
-    msg.classList.add('err');
-    return;
-  }
-  try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
-    await sendEmailVerification(cred.user);
-    msg.textContent = 'Cuenta creada. Revisa tu correo.';
-    msg.classList.add('ok');
-    $('reg-email').value = $('reg-pass').value = $('reg-pass2').value = '';
-  } catch (err) {
-    msg.textContent = getErrorMessage(err);
-    msg.classList.add('err');
-  }
-};
-
-window.login = async function () {
-  const email = $('log-email').value.trim();
-  const pass  = $('log-pass').value;
-  const msg   = $('log-msg');
-  msg.textContent = ''; msg.className = 'hint';
-  try {
-    await signInWithEmailAndPassword(auth, email, pass);
-    $('log-email').value = $('log-pass').value = '';
-    try {
-      console.log('Login exitoso, redirigiendo a subindex.html');
-      if (typeof window.onLoginSuccess === 'function') {
-        window.onLoginSuccess();
-      } else {
-        window.location.href = './subindex.html';
-      }
-    } catch (e) {
-      console.error('Error en redirección post-login:', e);
-      window.location.href = './subindex.html';
-    }
-  } catch (err) {
-    msg.textContent = getErrorMessage(err);
-    msg.classList.add('err');
-  }
-};
-
-window.salir = async function () {
-  try {
-    await signOut(auth);
-    window.location.href = "./auth.html";
-  } catch (err) {
-    console.error("Error al cerrar sesión:", err);
-  }
-};
-
-// ==================== DATOS INICIALES / LOCAL ====================
+// ==================== DATOS INICIALES ====================
 const DATOS_POR_DEFECTO = [
   { nombre: 'Entrenamiento', hijos: [] },
   { nombre: 'Seguimiento', hijos: [] },
   { nombre: 'Calendario', hijos: [] }
 ];
-let datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
-console.log('[Datos iniciales] datos:', datos);
+let datos = structuredClone(DATOS_POR_DEFECTO);
+console.log('[Datos iniciales] Usando datos por defecto, se cargarán de Firestore al autenticar');
 
 // ==================== ESTADO / REFERENCIAS UI ====================
 let rutaActual = [];
 let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay, subHeader;
 let menuTitulo;
 let ultimoMenuSeleccionado = 'Dashboard';
-// Evitar que un clic/tap "pegado" tras navegar dispare acciones en el nuevo nivel.
-let suppressClicksUntil = 0;
+
 function navigatePush(index) {
-  suppressClicksUntil = Date.now() + 600; // bloquear clicks inmediatos durante 600ms
   rutaActual.push(index);
   renderizar();
-  suppressPointerEvents(600);
-}
-
-let _pointerSuppressTimer = null;
-function suppressPointerEvents(ms = 600) {
-  if (!contenido) return;
-  contenido.style.pointerEvents = 'none';
-  if (_pointerSuppressTimer) clearTimeout(_pointerSuppressTimer);
-  _pointerSuppressTimer = setTimeout(() => {
-    try { contenido.style.pointerEvents = ''; } catch (e) {}
-    _pointerSuppressTimer = null;
-  }, ms);
 }
 
 // ==================== DOMContentLoaded: inicialización UI ====================
@@ -200,54 +95,134 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.renderizar = renderizar;
   window.guardarDatos = guardarDatos;
-  renderizar();
-  restaurarTimer();
+
+  if (isAppPage()) {
+    renderizar();
+    restaurarTimer();
+    
+    // NO sincronizar automáticamente al recargar la página
+    // Solo sincronizar cuando el usuario hace login (onAuthStateChanged)
+    console.log('[DOMContentLoaded] Página cargada, usando datos locales');
+  }
+
+  initGlobalListeners();
 });
 
 // ==================== FIRESTORE HELPERS ====================
 async function cargarDatosUsuario(uid) {
-  if (!uid) return null;
+  console.log('[cargarDatosUsuario] Intentando cargar datos para uid:', uid);
+  if (!uid) {
+    console.warn('[cargarDatosUsuario] No hay uid');
+    return null;
+  }
   try {
     const ref = doc(db, "usuarios", uid);
+    console.log('[cargarDatosUsuario] Referencia creada:', ref.path);
+    
     const snap = await getDoc(ref);
+    console.log('[cargarDatosUsuario] Snapshot obtenido. Existe?:', snap.exists());
+    
     if (snap.exists()) {
       const d = snap.data();
-      if (d && Array.isArray(d.datos)) return structuredClone(d.datos);
+      console.log('[cargarDatosUsuario] Datos cargados:', d);
+      if (d && Array.isArray(d.datos)) {
+        console.log('[cargarDatosUsuario] ✓ Datos válidos, cantidad de elementos:', d.datos.length);
+        return structuredClone(d.datos);
+      }
+      console.warn('[cargarDatosUsuario] ⚠️ Datos inválidos o no es array');
       return { __exists: true, __datosInvalidos: true };
     }
+    console.log('[cargarDatosUsuario] Documento no existe en Firestore');
     return null;
   } catch (e) {
-    console.error("Error al cargar datos (network/other):", e);
+    console.error("[cargarDatosUsuario] ❌ Error:", e);
+    console.error("[cargarDatosUsuario] Código de error:", e?.code);
+    console.error("[cargarDatosUsuario] Mensaje:", e?.message);
     return { __error: true, __message: e?.message || String(e) };
   }
 }
 
 async function guardarDatosUsuario(uid, datosActuales) {
+  console.log('[guardarDatosUsuario] Iniciando guardado para uid:', uid);
+  console.log('[guardarDatosUsuario] Datos a guardar (preview):', JSON.stringify(datosActuales).substring(0, 200) + '...');
+  
   if (!uid || !Array.isArray(datosActuales)) {
-    console.warn('[guardarDatosUsuario] uid o datosActuales inválidos:', uid, datosActuales);
+    console.warn('[guardarDatosUsuario] ⚠️ uid o datosActuales inválidos:', uid, datosActuales);
     return;
   }
-  const isDefault = JSON.stringify(datosActuales) === JSON.stringify(DATOS_POR_DEFECTO);
-  if (isDefault) {
-    console.warn('[guardarDatosUsuario] datos son los por defecto; evitar guardado automático');
-  }
+  
   try {
     const ref = doc(db, "usuarios", uid);
-    await setDoc(ref, { datos: structuredClone(datosActuales) }, { merge: true });
+    console.log('[guardarDatosUsuario] Guardando en:', ref.path);
+    
+    await setDoc(ref, { 
+      datos: structuredClone(datosActuales),
+      ultimaActualizacion: new Date().toISOString()
+    }, { merge: true });
+    
+    console.log('[guardarDatosUsuario] ✓ Datos guardados exitosamente en Firestore');
   } catch (e) {
-    console.error("Error al guardar datos:", e);
+    console.error("[guardarDatosUsuario] ❌ Error al guardar:", e);
+    console.error("[guardarDatosUsuario] Código de error:", e?.code);
   }
 }
 
-// ==================== GUARDADO LOCAL + REMOTO ====================
+// ==================== SINCRONIZACIÓN - SOLO FIRESTORE ====================
+onAuthStateChanged(auth, async (user) => {
+  console.log('[onAuthStateChanged] Estado de autenticación cambió');
+  console.log('[onAuthStateChanged] Usuario:', user ? user.uid : 'null');
+  
+  if (user) {
+    console.log('[onAuthStateChanged] ✓ Usuario autenticado, cargando datos de Firestore...');
+    
+    try {
+      const datosRemoto = await cargarDatosUsuario(user.uid);
+      
+      if (datosRemoto && Array.isArray(datosRemoto)) {
+        console.log('[onAuthStateChanged] ✓ Datos cargados de Firestore');
+        datos = structuredClone(datosRemoto);
+      } else {
+        console.log('[onAuthStateChanged] No hay datos en Firestore, usando datos por defecto');
+        datos = structuredClone(DATOS_POR_DEFECTO);
+      }
+      
+      renderizar();
+      
+    } catch (error) {
+      console.error('[onAuthStateChanged] Error al cargar datos:', error);
+      datos = structuredClone(DATOS_POR_DEFECTO);
+      renderizar();
+    }
+  } else {
+    console.log('[onAuthStateChanged] ⚠️ No hay usuario autenticado');
+    datos = structuredClone(DATOS_POR_DEFECTO);
+    if (isAppPage()) renderizar();
+  }
+});
+
+// ==================== GUARDADO - SOLO FIRESTORE ====================
 let saveTimer = null;
 function guardarDatos() {
-  console.log('[guardarDatos] datos a guardar:', datos);
-  localStorage.setItem("misDatos", JSON.stringify(datos));
+  console.log('[guardarDatos] ========== INICIO GUARDADO ==========');
+  console.log('[guardarDatos] Datos actuales:', JSON.stringify(datos).substring(0, 300));
+  
   const user = auth.currentUser;
-  if (!user) return;
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => { guardarDatosUsuario(user.uid, datos); }, 300);
+  if (!user) {
+    console.log('[guardarDatos] No hay usuario autenticado, no se puede guardar');
+    return;
+  }
+  
+  if (saveTimer) {
+    console.log('[guardarDatos] Cancelando timer anterior');
+    clearTimeout(saveTimer);
+  }
+  
+  console.log('[guardarDatos] Programando guardado en Firestore en 300ms...');
+  saveTimer = setTimeout(async () => { 
+    console.log('[guardarDatos] Ejecutando guardado en Firestore...');
+    await guardarDatosUsuario(user.uid, datos);
+    console.log('[guardarDatos] ========== FIN GUARDADO ==========');
+  }, 300);
 }
 
 // ==================== UTILITY: nivelActual ====================
@@ -257,49 +232,7 @@ function nivelActual() {
   return nivel;
 }
 
-// ==================== AUTH STATE ====================
-onAuthStateChanged(auth, async (user) => {
-  const authSec = $('auth');
-  const appSec  = $('app');
-  hide($('welcome')); hide($('verify-hint'));
-
-  if (user) {
-    hide(authSec);
-    show(appSec);
-    show(contenido);
-    show(timerContainer); show(headerButtons); show(homeButton); show(logoutButton);
-    show(addButton); show(backButton); show(menuButton); show(tituloNivel); show(menuTitulo);
-
-    const datosRemotos = await cargarDatosUsuario(user.uid);
-
-    if (datosRemotos && datosRemotos.__error) {
-      console.warn('[onAuthStateChanged] Error al leer remoto; manteniendo datos locales', datosRemotos.__message);
-      datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
-    } else if (datosRemotos === null) {
-      const local = JSON.parse(localStorage.getItem("misDatos"));
-      datos = Array.isArray(local) ? local : structuredClone(DATOS_POR_DEFECTO);
-      const soloDefaults = JSON.stringify(datos) === JSON.stringify(DATOS_POR_DEFECTO);
-      if (!soloDefaults) await guardarDatosUsuario(user.uid, datos);
-    } else if (Array.isArray(datosRemotos)) {
-      datos = datosRemotos;
-      console.log('[Datos cargados Firestore] datos:', datos);
-    } else if (datosRemotos && datosRemotos.__datosInvalidos) {
-      console.warn('[onAuthStateChanged] documento remoto con estructura inesperada; usando local');
-      datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
-    }
-  } else {
-    show(authSec); hide(appSec); hide(contenido); hide(timerContainer); hide(headerButtons);
-    hide(homeButton); hide(logoutButton); hide(addButton); hide(backButton); hide(menuButton);
-    hide(tituloNivel); hide(menuTitulo);
-    datos = JSON.parse(localStorage.getItem("misDatos")) || structuredClone(DATOS_POR_DEFECTO);
-    console.log('[Datos cargados localStorage] datos:', datos);
-  }
-  rutaActual = [];
-  renderizar();
-});
-
 // ==================== funcion buscador ejercicios de biblioteca ====================
-
 function abrirBuscadorEjercicios() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -337,7 +270,7 @@ function abrirBuscadorEjercicios() {
 }
 
 function añadirEjercicioDesdeBiblioteca(nombre) {
-  const nivel = nivelActual(); // ← ya la tienes
+  const nivel = nivelActual();
   nivel.hijos.push({
     nombre,
     hijos: []
@@ -346,9 +279,11 @@ function añadirEjercicioDesdeBiblioteca(nombre) {
   renderizar();
 }
 
-
 // ==================== RENDERIZADO PRINCIPAL ====================
 function renderizar() {
+  console.log('[renderizar] ========== INICIO RENDER ==========');
+  console.log('[renderizar] Stack trace:', new Error().stack.split('\n').slice(1, 4).join('\n'));
+  
   if (!contenido) return;
   contenido.innerHTML = '';
   let nivel = nivelActual();
@@ -376,10 +311,13 @@ function renderizar() {
     else menuTitulo.textContent = ultimoMenuSeleccionado;
   }
 
-  // Subheader
+  // -------------------- SUBHEADER --------------------
+  subHeader.innerHTML = '';
+  subHeader.style.display = rutaActual.length === 0 ? 'flex' : ''; 
+
   if (rutaActual.length === 0) {
+    // Nivel 0: Dashboard
     tituloNivel.style.display = 'none';
-    subHeader.style.display = 'flex';
     subHeader.innerHTML = '';
     const btnEntreno = document.createElement('button');
     btnEntreno.id = 'liveEntrenamiento';
@@ -387,14 +325,30 @@ function renderizar() {
     btnEntreno.className = 'btn-primary';
     btnEntreno.addEventListener('click', iniciarEntrenamiento);
     subHeader.appendChild(btnEntreno);
+
   } else {
-    subHeader.style.display = '';
-    subHeader.innerHTML = '';
+    // Niveles 1–5
+    tituloNivel.style.display = '';
     const h2Nivel = document.createElement('h2');
     h2Nivel.id = 'tituloNivel';
     h2Nivel.textContent = rutaActual.length === 1 ? 'Bloques' : (nivel.nombre || ultimoMenuSeleccionado);
     subHeader.appendChild(h2Nivel);
 
+    // -------------------- BOTÓN VOLVER --------------------
+    if (rutaActual.length >= 1 && rutaActual.length <= 5) {
+      const backSubBtn = document.createElement('button');
+      backSubBtn.className = 'btn-back-subheader';
+      backSubBtn.innerHTML = '⬅';
+      backSubBtn.title = 'Volver al nivel anterior';
+      backSubBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        rutaActual.pop();
+        renderizar();
+      });
+      subHeader.insertBefore(backSubBtn, h2Nivel.nextSibling);
+    }
+
+    // -------------------- BOTÓN AÑADIR --------------------
     if (rutaActual.length !== 5) {
       addButton.style.display = '';
       subHeader.appendChild(addButton);
@@ -403,7 +357,7 @@ function renderizar() {
       const addSerieBtn = document.createElement('button');
       addSerieBtn.className = 'add-serie';
       addSerieBtn.textContent = '+ Añadir serie';
-      addSerieBtn.onclick = function() {
+      addSerieBtn.onclick = () => {
         if (nivel.series) nivel.series.push({});
         else nivel.series = [{}];
         guardarDatos();
@@ -412,6 +366,7 @@ function renderizar() {
       subHeader.appendChild(addSerieBtn);
     }
 
+    // -------------------- BOTÓN BUSCAR (nivel 4) --------------------
     if (rutaActual.length === 4) {
       const searchBtn = document.createElement('button');
       searchBtn.textContent = '🔍';
@@ -419,7 +374,6 @@ function renderizar() {
       searchBtn.onclick = abrirBuscadorEjercicios;
       subHeader.appendChild(searchBtn);
     }
-
   }
 
   // Pantalla seguimiento y dashboard
@@ -470,7 +424,6 @@ function renderizar() {
         setTimeout(() => {
           const active = document.activeElement;
           if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
-            // Si el foco se movió a otro input dentro de las series, evitar re-render para no perder foco
             return;
           }
           renderizar();
@@ -588,20 +541,17 @@ function renderizar() {
     // buscar ejercicio anterior y mostrar
     function fechaATimestamp(fechaStr) {
       if (!fechaStr || typeof fechaStr !== "string") return null;
-      // Aceptar formatos YYYY-MM-DD y YYYY-MM-DDTHH:mm:ss... -> normalizar a ISO
       const simpleDate = /^\d{4}-\d{2}-\d{2}$/.test(fechaStr);
       const input = simpleDate ? (fechaStr + 'T00:00:00Z') : fechaStr;
       const ts = Date.parse(input);
       if (Number.isNaN(ts)) return null;
       return ts;
     }
+    
     function buscarEjercicioAnterior(datosArg, rutaArg, ejercicioActual) {
       if (!ejercicioActual || !datosArg) return null;
       const nombreEjercicioActual = (ejercicioActual.nombre || '').trim().toLowerCase();
 
-      console.log('[buscarEjercicioAnterior] inicio:', { nombreEjercicioActual, rutaArg, ejercicioActual });
-
-      // Determinar la sesión actual a partir de la ruta (si está disponible)
       let sesionActual = null;
       if (Array.isArray(rutaArg) && rutaArg.length >= 3) {
         const m = rutaArg[0];
@@ -610,12 +560,9 @@ function renderizar() {
         sesionActual = datosArg?.[m]?.hijos?.[mi]?.hijos?.[s] || null;
       }
 
-      // Timestamp de la sesión actual (fallback a la fecha del ejercicio si no hay sesión)
       const fechaReferencia = (sesionActual && (sesionActual._fecha || sesionActual.fecha)) || ejercicioActual._fecha || ejercicioActual.fecha;
       const timestampActual = fechaATimestamp(fechaReferencia);
-      console.log('[buscarEjercicioAnterior] timestampActual:', { fechaReferencia, timestampActual });
 
-      // Recolectar sesiones en recorrido (con índice lineal) para poder usar orden estructural
       const sesionesPlan = [];
       let linearIndex = 0;
       for (let mi = 0; mi < datosArg.length; mi++) {
@@ -624,13 +571,10 @@ function renderizar() {
           const micro = meso.hijos[mj];
           for (let sk = 0; sk < (micro.hijos || []).length; sk++) {
             const ses = micro.hijos[sk];
-            // Intentar obtener la fecha de la sesión; si no existe, buscar en los bloques o ejercicios dentro
             let fechaSesion = ses._fecha || ses.fecha || null;
             if (!fechaSesion) {
-              // buscar en bloques
               for (const b of ses.hijos || []) {
                 if (b._fecha || b.fecha) { fechaSesion = b._fecha || b.fecha; break; }
-                // buscar en ejercicios dentro del bloque
                 for (const e of b.hijos || []) {
                   if (e._fecha || e.fecha) { fechaSesion = e._fecha || e.fecha; break; }
                 }
@@ -644,7 +588,6 @@ function renderizar() {
         }
       }
 
-      // Encontrar índice lineal de la sesión actual (si existe)
       let actualLinear = null;
       if (sesionActual) {
         for (const s of sesionesPlan) {
@@ -652,35 +595,25 @@ function renderizar() {
         }
       }
 
-      // Buscamos la sesión anterior más cercana que contenga el ejercicio
-      let mejor = null; // { ejerc, fechaTs, fechaRaw }
+      let mejor = null;
 
       for (const sInfo of sesionesPlan) {
         const sesion = sInfo.sesion;
-        // Excluir la misma sesión actual por referencia
         if (sesionActual && sesion === sesionActual) continue;
 
-        // Si tenemos timestampActual válido, priorizar sesiones con tsSesion no nulo
         if (timestampActual !== null) {
-          if (sInfo.tsSesion === null) {
-            console.log('[buscarEjercicioAnterior] ignorando sesión sin fecha al comparar por fecha:', sInfo);
-            continue;
-          }
+          if (sInfo.tsSesion === null) continue;
           if (sInfo.tsSesion >= timestampActual) continue;
         } else if (actualLinear !== null) {
-          // Si no hay fechas, usar orden lineal: queremos solo sesiones anteriores en orden
           if (sInfo.linearIndex >= actualLinear) continue;
         } else {
-          // Sin referencia de fecha ni sesión actual, no podemos comparar
           continue;
         }
 
-        // buscar el ejercicio dentro de esta sesión
         for (const bloque of sesion.hijos || []) {
           for (const ejerc of bloque.hijos || []) {
             if (((ejerc.nombre || '').trim().toLowerCase()) !== nombreEjercicioActual) continue;
             if (!ejerc.series || ejerc.series.length === 0) continue;
-            // Seleccionar mejor: si usamos fechas, comparar tsSesion; si no, usar linearIndex
             if (!mejor) {
               mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
             } else {
@@ -694,36 +627,26 @@ function renderizar() {
                 }
               }
             }
-            console.log('[buscarEjercicioAnterior] candidato válido encontrado:', { sesionIndex: sInfo.linearIndex, fechaSesion: sInfo.fechaSesion });
           }
         }
       }
 
-      if (!mejor) console.log('[buscarEjercicioAnterior] no se encontró sesión anterior');
-      else console.log('[buscarEjercicioAnterior] resultado:', mejor);
       return mejor;
     }
 
-    // La fecha de sesión está guardada en el objeto "sesión" (nivel índice 2).
-    // Cuando estamos viendo series (rutaActual.length === 5), la ruta es:
-    // [meso, micro, sesion, bloque, ejercicio]
     const sesionObj = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]];
     if (sesionObj?.hijos) {
       for (const bloque of sesionObj.hijos) {
-        // Determinar la fecha aplicable para este bloque: preferir fecha del bloque, si no usar la de la sesión
         const bloqueFecha = bloque._fecha || bloque.fecha || sesionObj._fecha || sesionObj?.fecha || null;
         if (bloque.hijos) {
           for (const ejerc of bloque.hijos) {
-            // Si el ejercicio ya tiene _fecha respetarla, si no usar la fecha del bloque/sesión
             ejerc._fecha = bloqueFecha || ejerc._fecha;
           }
         }
       }
     }
-    // nivel es el ejercicio actual; priorizar la fecha del propio ejercicio, luego bloque/sesión
     nivel._fecha = nivel._fecha || sesionObj?.fecha || sesionObj?._fecha || null;
 
-    // const ejercicioAnterior = buscarEjercicioAnterior(datos, rutaActual, nivel);
     const ejercicioAnteriorObj = buscarEjercicioAnterior(datos, rutaActual, nivel);
     if (ejercicioAnteriorObj) {
       const ejercicioAnterior = ejercicioAnteriorObj.ejerc;
@@ -733,7 +656,7 @@ function renderizar() {
           fechaMostrar = fechaMostrar.split('T')[0];
         }
         const d = new Date(fechaMostrar + 'T00:00:00');
-        fechaMostrar = d.toLocaleDateString('es-ES'); // Formato DD/MM/YYYY
+        fechaMostrar = d.toLocaleDateString('es-ES');
       }
       const statsBoxAnt = document.createElement('div');
       statsBoxAnt.style.background = "#ffffffff";
@@ -778,13 +701,10 @@ function renderizar() {
   const nombres = ['Mesociclos','Microciclos','Sesiones','Ejercicios'];
   tituloNivel.textContent = nombres[rutaActual.length - 1] || nivel.nombre;
 
-    if (nivel.hijos && nivel.hijos.length) {
+  if (nivel.hijos && nivel.hijos.length) {
     nivel.hijos.forEach((item, index) => {
       const div = crearIndice(item, index, nivel);
-      div.addEventListener('click', (e) => {
-        if (Date.now() < suppressClicksUntil) { e.stopPropagation(); return; }
-        navigatePush(index);
-      });
+      // NO añadir listener de click aquí, ya está en crearIndice
       contenido.appendChild(div);
     });
   }
@@ -813,29 +733,119 @@ function renderizar() {
   };
 }
 
+function asegurarContenidoVisible() {
+  if (!contenido) return;
+  contenido.style.opacity = "1";
+  contenido.style.transform = "translateX(0)";
+  contenido.style.transition = "none";
+  contenido.style.pointerEvents = "auto";
+  document.querySelectorAll('[data-clon], .drag-ghost, .clon').forEach(el => el.remove());
+}
+asegurarContenidoVisible();
+
 // ==================== CREAR INDICE (DRAG & DROP + UI ITEM) ====================
 let dragItem = null;
 let dragStartY = 0;
-let dragStartX = 0;
-let dragTimer = null;
-let placeholder = null;
-let dragOffsetY = 0;
-let dragOffsetX = 0;
-let dragGhost = null;
 let dragging = false;
-let dragPressPending = false;
-const dragThreshold = 10;
+let dragStartIndex = null;
+let dragTimer = null;
+
+function startDrag(e) {
+  if (e.type === "mousedown" && e.button !== 0) return;
+
+  dragItem = e.currentTarget.closest(".list-item");
+  if (!dragItem) return;
+
+  dragging = false;
+  dragStartIndex = [...contenido.children].indexOf(dragItem);
+
+  const touch = e.touches ? e.touches[0] : e;
+  dragStartY = touch.clientY;
+
+  dragTimer = setTimeout(() => {
+    dragging = true;
+    dragItem.classList.add("dragging");
+  }, 600);
+}
+
+function dragMove(e) {
+  if (!dragging || !dragItem) return;
+
+  const touch = e.touches ? e.touches[0] : e;
+  const y = touch.clientY;
+
+  const items = [...document.querySelectorAll(".list-item:not(.dragging)")];
+
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    if (y < rect.top + rect.height / 2) {
+      item.parentNode.insertBefore(dragItem, item);
+      break;
+    } else {
+      item.parentNode.appendChild(dragItem);
+    }
+  }
+
+  e.preventDefault();
+}
+
+function dragEnd() {
+  clearTimeout(dragTimer);
+
+  if (!dragging || !dragItem) return;
+
+  dragging = false;
+  dragItem.classList.remove("dragging");
+
+  const newIndex = [...contenido.children].indexOf(dragItem);
+
+  if (dragStartIndex !== null && newIndex !== dragStartIndex) {
+    const nivel = nivelActual();
+    const movedItem = nivel.hijos.splice(dragStartIndex, 1)[0];
+    nivel.hijos.splice(newIndex, 0, movedItem);
+    guardarDatos();
+  }
+
+  dragItem = null;
+  dragStartIndex = null;
+}
 
 function crearIndice(item, index, nivel) {
   const div = document.createElement('div');
   div.className = 'list-item';
+  div.dataset.index = index;
+  div.dataset.nivel = rutaActual.length;
+  
+  // Click en el div completo
+  div.addEventListener('click', (e) => {
+    // No navegar si estamos arrastrando
+    if (dragging) return;
+    
+    // No navegar si clickeamos en:
+    // - Botones (opciones, editar, etc)
+    // - Inputs de fecha
+    const target = e.target;
+    if (target.tagName === 'BUTTON' || 
+        target.type === 'date' ||
+        target.closest('.btn-opciones')) {
+      e.stopPropagation();
+      return;
+    }
+    
+    // Navegar al siguiente nivel
+    e.stopPropagation();
+    navigatePush(index);
+  });
+
+  div.addEventListener('mousedown', startDrag, { capture: true });
+  div.addEventListener('touchstart', startDrag, { passive: false, capture: true });
+
   div.style.display = 'flex';
   div.style.alignItems = 'center';
   div.style.gap = '4px';
-  div.style.flexWrap = 'nowrap';
-  div.style.overflow = 'hidden';
-  // Evitar el drag nativo HTML5 en móviles; usamos nuestro propio manejo táctil.
-  div.style.touchAction = 'none';
+  div.style.padding = '8px';
+  div.style.borderBottom = '1px solid #ddd';
+  div.style.cursor = 'pointer';
 
   if (!item.editando) item.editando = false;
 
@@ -869,11 +879,9 @@ function crearIndice(item, index, nivel) {
       fechaInput.value = nivel.hijos[index].fecha || '';
       ['pointerdown','mousedown','touchstart','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('change', async e => {
-        // Guardar la fecha en formato YYYY-MM-DD
-        const raw = e.target.value; // formato YYYY-MM-DD desde el input
+        const raw = e.target.value;
         nivel.hijos[index].fecha = raw;
         nivel.hijos[index]._fecha = raw;
-        console.log('[fechaInput] guardada sesión:', { raw, index, sesion: nivel.hijos[index] });
         guardarDatos();
         const user = auth.currentUser;
         if (user) {
@@ -887,67 +895,9 @@ function crearIndice(item, index, nivel) {
   else {
     const input = document.createElement('input');
     input.value = item.nombre;
-    input.disabled = true;
-    input.style.flex = '1 1 auto';
-    input.style.minWidth = '40px';
-
-    let startX = null;
-    let startY = null;
-
-    input.addEventListener('touchstart', e => {
-      if (e.touches.length === 1) {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-        dragging = false;
-        // preparar arrastre por pulsación prolongada
-        try { if (e.cancelable) e.preventDefault(); startDrag(e); } catch (err) { /* no bloquear si falla */ }
-      }
-    });
-
-    input.addEventListener('touchmove', e => {
-      if (startX === null || startY === null) return;
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      const deltaX = currentX - startX;
-      const deltaY = currentY - startY;
-      const moveDist = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-      // Si el usuario se mueve ligeramente antes de que termine el long-press, cancelar el pending
-      if (dragPressPending && moveDist > 6) {
-        clearTimeout(dragTimer);
-        dragPressPending = false;
-      }
-
-      // No iniciar arrastre por movimiento. Solo permitir movimiento si el ghost ya existe.
-      if (dragItem && dragItem.ghost) {
-        dragging = true;
-        dragMove(e);
-        if (e.cancelable) e.preventDefault(); // bloquear scroll vertical durante arrastre
-      }
-    });
-
-    input.addEventListener('touchend', e => {
-      if (Date.now() < suppressClicksUntil) {
-        startX = null; startY = null; clearTimeout(dragTimer); dragPressPending = false;
-        return;
-      }
-      if (!dragging) {
-        const endX = e.changedTouches[0].clientX;
-        const endY = e.changedTouches[0].clientY;
-        const deltaX = endX - startX;
-        const deltaY = endY - startY;
-        const distancia = Math.sqrt(deltaX*deltaX + deltaY*deltaY);
-        if (distancia < 10) { 
-          navigatePush(index);
-        }
-      }
-      startX = null; startY = null; clearTimeout(dragTimer); dragPressPending = false;
-    });
-
-    input.addEventListener('click', (e) => {
-      if (Date.now() < suppressClicksUntil) { e.stopPropagation(); e.preventDefault(); return; }
-      if (clon) { clon.remove(); clon = null; }
-      navigatePush(index);
-    });
+    input.readOnly = true; // Usar readonly en lugar de disabled
+    input.style.flex = '1';
+    input.style.cursor = 'pointer';
 
     div.appendChild(input);
 
@@ -957,11 +907,9 @@ function crearIndice(item, index, nivel) {
       fechaInput.value = nivel.hijos[index].fecha ? nivel.hijos[index].fecha.slice(0,10) : '';
       ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
       fechaInput.addEventListener('change', async e => {
-        // Guardar la fecha en formato YYYY-MM-DD
-        const raw = e.target.value; // formato YYYY-MM-DD desde el input
+        const raw = e.target.value;
         nivel.hijos[index].fecha = raw;
         nivel.hijos[index]._fecha = raw;
-        console.log('[fechaInput] guardada sesión:', { raw, index, sesion: nivel.hijos[index] });
         guardarDatos();
         const user = auth.currentUser;
         if (user) {
@@ -992,423 +940,60 @@ function crearIndice(item, index, nivel) {
       });
       div.appendChild(opcionesBtn);
     }
-
-    // DRAG & DROP
-    // Escuchar en fase de captura para recibir el evento incluso si el objetivo
-    // es un input/botón interno que podría detener la propagación.
-    div.addEventListener('mousedown', startDrag, {capture: true});
-    div.addEventListener('touchstart', startDrag, {passive: false, capture: true});
-
-    function startDrag(e) {
-      const t = e.target;
-
-      if (
-        t.tagName === 'INPUT' ||
-        t.tagName === 'BUTTON' ||
-        t.tagName === 'TEXTAREA' ||
-        t.closest('.btn-opciones')
-      ) {
-        return; // dejar que el navegador haga lo suyo
-      }
-      // Evitar que el evento táctil haga focus en inputs o active comportamiento nativo
-      if ((e.touches && e.touches.length) || (e.changedTouches && e.changedTouches.length)) {
-        try { if (e.cancelable) e.preventDefault(); } catch (err) {}
-      }
-      // Si ya hemos preparado este elemento y tiene createGhost, no re-preparar
-      if (dragItem && dragItem.div === div && dragItem.createGhost) return;
-      dragItem = { div, index, nivel };
-      const x = e.clientX || (e.touches && e.touches[0].clientX) || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientX) || 0;
-      const y = e.clientY || (e.touches && e.touches[0].clientY) || (e.changedTouches && e.changedTouches[0] && e.changedTouches[0].clientY) || 0;
-      const rect = div.getBoundingClientRect();
-      dragStartY = y; dragStartX = x;
-      dragOffsetY = y - rect.top;
-      dragOffsetX = x - rect.left;
-      // Crear ghost/placeholder: en touch queremos creación inmediata, en mouse mantener pequeño retardo
-      function createGhost() {
-        // si ya existe placeholder/ghost salir
-        if (placeholder || dragItem.ghost) return;
-        // placeholder mantiene espacio en la lista
-        placeholder = document.createElement('div');
-        placeholder.className = 'drag-placeholder';
-        placeholder.style.height = div.offsetHeight + 'px';
-        div.parentNode.insertBefore(placeholder, div.nextSibling);
-
-        // ocultar el original (mantiene el layout)
-        div.style.visibility = 'hidden';
-
-        // Crear (o reusar) un overlay fijo en el body para el ghost.
-        let overlay = document.getElementById('ghost-overlay');
-        if (!overlay) {
-          overlay = document.createElement('div');
-          overlay.id = 'ghost-overlay';
-          overlay.style.position = 'fixed';
-          overlay.style.top = '0';
-          overlay.style.left = '0';
-          overlay.style.width = '100%';
-          overlay.style.height = '100%';
-          overlay.style.pointerEvents = 'none';
-          overlay.style.zIndex = '2147483647';
-          overlay.style.overflow = 'visible';
-          overlay.style.transform = 'none';
-          document.body.appendChild(overlay);
-        }
-
-        dragGhost = div.cloneNode(true);
-        dragGhost.classList.add('drag-ghost');
-        // posicionamos dentro del overlay usando coordenadas de client (overlay es fixed)
-        dragGhost.style.position = 'absolute';
-        dragGhost.style.pointerEvents = 'none';
-        dragGhost.style.display = 'block';
-        dragGhost.style.boxSizing = 'border-box';
-
-        // Dejar la apariencia al CSS en `style.css` mediante la clase `.drag-ghost`.
-        // Conservamos solo propiedades necesarias para posicionamiento/performace.
-        try {
-          dragGhost.style.willChange = 'transform';
-          dragGhost.style.backfaceVisibility = 'hidden';
-        } catch (err) {}
-
-        // copiar valores de inputs/textarea al clon
-        try {
-          const origInputs = div.querySelectorAll('input,textarea');
-          const cloneInputs = dragGhost.querySelectorAll('input,textarea');
-          for (let i = 0; i < cloneInputs.length; i++) {
-            if (origInputs[i]) cloneInputs[i].value = origInputs[i].value;
-          }
-        } catch (err) {}
-
-        // Reemplazar inputs/textarea en el clon por elementos de texto
-        try {
-          const cloneControls = dragGhost.querySelectorAll('input,textarea,button');
-          for (let c of Array.from(cloneControls)) {
-            const text = (c.value !== undefined && c.value !== null && c.value !== '') ? c.value : (c.textContent || c.getAttribute('placeholder') || '');
-            const span = document.createElement('div');
-            span.className = 'drag-ghost-text';
-            span.textContent = String(text);
-            // copy width/height if needed
-            span.style.display = 'flex';
-            span.style.alignItems = 'center';
-            span.style.justifyContent = 'flex-start';
-            // replace control with span
-            try { c.parentNode.replaceChild(span, c); } catch (e) {}
-          }
-        } catch (err) {}
-
-        // calcular posicion inicial usando coords del viewport
-        const startLeft = Math.round(rect.left);
-        const startTop = Math.round(rect.top);
-        dragGhost.style.width = rect.width + 'px';
-        dragGhost.style.height = rect.height + 'px';
-        dragGhost.style.transform = `translate3d(${startLeft}px, ${startTop}px, 0) scale(1.02)`;
-
-        console.log('[createGhost] overlay approach, rect:', rect, 'start', startLeft, startTop, 'index', index);
-
-        overlay.appendChild(dragGhost);
-
-        // store ghost ref on dragItem
-        dragItem.ghost = dragGhost;
-        dragItem._ghostOverlay = overlay;
-        // marcar que entramos en modo arrastre (evita que el handler de swipe horizontal actúe)
-        dragging = true;
-
-        document.addEventListener('mousemove', dragMove);
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('touchmove', dragMove, {passive:false});
-        document.addEventListener('touchend', dragEnd);
-      }
-
-      // Exponer createGhost para poder invocarlo desde touchmove (inicio por movimiento)
-      dragItem.createGhost = createGhost;
-
-      // Siempre esperar 1000ms antes de crear el ghost (evitar arranques inmediatos)
-      const delayMs = 1000;
-      if (dragTimer) clearTimeout(dragTimer);
-      dragPressPending = true;
-      dragTimer = setTimeout(() => { dragPressPending = false; createGhost(); }, delayMs);
-    }
-
-    function dragMove(e) {
-      if (!dragItem || !placeholder) return;
-      const x = e.clientX || (e.touches && e.touches[0].clientX) || dragStartX;
-      const y = e.clientY || (e.touches && e.touches[0].clientY) || dragStartY;
-      if (!dragItem.ghost) return;
-      // overlay is fixed; use viewport/client coords and translate3d for smooth GPU movement
-      const tx = Math.round(x - dragOffsetX);
-      const ty = Math.round(y - dragOffsetY);
-      try {
-        dragItem.ghost.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(1.02)`;
-      } catch (err) {
-        dragItem.ghost.style.left = (x - dragOffsetX) + 'px';
-        dragItem.ghost.style.top = (y - dragOffsetY) + 'px';
-      }
-      const siblings = Array.from(placeholder.parentNode.children).filter(c => c !== placeholder);
-      for (let sib of siblings) {
-        const rect = sib.getBoundingClientRect();
-        if (y > rect.top && y < rect.bottom) {
-          sib.parentNode.insertBefore(placeholder, y < rect.top + rect.height/2 ? sib : sib.nextSibling);
-          break;
-        }
-      }
-    }
-
-    function dragEnd(e) {
-      clearTimeout(dragTimer);
-      if (!dragItem) return;
-      // insertar el original en la posición del placeholder
-      const original = dragItem.div;
-      placeholder.parentNode.insertBefore(original, placeholder);
-      original.style.visibility = '';
-      // limpiar ghost
-      if (dragItem.ghost) {
-        // quitar del overlay
-        try { dragItem.ghost.remove(); } catch (err) {}
-        dragItem.ghost = null;
-      }
-      if (dragItem._ghostOverlay) {
-        try {
-          if (dragItem._ghostOverlay.children.length === 0) dragItem._ghostOverlay.remove();
-        } catch (err) {}
-        dragItem._ghostOverlay = null;
-      }
-      // compatibilidad: limpiar variable global si existe
-      if (dragGhost) { try { dragGhost.remove(); } catch (err) {} dragGhost = null; }
-      placeholder.remove(); placeholder = null;
-      const newIndex = Array.from(original.parentNode.children).indexOf(original);
-      const arr = dragItem.nivel.hijos;
-      arr.splice(newIndex, 0, arr.splice(dragItem.index, 1)[0]);
-      guardarDatos();
-      renderizar();
-
-      document.removeEventListener('mousemove', dragMove);
-      document.removeEventListener('mouseup', dragEnd);
-      document.removeEventListener('touchmove', dragMove);
-      document.removeEventListener('touchend', dragEnd);
-      dragItem = null; dragging = false;
-    }
-
-    div.addEventListener('mouseup', () => clearTimeout(dragTimer));
-    div.addEventListener('touchend', () => { clearTimeout(dragTimer); dragPressPending = false; });
   }
-
+  
   return div;
 }
 
-// ==================== GESTOS / SWIPE CON CLON ====================
-let touchStartX = null;
-let touchEndX = null;
-let isMouseDown = false;
-let duracion = 300;
-let clon = null;
-let direccionSwipe = null;
-let swipeActivado = false; // <-- solo se activa en swipe, no clic
+// ==================== LISTENERS GLOBALES ====================
+function initGlobalListeners() {
+  if (!isAppPage() || !contenido) return;
 
-function resetTouch() {
-  touchStartX = null; 
-  touchEndX = null; 
-  isMouseDown = false; 
-  direccionSwipe = null;
-  swipeActivado = false;
-  if (clon) { clon.remove(); clon = null; }
-}
-
-/**
- * crearClon(avanzar, retroceder)
- * - Avanzar = nivel 0 swipe izquierda -> mostrar clon del siguiente nivel (rutaActual + 0)
- * - Retroceder = nivel >0 swipe derecha -> mostrar clon del nivel anterior (rutaActual.slice(0,-1))
- * Esta versión crea nodos con crearIndice (no innerHTML) y mantiene listeners.
- */
-function crearClon(avanzar, retroceder) {
-  if (!contenido) return null;
-  const ancho = contenido.offsetWidth;
-
-  const nuevoClon = document.createElement("div");
-  nuevoClon.style.position = "absolute";
-  nuevoClon.style.top = "0px";
-  nuevoClon.style.left = "0px";
-  nuevoClon.style.width = "100%";
-  nuevoClon.style.height = "100%";
-  nuevoClon.style.zIndex = "10000";
-  nuevoClon.style.pointerEvents = "none";
-  nuevoClon.style.opacity = "0.95";
-  nuevoClon.style.transition = "none";
-  nuevoClon.style.overflow = "visible";
-
-  const rutaTemp = avanzar ? [...rutaActual, 0] : retroceder ? rutaActual.slice(0, -1) : [...rutaActual];
-  let nivel = { hijos: datos };
-  for (const idx of rutaTemp) {
-    if (!nivel || !nivel.hijos || !nivel.hijos[idx]) { nivel = null; break; }
-    nivel = nivel.hijos[idx];
-  }
-
-  if (nivel) {
-    if (nivel.series && Array.isArray(nivel.series)) {
-      const encabezados = document.createElement("div");
-      encabezados.className = "series-header";
-      ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt => {
-        const col = document.createElement("div"); col.textContent = txt; encabezados.appendChild(col);
-      });
-      nuevoClon.appendChild(encabezados);
-
-      const seriesContainer = document.createElement("div");
-      seriesContainer.className = "series-container";
-      nivel.series.forEach((serie, idx) => {
-        const serieDiv = document.createElement("div"); serieDiv.className = "serie-row";
-        const numBtn = document.createElement("button"); numBtn.className = "serie-num";
-        numBtn.textContent = serie.marca || (idx + 1); serieDiv.appendChild(numBtn);
-
-        ['reps','peso','rir','descanso'].forEach(key => {
-          const cell = document.createElement("div"); cell.className = "serie-cell";
-          cell.textContent = serie[key] ?? "";
-          serieDiv.appendChild(cell);
-        });
-        const tmp = document.createElement("div"); tmp.className = "serie-cell"; tmp.textContent = serie.completada ? "✔️" : "🕔"; serieDiv.appendChild(tmp);
-        const borrar = document.createElement("div"); borrar.className = "serie-cell"; borrar.textContent = "❌"; serieDiv.appendChild(borrar);
-        seriesContainer.appendChild(serieDiv);
-      });
-      nuevoClon.appendChild(seriesContainer);
-    } else if (nivel.hijos && nivel.hijos.length > 0) {
-      nivel.hijos.forEach((item, idx) => {
-        const node = crearIndice(item, idx, nivel);
-        nuevoClon.appendChild(node);
-      });
-    } else {
-      const txt = document.createElement("div"); txt.className = "nivel-empty";
-      txt.textContent = nivel.nombre || "(sin contenido)"; nuevoClon.appendChild(txt);
+  // ==================== FUNCIÓN DE RESTAURACIÓN ====================
+  window.restaurarDesdeJSON = async function(jsonString) {
+    try {
+      const datosRecuperados = JSON.parse(jsonString);
+      const user = auth.currentUser;
+      
+      if (!user) {
+        console.error('❌ Debes iniciar sesión primero');
+        alert('Debes iniciar sesión primero');
+        return;
+      }
+      
+      if (!Array.isArray(datosRecuperados)) {
+        console.error('❌ Formato de datos inválido');
+        alert('Formato de datos inválido');
+        return;
+      }
+      
+      console.log('[restaurarDesdeJSON] Restaurando datos para uid:', user.uid);
+      console.log('[restaurarDesdeJSON] Cantidad de elementos:', datosRecuperados.length);
+      
+      await setDoc(doc(db, "usuarios", user.uid), { 
+        datos: structuredClone(datosRecuperados),
+        ultimaActualizacion: new Date().toISOString()
+      }, { merge: true });
+      
+      datos = structuredClone(datosRecuperados);
+      localStorage.setItem("misDatos", JSON.stringify(datos));
+      
+      console.log('✅ Datos restaurados correctamente');
+      alert('✅ Datos restaurados correctamente');
+      renderizar();
+      
+    } catch (error) {
+      console.error('❌ Error al restaurar:', error);
+      alert('Error al restaurar: ' + error.message);
     }
-  } else {
-    const aviso = document.createElement("div"); aviso.className = "nivel-empty";
-    aviso.textContent = "(nivel vacío)"; nuevoClon.appendChild(aviso);
-  }
+  };
 
-  if (avanzar) nuevoClon.style.transform = `translateX(${ancho}px)`;
-  else if (retroceder) nuevoClon.style.transform = `translateX(${-ancho}px)`;
-  else nuevoClon.style.transform = `translateX(${ancho}px)`;
+  console.log('💾 Función restaurarDesdeJSON() disponible. Uso: restaurarDesdeJSON(\'tu json aquí\')');
 
-  const padre = contenido.parentNode;
-  if (padre && getComputedStyle(padre).position === "static") padre.style.position = "relative";
-  padre.appendChild(nuevoClon);
-  return nuevoClon;
-}
-
-// Eventos touch/mouse
-function onTouchStart(e) {
-  const esInput = e.target.closest('.list-item input');
-  const modoVisual = esInput?.disabled; // deshabilitado = modo visual
-  if (esInput && !modoVisual) return; // bloquear solo inputs en modo edición
-
-  touchStartX = e.touches ? e.touches[0].clientX : e.clientX;
-  isMouseDown = !e.touches;
-  direccionSwipe = null;
-}
-
-function onTouchMove(e) {
-  if (touchStartX === null) return;
-
-  // Si estamos en modo arrastre vertical, ignorar la lógica de swipe horizontal
-  if (dragging) {
-    if (e.cancelable) e.preventDefault();
-    return;
-  }
-
-  const esInput = e.target.closest('.list-item input');
-  const modoVisual = esInput?.disabled;
-  if (esInput && !modoVisual) return; // bloquear swipe solo en edición
-
-  touchEndX = e.touches ? e.touches[0].clientX : e.clientX;
-  const deltaX = touchEndX - touchStartX;
-  if (Math.abs(deltaX) < 5) return;
-  direccionSwipe = deltaX > 0 ? "derecha" : "izquierda";
-  swipeActivado = true;
-
-  contenido.style.transition = "none";
-  contenido.style.transform = `translateX(${deltaX}px)`;
-
-  const nivel = nivelActual();
-  const nivel0 = rutaActual.length === 0;
-  let avanzar = false, retroceder = false;
-
-  if (nivel0 && direccionSwipe === "izquierda" && nivel.hijos?.length > 0) avanzar = true;
-  else if (!nivel0 && direccionSwipe === "derecha") retroceder = true;
-
-  if ((avanzar || retroceder) && !clon) clon = crearClon(avanzar, retroceder);
-
-  if (clon) {
-    const ancho = contenido.offsetWidth;
-    const clonDesplazamiento = direccionSwipe === "izquierda" ? deltaX + ancho : deltaX - ancho;
-    clon.style.transform = `translateX(${clonDesplazamiento}px)`;
-  }
-
-  if (e.cancelable) e.preventDefault(); // bloquear scroll vertical
-}
-
-function onTouchEnd(e) {
-  if (!swipeActivado) { resetTouch(); return; }
-  touchEndX = e.changedTouches && e.changedTouches.length ? e.changedTouches[0].clientX : e.clientX;
-  handleGestureFinish();
-}
-
-
-
-function handleGestureFinish() {
-  if (!contenido || touchStartX === null || touchEndX === null) { resetTouch(); return; }
-  const deltaX = touchEndX - touchStartX;
-  const ancho = contenido.offsetWidth;
-  const umbral = 80;
-  const nivel = nivelActual();
-  const nivel0 = rutaActual.length === 0;
-
-  if (Math.abs(deltaX) < umbral) {
-    contenido.style.transition = `transform ${duracion}ms ease`;
-    contenido.style.transform = "translateX(0)";
-    if (clon) {
-      clon.style.transition = `transform ${duracion}ms ease`;
-      clon.style.transform = `translateX(${direccionSwipe === "izquierda" ? ancho : -ancho}px)`;
-    }
-    setTimeout(resetTouch, duracion);
-    return;
-  }
-
-  const direccion = deltaX > 0 ? "derecha" : "izquierda";
-  let avanzar = false, retroceder = false;
-
-  if (nivel0 && direccion === "izquierda" && nivel.hijos?.length > 0) avanzar = true;
-  else if (!nivel0 && direccion === "derecha") retroceder = true;
-
-  if (!avanzar && !retroceder) {
-    contenido.style.transition = `transform ${duracion}ms ease`;
-    contenido.style.transform = "translateX(0)";
-    setTimeout(resetTouch, duracion);
-    return;
-  }
-
-  contenido.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
-  if (clon) clon.style.transition = `transform ${duracion}ms ease, opacity ${duracion}ms ease`;
-
-  contenido.style.transform = direccion === "izquierda" ? `translateX(${-ancho}px)` : `translateX(${ancho}px)`;
-  contenido.style.opacity = "0";
-  if (clon) clon.style.transform = "translateX(0)";
-
-  setTimeout(() => {
-    if (retroceder) {
-      suppressClicksUntil = Date.now() + 600;
-      rutaActual.pop();
-    }
-    if (avanzar) navigatePush(0);
-    else renderizar();
-    if (retroceder) suppressPointerEvents(600);
-    contenido.style.transition = "none";
-    contenido.style.transform = "translateX(0)";
-    contenido.style.opacity = "1";
-    resetTouch();
-  }, duracion);
-}
-
-// listeners
-if (document.getElementById("contenido")) {
-  document.body.addEventListener("touchstart", onTouchStart, {passive: false});
-  document.body.addEventListener("touchmove", onTouchMove, {passive: false});
-  document.body.addEventListener("touchend", onTouchEnd);
-  document.body.addEventListener("mousedown", onTouchStart);
-  document.body.addEventListener("mousemove", onTouchMove);
-  document.body.addEventListener("mouseup", onTouchEnd);
+  // Drag & drop global
+  document.addEventListener("mousemove", dragMove);
+  document.addEventListener("touchmove", dragMove, { passive: false });
+  document.addEventListener("mouseup", dragEnd);
+  document.addEventListener("touchend", dragEnd);
+  document.addEventListener("touchcancel", dragEnd);
 }

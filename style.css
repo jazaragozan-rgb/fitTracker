@@ -566,3 +566,20 @@ main#contenido {
   margin: 6px;
   gap: 6px;
 }
+.list-item.dragging {
+  opacity: 0.5;
+  background: #f0f0f0;
+  border: 2px dashed #999;
+}
+.list-item.dragging {
+  opacity: 0.5;
+  background: #f0f0f0;
+  border: 2px dashed #999;
+}
+.btn-back-subheader {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  cursor: pointer;
+  margin-right: 8px; /* separación del botón añadir */
+}
