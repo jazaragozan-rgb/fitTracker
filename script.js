@@ -334,6 +334,10 @@ function renderizar() {
     h2Nivel.textContent = rutaActual.length === 1 ? 'Bloques' : (nivel.nombre || ultimoMenuSeleccionado);
     subHeader.appendChild(h2Nivel);
 
+    // -------------------- CONTENEDOR DE BOTONES --------------------
+    const botonesContainer = document.createElement('div');
+    botonesContainer.id = 'subHeaderButtons';
+
     // -------------------- BOTÓN VOLVER --------------------
     if (rutaActual.length >= 1 && rutaActual.length <= 5) {
       const backSubBtn = document.createElement('button');
@@ -345,15 +349,42 @@ function renderizar() {
         rutaActual.pop();
         renderizar();
       });
-      subHeader.insertBefore(backSubBtn, h2Nivel.nextSibling);
+      botonesContainer.appendChild(backSubBtn);
     }
 
     // -------------------- BOTÓN AÑADIR --------------------
     if (rutaActual.length !== 5) {
-      addButton.style.display = '';
-      subHeader.appendChild(addButton);
+      const addBtn = document.createElement('button');
+      addBtn.className = 'header-btn';
+      addBtn.textContent = '+ Añadir';
+      addBtn.style.display = '';
+      botonesContainer.appendChild(addBtn);
+      
+      // Asignar onclick al botón añadir
+      addBtn.onclick = () => {
+        if (rutaActual.length >= 1 && rutaActual.length <= 4 && window.itemCopiado) {
+          mostrarConfirmacion("¿Desea pegar el contenido aquí o desea crear un bloque nuevo?", () => {
+            if (window.itemCopiado.nivel !== rutaActual.length) {
+              mostrarConfirmacion(`El contenido se debe pegar en el nivel ${window.itemCopiado.nivel}`, () => {}, null, "Aceptar");
+            } else {
+              nivel.hijos.push(structuredClone(window.itemCopiado.datos));
+              window.itemCopiado = null;
+              guardarDatos();
+              renderizar();
+            }
+          }, () => {
+            const nombreDefault = "Nuevo " + tituloNivel.textContent;
+            nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
+            guardarDatos(); renderizar();
+          }, "Pegar", "Crear nuevo");
+        } else {
+          const nombreDefault = "Nuevo " + tituloNivel.textContent;
+          nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
+          guardarDatos(); renderizar();
+        }
+      };
     } else {
-      addButton.style.display = 'none';
+      // Nivel 5: botón añadir serie
       const addSerieBtn = document.createElement('button');
       addSerieBtn.className = 'add-serie';
       addSerieBtn.textContent = '+ Añadir serie';
@@ -363,17 +394,19 @@ function renderizar() {
         guardarDatos();
         renderizar();
       };
-      subHeader.appendChild(addSerieBtn);
+      botonesContainer.appendChild(addSerieBtn);
     }
 
-    // -------------------- BOTÓN BUSCAR (nivel 4) --------------------
+    // -------------------- BOTÓN BUSCAR (solo nivel 4) --------------------
     if (rutaActual.length === 4) {
       const searchBtn = document.createElement('button');
       searchBtn.textContent = '🔍';
       searchBtn.className = 'btn-search';
       searchBtn.onclick = abrirBuscadorEjercicios;
-      subHeader.appendChild(searchBtn);
+      botonesContainer.appendChild(searchBtn);
     }
+
+    subHeader.appendChild(botonesContainer);
   }
 
   // Pantalla seguimiento y dashboard
@@ -708,29 +741,6 @@ function renderizar() {
       contenido.appendChild(div);
     });
   }
-
-  addButton.onclick = () => {
-    if (rutaActual.length >= 1 && rutaActual.length <= 4 && window.itemCopiado) {
-      mostrarConfirmacion("¿Desea pegar el contenido aquí o desea crear un bloque nuevo?", () => {
-        if (window.itemCopiado.nivel !== rutaActual.length) {
-          mostrarConfirmacion(`El contenido se debe pegar en el nivel ${window.itemCopiado.nivel}`, () => {}, null, "Aceptar");
-        } else {
-          nivel.hijos.push(structuredClone(window.itemCopiado.datos));
-          window.itemCopiado = null;
-          guardarDatos();
-          renderizar();
-        }
-      }, () => {
-        const nombreDefault = "Nuevo " + tituloNivel.textContent;
-        nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
-        guardarDatos(); renderizar();
-      }, "Pegar", "Crear nuevo");
-    } else {
-      const nombreDefault = "Nuevo " + tituloNivel.textContent;
-      nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
-      guardarDatos(); renderizar();
-    }
-  };
 }
 
 function asegurarContenidoVisible() {
