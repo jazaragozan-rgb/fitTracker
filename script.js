@@ -236,37 +236,93 @@ function nivelActual() {
 function abrirBuscadorEjercicios() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
+  
+  // Cerrar al hacer click en el overlay
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) overlay.remove();
+  });
 
   const modal = document.createElement('div');
-  modal.className = 'modal';
+  modal.className = 'modal-ejercicios';
 
+  // Header del modal con título y botón cerrar
+  const header = document.createElement('div');
+  header.className = 'modal-ejercicios-header';
+  
+  const titulo = document.createElement('h3');
+  titulo.textContent = 'Buscar ejercicio';
+  titulo.style.margin = '0';
+  titulo.style.color = '#414141';
+  titulo.style.fontSize = '1.3rem';
+  
+  const btnCerrar = document.createElement('button');
+  btnCerrar.className = 'btn-cerrar-modal';
+  btnCerrar.innerHTML = '✖';
+  btnCerrar.onclick = () => overlay.remove();
+  
+  header.appendChild(titulo);
+  header.appendChild(btnCerrar);
+
+  // Input de búsqueda
   const input = document.createElement('input');
+  input.className = 'input-buscar-ejercicio';
   input.placeholder = 'Buscar ejercicio...';
+  input.type = 'text';
 
+  // Lista de ejercicios
   const list = document.createElement('div');
   list.className = 'exercise-list';
 
+  // Función para buscar y mostrar ejercicios
   input.addEventListener('input', () => {
     const q = input.value.toLowerCase();
     list.innerHTML = '';
-    exercises
-      .filter(e => e.nombre.toLowerCase().includes(q))
-      .slice(0, 50)
-      .forEach(ej => {
-        const item = document.createElement('div');
-        item.className = 'exercise-item';
-        item.textContent = ej.nombre;
-        item.onclick = () => {
-          añadirEjercicioDesdeBiblioteca(ej.nombre);
-          overlay.remove();
-        };
-        list.appendChild(item);
-      });
+    
+    if (q.trim() === '') {
+      // Mostrar mensaje inicial
+      const mensaje = document.createElement('div');
+      mensaje.className = 'exercise-mensaje';
+      mensaje.textContent = 'Escribe para buscar ejercicios...';
+      list.appendChild(mensaje);
+      return;
+    }
+    
+    const resultados = exercises.filter(e => e.nombre.toLowerCase().includes(q)).slice(0, 50);
+    
+    if (resultados.length === 0) {
+      const mensaje = document.createElement('div');
+      mensaje.className = 'exercise-mensaje';
+      mensaje.textContent = 'No se encontraron ejercicios';
+      list.appendChild(mensaje);
+      return;
+    }
+    
+    resultados.forEach(ej => {
+      const item = document.createElement('div');
+      item.className = 'exercise-item';
+      item.textContent = ej.nombre;
+      item.onclick = () => {
+        añadirEjercicioDesdeBiblioteca(ej.nombre);
+        overlay.remove();
+      };
+      list.appendChild(item);
+    });
   });
 
-  modal.append(input, list);
+  // Mostrar mensaje inicial
+  const mensajeInicial = document.createElement('div');
+  mensajeInicial.className = 'exercise-mensaje';
+  mensajeInicial.textContent = 'Escribe para buscar ejercicios...';
+  list.appendChild(mensajeInicial);
+
+  modal.appendChild(header);
+  modal.appendChild(input);
+  modal.appendChild(list);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
+  
+  // Autofocus en el input
+  setTimeout(() => input.focus(), 100);
 }
 
 function añadirEjercicioDesdeBiblioteca(nombre) {

@@ -24,7 +24,7 @@ export function mostrarTimer(){
   // Botón de Pausa
   const btnPause=document.createElement("button");
   btnPause.textContent="⏸";
-  btnPause.className = "btn-pause";  // Agregar la clase CSS
+  btnPause.className = "btn-pause";
 
   let pausado=false;
   let tiempoRestante=Math.floor((fin-Date.now())/1000);
@@ -49,10 +49,11 @@ export function mostrarTimer(){
   // Botón de Parar
   const btnSkip=document.createElement("button");
   btnSkip.textContent="⏹";
-  btnSkip.className = "btn-skip";  // Agregar la clase CSS
+  btnSkip.className = "btn-skip";
   btnSkip.onclick=()=> {
     clearInterval(timerInterval);
     timerContainer.innerHTML="";
+    timerContainer.className=""; // Remover la clase timer-active
     localStorage.removeItem("timerFin");
     localStorage.removeItem("timerPause");
   };
@@ -68,6 +69,7 @@ export function mostrarTimer(){
     if(t<=0){
       clearInterval(timerInterval);
       timerContainer.innerHTML="";
+      timerContainer.className=""; // Remover la clase timer-active
       localStorage.removeItem("timerFin");
       return;
     }
