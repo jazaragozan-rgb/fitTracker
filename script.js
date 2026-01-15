@@ -1000,15 +1000,12 @@ function crearIndice(item, index, nivel) {
       div.appendChild(fechaInput);
     }
 
-    // opciones botón
+    // opciones botón - MODIFICADO CON NUEVA ESTRUCTURA
     if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
-      opcionesBtn.innerHTML = `<span style="display:inline-block;width:40px;text-align:center;">
-        <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
-        <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
-        <span style="display:inline-block;width:5px;height:5px;background:#888;border-radius:50%;margin:0 2px;"></span>
-      </span>`;
+      const punto = document.createElement('span');
+      opcionesBtn.appendChild(punto);
       opcionesBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
