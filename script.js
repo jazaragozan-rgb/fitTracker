@@ -3,6 +3,7 @@ import { auth, db, onAuthStateChanged } from './auth.js';
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { renderizarDashboard } from "./dashboard.js";
 import { renderizarSeguimiento } from "./seguimiento.js";
+import { renderizarCalendario } from "./calendario.js";
 import { iniciarEntrenamiento } from './live.js';
 import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
 import { iniciarTimer, restaurarTimer } from "./timer.js";
@@ -95,6 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   window.renderizar = renderizar;
   window.guardarDatos = guardarDatos;
+  window.rutaActual = rutaActual;
 
   if (isAppPage()) {
     renderizar();
@@ -480,7 +482,11 @@ function renderizar() {
     subHeader.appendChild(botonesContainer);
   }
 
-  // Pantalla seguimiento y dashboard
+  // Pantalla calendario, seguimiento y dashboard
+  if (rutaActual.length === 1 && rutaActual[0] === 2) {
+    renderizarCalendario(datos, contenido, subHeader, rutaActual, renderizar);
+    return;
+  }
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
     renderizarSeguimiento(nivel, contenido, subHeader, addButton);
     return;

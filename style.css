@@ -57,6 +57,7 @@ header {
   z-index: 100;
 }
 
+/* Logo del header - preparado para imagen */
 #menuTitulo { 
   flex: 1; 
   text-align: center; 
@@ -64,6 +65,21 @@ header {
   font-weight: 700; 
   color: var(--text-primary);
   letter-spacing: -0.3px;
+  display: none; /* Ocultar texto, preparado para imagen */
+}
+
+/* Contenedor para logo/imagen en el header */
+#headerLogo {
+  flex: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#headerLogo img {
+  max-height: 32px;
+  width: auto;
 }
 
 #liveEntrenamiento.btn-primary {   
@@ -160,7 +176,7 @@ header {
 
 #subHeader h2 {
   flex: none;
-  text-align: left;
+  text-align: center;
   font-size: 1rem;
   font-weight: 700;
   color: var(--primary-mint);
@@ -168,6 +184,7 @@ header {
   z-index: 31;
   letter-spacing: -0.3px;
   text-transform: uppercase;
+  width: 100%;
 }
 
 /* Contenedor de botones en el subheader */
@@ -1015,7 +1032,7 @@ main#contenido {
   z-index: 20;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
-  padding-top: 130px;
+  padding-top: 116px;
   padding-bottom: 75px;
   min-height: 100vh;
   overflow-y: auto;
