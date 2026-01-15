@@ -40,7 +40,7 @@ body {
   line-height: 1.5;
 }
 
-/* === Header === */
+/* === Header - MÁS COMPACTO === */
 header {
   position: fixed;
   top: 0;
@@ -51,8 +51,8 @@ header {
   justify-content: space-between;
   background: var(--bg-card);
   color: var(--text-primary);
-  padding: 0 16px;
-  height: 56px;
+  padding: 0 12px;
+  height: 48px;
   box-shadow: var(--shadow-sm);
   z-index: 100;
 }
@@ -60,7 +60,7 @@ header {
 #menuTitulo { 
   flex: 1; 
   text-align: center; 
-  font-size: 1.125rem; 
+  font-size: 1rem; 
   font-weight: 700; 
   color: var(--text-primary);
   letter-spacing: -0.3px;
@@ -68,9 +68,9 @@ header {
 
 #liveEntrenamiento.btn-primary {   
   width: 100%;
-  max-width: 280px;
-  height: 48px;
-  font-size: 0.875rem; 
+  max-width: 260px;
+  height: 40px;
+  font-size: 0.813rem; 
   font-weight: 700;
   color: #FFFFFF;
   background: var(--primary-mint);
@@ -106,7 +106,7 @@ header {
   align-items: center;
   justify-content: center;
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.813rem;
   z-index: 20;
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
@@ -122,8 +122,8 @@ header {
   background: transparent;
   border: none;
   cursor: pointer;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -136,24 +136,24 @@ header {
 }
 
 #logoutButton img {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   opacity: 0.6;
 }
 
-/* Caja debajo del header */
+/* Caja debajo del header - MÁS COMPACTA === */
 #subHeader {
   position: fixed;
-  top: 56px;
+  top: 48px;
   left: 0;
   width: 100%;
   display: flex;
   flex-direction: column;
   justify-content: flex-start;
   align-items: stretch;
-  padding: 16px;
+  padding: 8px 12px;
   background: var(--bg-card);
-  min-height: 96px;
+  min-height: 60px;
   z-index: 90;
   box-shadow: var(--shadow-sm);
 }
@@ -161,10 +161,10 @@ header {
 #subHeader h2 {
   flex: none;
   text-align: left;
-  font-size: 1.25rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--primary-mint);
-  margin: 0 0 12px 0;
+  margin: 0 0 6px 0;
   z-index: 31;
   letter-spacing: -0.3px;
   text-transform: uppercase;
@@ -176,18 +176,18 @@ header {
   display: flex;
   justify-content: center;
   align-items: center;
-  margin-top: 4px;
-  height: 48px;
+  margin-top: 0;
+  height: 36px;
   width: 100%;
-  gap: 12px;
+  gap: 10px;
 }
 
 /* Botones dentro del subheader - centrados */
 #subHeader .header-btn,
 .add-serie {
-  width: 160px;
-  height: 48px;
-  font-size: 0.875rem; 
+  width: 150px;
+  height: 36px;
+  font-size: 0.813rem; 
   font-weight: 700;
   color: #FFFFFF;
   border: none;
@@ -219,10 +219,10 @@ header {
   left: 0;
   background: transparent;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   cursor: pointer;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -242,12 +242,12 @@ header {
 .btn-search {
   position: absolute;
   right: 0;
-  width: 48px;
-  height: 48px;
+  width: 40px;
+  height: 40px;
   border: none;
   border-radius: 8px;
   background: transparent;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -596,10 +596,10 @@ button:hover {
   border-radius: 8px;
   cursor: pointer;
   padding: 0;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   z-index: 1;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -953,7 +953,7 @@ main#contenido {
   z-index: 20;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
-  padding-top: 180px;
+  padding-top: 130px;
   padding-bottom: 75px;
   min-height: 100vh;
   overflow-y: auto;
