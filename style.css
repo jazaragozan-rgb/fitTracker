@@ -1242,5 +1242,4 @@ main#contenido {
 .list-item.dragging {
   opacity: 0.5;
   box-shadow: var(--shadow-lg);
-
 }
