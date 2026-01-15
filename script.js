@@ -375,12 +375,27 @@ function renderizar() {
     // Nivel 0: Dashboard
     tituloNivel.style.display = 'none';
     subHeader.innerHTML = '';
+    
+    // Añadir título como en otros niveles
+    const h2Nivel = document.createElement('h2');
+    h2Nivel.id = 'tituloNivel';
+    h2Nivel.textContent = 'Dashboard';
+    subHeader.appendChild(h2Nivel);
+    
+    // Contenedor para el botón (misma estructura que otros niveles)
+    const botonesContainer = document.createElement('div');
+    botonesContainer.id = 'subHeaderButtons';
+    botonesContainer.style.display = 'flex';
+    botonesContainer.style.justifyContent = 'center';
+    
     const btnEntreno = document.createElement('button');
     btnEntreno.id = 'liveEntrenamiento';
     btnEntreno.textContent = 'Empezar entrenamiento';
     btnEntreno.className = 'btn-primary';
     btnEntreno.addEventListener('click', iniciarEntrenamiento);
-    subHeader.appendChild(btnEntreno);
+    botonesContainer.appendChild(btnEntreno);
+    
+    subHeader.appendChild(botonesContainer);
 
   } else {
     // Niveles 1–5
