@@ -235,11 +235,12 @@ function nivelActual() {
 }
 
 // ==================== funcion buscador ejercicios de biblioteca ====================
+// REEMPLAZAR la función abrirBuscadorEjercicios() en script.js
+
 function abrirBuscadorEjercicios() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   
-  // Cerrar al hacer click en el overlay
   overlay.addEventListener('click', (e) => {
     if (e.target === overlay) overlay.remove();
   });
@@ -247,15 +248,13 @@ function abrirBuscadorEjercicios() {
   const modal = document.createElement('div');
   modal.className = 'modal-ejercicios';
 
-  // Header del modal con título y botón cerrar
+  // ========== HEADER ==========
   const header = document.createElement('div');
   header.className = 'modal-ejercicios-header';
   
   const titulo = document.createElement('h3');
-  titulo.textContent = 'Buscar ejercicio';
+  titulo.textContent = '🔍 Buscar ejercicio';
   titulo.style.margin = '0';
-  titulo.style.color = '#414141';
-  titulo.style.fontSize = '1.3rem';
   
   const btnCerrar = document.createElement('button');
   btnCerrar.className = 'btn-cerrar-modal';
@@ -265,65 +264,190 @@ function abrirBuscadorEjercicios() {
   header.appendChild(titulo);
   header.appendChild(btnCerrar);
 
-  // Input de búsqueda
+  // ========== INPUT DE BÚSQUEDA ==========
+  const searchContainer = document.createElement('div');
+  searchContainer.style.padding = '16px 20px';
+  
   const input = document.createElement('input');
   input.className = 'input-buscar-ejercicio';
-  input.placeholder = 'Buscar ejercicio...';
+  input.placeholder = 'Buscar por nombre, músculo o equipamiento...';
   input.type = 'text';
+  
+  searchContainer.appendChild(input);
 
-  // Lista de ejercicios
+  // ========== CONTADOR ==========
+  const counter = document.createElement('div');
+  counter.className = 'exercise-counter';
+  counter.style.cssText = `
+    padding: 0 20px 8px 20px;
+    font-size: 0.813rem;
+    color: var(--text-secondary);
+    text-align: right;
+    font-weight: 600;
+  `;
+
+  // ========== LISTA DE EJERCICIOS ==========
   const list = document.createElement('div');
   list.className = 'exercise-list';
 
-  // Función para buscar y mostrar ejercicios
-  input.addEventListener('input', () => {
-    const q = input.value.toLowerCase();
+  // ========== FUNCIÓN DE RENDERIZADO ==========
+  function renderizarEjercicios(query = '') {
     list.innerHTML = '';
+    const q = query.toLowerCase().trim();
     
-    if (q.trim() === '') {
-      // Mostrar mensaje inicial
+    if (q === '') {
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
-      mensaje.textContent = 'Escribe para buscar ejercicios...';
+      mensaje.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 12px;">💪</div>
+        <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+          Busca ejercicios
+        </p>
+        <p style="font-size: 0.875rem; color: var(--text-light);">
+          ${exercises.length} ejercicios disponibles
+        </p>
+      `;
       list.appendChild(mensaje);
+      counter.textContent = '';
       return;
     }
     
-    const resultados = exercises.filter(e => e.nombre.toLowerCase().includes(q)).slice(0, 50);
+    // Filtrar ejercicios
+    const resultados = exercises.filter(e => {
+      const nombreMatch = e.nombre.toLowerCase().includes(q);
+      const grupoMatch = Array.isArray(e.grupo_muscular) 
+        ? e.grupo_muscular.some(g => g.toLowerCase().includes(q))
+        : e.grupo_muscular.toLowerCase().includes(q);
+      const equipMatch = e.equipamiento.toLowerCase().includes(q);
+      
+      return nombreMatch || grupoMatch || equipMatch;
+    }).slice(0, 50);
+
+    // Actualizar contador
+    counter.textContent = `${resultados.length} ejercicio${resultados.length !== 1 ? 's' : ''} encontrado${resultados.length !== 1 ? 's' : ''}`;
     
     if (resultados.length === 0) {
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
-      mensaje.textContent = 'No se encontraron ejercicios';
+      mensaje.innerHTML = `
+        <div style="font-size: 3rem; margin-bottom: 12px;">🤔</div>
+        <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
+          No se encontraron ejercicios
+        </p>
+        <p style="font-size: 0.875rem; color: var(--text-light);">
+          Intenta con otro término
+        </p>
+      `;
       list.appendChild(mensaje);
       return;
     }
-    
+
+    // Mapeo de emojis por grupo muscular
+    const grupoEmojis = {
+      'pecho': '💪',
+      'espalda': '🔙',
+      'hombros': '🦾',
+      'piernas': '🦵',
+      'gluteos': '🍑',
+      'biceps': '💪',
+      'triceps': '💪',
+      'cuadriceps': '🦵',
+      'isquiotibiales': '🦵',
+      'gemelos': '🦿',
+      'core': '🔥',
+      'hombro_lateral': '🦾',
+      'hombro_posterior': '🦾'
+    };
+
+    const equipamientoEmojis = {
+      'barra': '🏋️',
+      'mancuernas': '🔩',
+      'polea': '⚙️',
+      'maquina': '🏗️',
+      'peso_corporal': '🧍',
+      'smith': '🏋️',
+      'lastre': '⚖️',
+      'barra_ez': '〰️',
+      'rueda': '⭕'
+    };
+
+    // Renderizar resultados
     resultados.forEach(ej => {
       const item = document.createElement('div');
-      item.className = 'exercise-item';
-      item.textContent = ej.nombre;
-      item.onclick = () => {
+      item.className = 'exercise-item-card';
+      
+      // Obtener grupos musculares
+      const grupos = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular];
+      const grupoTexto = grupos
+        .map(g => g.charAt(0).toUpperCase() + g.slice(1).replace('_', ' '))
+        .join(', ');
+      
+      // Emoji del primer grupo muscular
+      const grupoEmoji = grupoEmojis[grupos[0]] || '💪';
+      
+      // Equipamiento
+      const equipTexto = ej.equipamiento
+        .replace(/_/g, ' ')
+        .split(' ')
+        .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
+        .join(' ');
+      
+      const equipEmoji = equipamientoEmojis[ej.equipamiento] || '🏋️';
+
+      item.innerHTML = `
+        <div class="exercise-icon">${grupoEmoji}</div>
+        <div class="exercise-info">
+          <div class="exercise-name">${ej.nombre}</div>
+          <div class="exercise-details">
+            <span class="exercise-tag">
+              <span class="tag-icon">${grupoEmoji}</span>
+              ${grupoTexto}
+            </span>
+            <span class="exercise-tag">
+              <span class="tag-icon">${equipEmoji}</span>
+              ${equipTexto}
+            </span>
+          </div>
+        </div>
+        <button class="exercise-add-btn">+</button>
+      `;
+      
+      // Click en la tarjeta completa
+      item.onclick = (e) => {
+        if (e.target.classList.contains('exercise-add-btn')) return;
         añadirEjercicioDesdeBiblioteca(ej.nombre);
         overlay.remove();
       };
+      
+      // Click en el botón +
+      const addBtn = item.querySelector('.exercise-add-btn');
+      addBtn.onclick = (e) => {
+        e.stopPropagation();
+        añadirEjercicioDesdeBiblioteca(ej.nombre);
+        overlay.remove();
+      };
+      
       list.appendChild(item);
     });
+  }
+
+  // Event listener del input
+  input.addEventListener('input', (e) => {
+    renderizarEjercicios(e.target.value);
   });
 
-  // Mostrar mensaje inicial
-  const mensajeInicial = document.createElement('div');
-  mensajeInicial.className = 'exercise-mensaje';
-  mensajeInicial.textContent = 'Escribe para buscar ejercicios...';
-  list.appendChild(mensajeInicial);
+  // Renderizar estado inicial
+  renderizarEjercicios('');
 
+  // Montar todo
   modal.appendChild(header);
-  modal.appendChild(input);
+  modal.appendChild(searchContainer);
+  modal.appendChild(counter);
   modal.appendChild(list);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   
-  // Autofocus en el input
+  // Autofocus
   setTimeout(() => input.focus(), 100);
 }
 
