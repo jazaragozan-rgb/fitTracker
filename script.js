@@ -30,12 +30,14 @@ console.log('[Datos iniciales] Usando datos por defecto, se cargarán de Firesto
 
 // ==================== ESTADO / REFERENCIAS UI ====================
 let rutaActual = [];
+let ejercicioExpandido = null; // Para controlar qué ejercicio está expandido
 let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay, subHeader;
 let menuTitulo;
 let ultimoMenuSeleccionado = 'Dashboard';
 
 function navigatePush(index) {
   rutaActual.push(index);
+  ejercicioExpandido = null; // Resetear ejercicio expandido al navegar
   renderizar();
 }
 
@@ -57,9 +59,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Botones principales
   if (backButton) backButton.addEventListener("click", () => {
-    if (rutaActual.length > 0) { rutaActual.pop(); renderizar(); }
+    if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
-  if (homeButton) homeButton.addEventListener("click", () => { rutaActual = []; renderizar(); });
+  if (homeButton) homeButton.addEventListener("click", () => { rutaActual = []; ejercicioExpandido = null; renderizar(); });
   if (logoutButton) logoutButton.addEventListener("click", () => salir());
   if (menuButton) menuButton.addEventListener("click", () => {
     sideMenu.style.left = "0"; menuOverlay.classList.remove("hidden");
@@ -75,6 +77,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (seccion === "seguimiento") { rutaActual = [1]; ultimoMenuSeleccionado = 'Seguimiento'; }
       if (seccion === "calendario") { rutaActual = [2]; ultimoMenuSeleccionado = 'Calendario'; }
       if (seccion === "dashboard") { rutaActual = []; ultimoMenuSeleccionado = 'Dashboard'; }
+      ejercicioExpandido = null;
       renderizar();
       sideMenu.style.left = "-70%";
       menuOverlay.classList.add("hidden");
@@ -102,8 +105,6 @@ document.addEventListener("DOMContentLoaded", () => {
     renderizar();
     restaurarTimer();
     
-    // NO sincronizar automáticamente al recargar la página
-    // Solo sincronizar cuando el usuario hace login (onAuthStateChanged)
     console.log('[DOMContentLoaded] Página cargada, usando datos locales');
   }
 
@@ -235,8 +236,6 @@ function nivelActual() {
 }
 
 // ==================== funcion buscador ejercicios de biblioteca ====================
-// REEMPLAZAR la función abrirBuscadorEjercicios() en script.js
-
 function abrirBuscadorEjercicios() {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -248,13 +247,14 @@ function abrirBuscadorEjercicios() {
   const modal = document.createElement('div');
   modal.className = 'modal-ejercicios';
 
-  // ========== HEADER ==========
   const header = document.createElement('div');
   header.className = 'modal-ejercicios-header';
   
   const titulo = document.createElement('h3');
-  titulo.textContent = '🔍 Buscar ejercicio';
+  titulo.textContent = 'Buscar ejercicio';
   titulo.style.margin = '0';
+  titulo.style.color = '#414141';
+  titulo.style.fontSize = '1.3rem';
   
   const btnCerrar = document.createElement('button');
   btnCerrar.className = 'btn-cerrar-modal';
@@ -264,199 +264,80 @@ function abrirBuscadorEjercicios() {
   header.appendChild(titulo);
   header.appendChild(btnCerrar);
 
-  // ========== INPUT DE BÚSQUEDA ==========
-  const searchContainer = document.createElement('div');
-  searchContainer.style.padding = '16px 20px';
-  
   const input = document.createElement('input');
   input.className = 'input-buscar-ejercicio';
-  input.placeholder = 'Buscar por nombre, músculo o equipamiento...';
+  input.placeholder = 'Buscar ejercicio...';
   input.type = 'text';
-  
-  searchContainer.appendChild(input);
 
-  // ========== CONTADOR ==========
-  const counter = document.createElement('div');
-  counter.className = 'exercise-counter';
-  counter.style.cssText = `
-    padding: 0 20px 8px 20px;
-    font-size: 0.813rem;
-    color: var(--text-secondary);
-    text-align: right;
-    font-weight: 600;
-  `;
-
-  // ========== LISTA DE EJERCICIOS ==========
   const list = document.createElement('div');
   list.className = 'exercise-list';
 
-  // ========== FUNCIÓN DE RENDERIZADO ==========
-  function renderizarEjercicios(query = '') {
+  input.addEventListener('input', () => {
+    const q = input.value.toLowerCase();
     list.innerHTML = '';
-    const q = query.toLowerCase().trim();
     
-    if (q === '') {
+    if (q.trim() === '') {
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
-      mensaje.innerHTML = `
-        <div style="font-size: 3rem; margin-bottom: 12px;">💪</div>
-        <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
-          Busca ejercicios
-        </p>
-        <p style="font-size: 0.875rem; color: var(--text-light);">
-          ${exercises.length} ejercicios disponibles
-        </p>
-      `;
+      mensaje.textContent = 'Escribe para buscar ejercicios...';
       list.appendChild(mensaje);
-      counter.textContent = '';
       return;
     }
     
-    // Filtrar ejercicios
-    const resultados = exercises.filter(e => {
-      const nombreMatch = e.nombre.toLowerCase().includes(q);
-      const grupoMatch = Array.isArray(e.grupo_muscular) 
-        ? e.grupo_muscular.some(g => g.toLowerCase().includes(q))
-        : e.grupo_muscular.toLowerCase().includes(q);
-      const equipMatch = e.equipamiento.toLowerCase().includes(q);
-      
-      return nombreMatch || grupoMatch || equipMatch;
-    }).slice(0, 50);
-
-    // Actualizar contador
-    counter.textContent = `${resultados.length} ejercicio${resultados.length !== 1 ? 's' : ''} encontrado${resultados.length !== 1 ? 's' : ''}`;
+    const resultados = exercises.filter(e => e.nombre.toLowerCase().includes(q)).slice(0, 50);
     
     if (resultados.length === 0) {
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
-      mensaje.innerHTML = `
-        <div style="font-size: 3rem; margin-bottom: 12px;">🤔</div>
-        <p style="font-size: 1rem; font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
-          No se encontraron ejercicios
-        </p>
-        <p style="font-size: 0.875rem; color: var(--text-light);">
-          Intenta con otro término
-        </p>
-      `;
+      mensaje.textContent = 'No se encontraron ejercicios';
       list.appendChild(mensaje);
       return;
     }
-
-    // Mapeo de emojis por grupo muscular
-    const grupoEmojis = {
-      'pecho': '💪',
-      'espalda': '🔙',
-      'hombros': '🦾',
-      'piernas': '🦵',
-      'gluteos': '🍑',
-      'biceps': '💪',
-      'triceps': '💪',
-      'cuadriceps': '🦵',
-      'isquiotibiales': '🦵',
-      'gemelos': '🦿',
-      'core': '🔥',
-      'hombro_lateral': '🦾',
-      'hombro_posterior': '🦾'
-    };
-
-    const equipamientoEmojis = {
-      'barra': '🏋️',
-      'mancuernas': '🔩',
-      'polea': '⚙️',
-      'maquina': '🏗️',
-      'peso_corporal': '🧍',
-      'smith': '🏋️',
-      'lastre': '⚖️',
-      'barra_ez': '〰️',
-      'rueda': '⭕'
-    };
-
-    // Renderizar resultados
+    
     resultados.forEach(ej => {
       const item = document.createElement('div');
-      item.className = 'exercise-item-card';
-      
-      // Obtener grupos musculares
-      const grupos = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular];
-      const grupoTexto = grupos
-        .map(g => g.charAt(0).toUpperCase() + g.slice(1).replace('_', ' '))
-        .join(', ');
-      
-      // Emoji del primer grupo muscular
-      const grupoEmoji = grupoEmojis[grupos[0]] || '💪';
-      
-      // Equipamiento
-      const equipTexto = ej.equipamiento
-        .replace(/_/g, ' ')
-        .split(' ')
-        .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
-        .join(' ');
-      
-      const equipEmoji = equipamientoEmojis[ej.equipamiento] || '🏋️';
-
-      item.innerHTML = `
-        <div class="exercise-icon">${grupoEmoji}</div>
-        <div class="exercise-info">
-          <div class="exercise-name">${ej.nombre}</div>
-          <div class="exercise-details">
-            <span class="exercise-tag">
-              <span class="tag-icon">${grupoEmoji}</span>
-              ${grupoTexto}
-            </span>
-            <span class="exercise-tag">
-              <span class="tag-icon">${equipEmoji}</span>
-              ${equipTexto}
-            </span>
-          </div>
-        </div>
-        <button class="exercise-add-btn">+</button>
-      `;
-      
-      // Click en la tarjeta completa
-      item.onclick = (e) => {
-        if (e.target.classList.contains('exercise-add-btn')) return;
+      item.className = 'exercise-item';
+      item.textContent = ej.nombre;
+      item.onclick = () => {
         añadirEjercicioDesdeBiblioteca(ej.nombre);
         overlay.remove();
       };
-      
-      // Click en el botón +
-      const addBtn = item.querySelector('.exercise-add-btn');
-      addBtn.onclick = (e) => {
-        e.stopPropagation();
-        añadirEjercicioDesdeBiblioteca(ej.nombre);
-        overlay.remove();
-      };
-      
       list.appendChild(item);
     });
-  }
-
-  // Event listener del input
-  input.addEventListener('input', (e) => {
-    renderizarEjercicios(e.target.value);
   });
 
-  // Renderizar estado inicial
-  renderizarEjercicios('');
+  const mensajeInicial = document.createElement('div');
+  mensajeInicial.className = 'exercise-mensaje';
+  mensajeInicial.textContent = 'Escribe para buscar ejercicios...';
+  list.appendChild(mensajeInicial);
 
-  // Montar todo
   modal.appendChild(header);
-  modal.appendChild(searchContainer);
-  modal.appendChild(counter);
+  modal.appendChild(input);
   modal.appendChild(list);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   
-  // Autofocus
   setTimeout(() => input.focus(), 100);
 }
 
 function añadirEjercicioDesdeBiblioteca(nombre) {
   const nivel = nivelActual();
-  nivel.hijos.push({
+  
+  // Buscar el ejercicio en la biblioteca para obtener su imagen
+  const ejercicioBiblioteca = exercises.find(e => e.nombre === nombre);
+  
+  const nuevoEjercicio = {
     nombre,
-    hijos: []
-  });
+    hijos: [],
+    series: []
+  };
+  
+  // Si el ejercicio tiene imagen en la biblioteca, añadirla
+  if (ejercicioBiblioteca && ejercicioBiblioteca.imagen) {
+    nuevoEjercicio.imagen = ejercicioBiblioteca.imagen;
+  }
+  
+  nivel.hijos.push(nuevoEjercicio);
   guardarDatos();
   renderizar();
 }
@@ -489,7 +370,7 @@ function renderizar() {
   // Header/menu title
   if (menuTitulo) {
     if (rutaActual.length === 0) menuTitulo.textContent = 'Dashboard';
-    else if (rutaActual.length >= 1 && rutaActual.length <= 5) menuTitulo.textContent = 'Entrenamiento';
+    else if (rutaActual.length >= 1 && rutaActual.length <= 4) menuTitulo.textContent = 'Entrenamiento';
     else menuTitulo.textContent = ultimoMenuSeleccionado;
   }
 
@@ -502,13 +383,11 @@ function renderizar() {
     tituloNivel.style.display = 'none';
     subHeader.innerHTML = '';
     
-    // Añadir título como en otros niveles
     const h2Nivel = document.createElement('h2');
     h2Nivel.id = 'tituloNivel';
     h2Nivel.textContent = 'Dashboard';
     subHeader.appendChild(h2Nivel);
     
-    // Contenedor para el botón (misma estructura que otros niveles)
     const botonesContainer = document.createElement('div');
     botonesContainer.id = 'subHeaderButtons';
     botonesContainer.style.display = 'flex';
@@ -524,7 +403,7 @@ function renderizar() {
     subHeader.appendChild(botonesContainer);
 
   } else {
-    // Niveles 1–5
+    // Niveles 1–4
     tituloNivel.style.display = '';
     const h2Nivel = document.createElement('h2');
     h2Nivel.id = 'tituloNivel';
@@ -536,7 +415,7 @@ function renderizar() {
     botonesContainer.id = 'subHeaderButtons';
 
     // -------------------- BOTÓN VOLVER --------------------
-    if (rutaActual.length >= 1 && rutaActual.length <= 5) {
+    if (rutaActual.length >= 1 && rutaActual.length <= 4) {
       const backSubBtn = document.createElement('button');
       backSubBtn.className = 'btn-back-subheader';
       backSubBtn.innerHTML = '⬅';
@@ -544,55 +423,50 @@ function renderizar() {
       backSubBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         rutaActual.pop();
+        ejercicioExpandido = null;
         renderizar();
       });
       botonesContainer.appendChild(backSubBtn);
     }
 
     // -------------------- BOTÓN AÑADIR --------------------
-    if (rutaActual.length !== 5) {
-      const addBtn = document.createElement('button');
-      addBtn.className = 'header-btn';
-      addBtn.textContent = '+ Añadir';
-      addBtn.style.display = '';
-      botonesContainer.appendChild(addBtn);
-      
-      // Asignar onclick al botón añadir
-      addBtn.onclick = () => {
-        if (rutaActual.length >= 1 && rutaActual.length <= 4 && window.itemCopiado) {
-          mostrarConfirmacion("¿Desea pegar el contenido aquí o desea crear un bloque nuevo?", () => {
-            if (window.itemCopiado.nivel !== rutaActual.length) {
-              mostrarConfirmacion(`El contenido se debe pegar en el nivel ${window.itemCopiado.nivel}`, () => {}, null, "Aceptar");
-            } else {
-              nivel.hijos.push(structuredClone(window.itemCopiado.datos));
-              window.itemCopiado = null;
-              guardarDatos();
-              renderizar();
-            }
-          }, () => {
-            const nombreDefault = "Nuevo " + tituloNivel.textContent;
-            nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
-            guardarDatos(); renderizar();
-          }, "Pegar", "Crear nuevo");
-        } else {
+    const addBtn = document.createElement('button');
+    addBtn.className = 'header-btn';
+    addBtn.textContent = '+ Añadir';
+    addBtn.style.display = '';
+    botonesContainer.appendChild(addBtn);
+    
+    // Asignar onclick al botón añadir
+    addBtn.onclick = () => {
+      if (rutaActual.length >= 1 && rutaActual.length <= 4 && window.itemCopiado) {
+        mostrarConfirmacion("¿Desea pegar el contenido aquí o desea crear un bloque nuevo?", () => {
+          if (window.itemCopiado.nivel !== rutaActual.length) {
+            mostrarConfirmacion(`El contenido se debe pegar en el nivel ${window.itemCopiado.nivel}`, () => {}, null, "Aceptar");
+          } else {
+            nivel.hijos.push(structuredClone(window.itemCopiado.datos));
+            window.itemCopiado = null;
+            guardarDatos();
+            renderizar();
+          }
+        }, () => {
           const nombreDefault = "Nuevo " + tituloNivel.textContent;
-          nivel.hijos.push({ nombre:"", hijos:[], editando:true, placeholder:nombreDefault });
+          // En nivel 4 (ejercicios), añadir también el array de series
+          const nuevoItem = rutaActual.length === 4 
+            ? { nombre:"", hijos:[], series:[], editando:true, placeholder:nombreDefault }
+            : { nombre:"", hijos:[], editando:true, placeholder:nombreDefault };
+          nivel.hijos.push(nuevoItem);
           guardarDatos(); renderizar();
-        }
-      };
-    } else {
-      // Nivel 5: botón añadir serie
-      const addSerieBtn = document.createElement('button');
-      addSerieBtn.className = 'add-serie';
-      addSerieBtn.textContent = '+ Añadir serie';
-      addSerieBtn.onclick = () => {
-        if (nivel.series) nivel.series.push({});
-        else nivel.series = [{}];
-        guardarDatos();
-        renderizar();
-      };
-      botonesContainer.appendChild(addSerieBtn);
-    }
+        }, "Pegar", "Crear nuevo");
+      } else {
+        const nombreDefault = "Nuevo " + tituloNivel.textContent;
+        // En nivel 4 (ejercicios), añadir también el array de series
+        const nuevoItem = rutaActual.length === 4 
+          ? { nombre:"", hijos:[], series:[], editando:true, placeholder:nombreDefault }
+          : { nombre:"", hijos:[], editando:true, placeholder:nombreDefault };
+        nivel.hijos.push(nuevoItem);
+        guardarDatos(); renderizar();
+      }
+    };
 
     // -------------------- BOTÓN BUSCAR (solo nivel 4) --------------------
     if (rutaActual.length === 4) {
@@ -620,145 +494,402 @@ function renderizar() {
     return;
   }
 
-  // Nivel series (5)
-  if (rutaActual.length === 5) {
+  // NIVEL 4 UNIFICADO (ejercicios con series desplegables)
+  if (rutaActual.length === 4) {
     backButton.style.visibility = 'visible';
-    addButton.style.visibility = 'hidden';
+    addButton.style.visibility = 'visible';
     tituloNivel.textContent = nivel.nombre;
 
+    if (nivel.hijos && nivel.hijos.length) {
+      nivel.hijos.forEach((ejercicio, index) => {
+        const ejercicioWrapper = crearEjercicioAcordeon(ejercicio, index, nivel);
+        contenido.appendChild(ejercicioWrapper);
+      });
+    }
+    return;
+  }
+
+  // Otros niveles (lista de hijos)
+  backButton.style.visibility = 'visible';
+  addButton.style.visibility  = 'visible';
+  const nombres = ['Mesociclos','Microciclos','Sesiones','Ejercicios'];
+  tituloNivel.textContent = nombres[rutaActual.length - 1] || nivel.nombre;
+
+  if (nivel.hijos && nivel.hijos.length) {
+    nivel.hijos.forEach((item, index) => {
+      const div = crearIndice(item, index, nivel);
+      contenido.appendChild(div);
+    });
+  }
+}
+
+// ==================== CREAR EJERCICIO ACORDEON (NIVEL 4 UNIFICADO) ====================
+function crearEjercicioAcordeon(ejercicio, index, nivel) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'ejercicio-acordeon';
+  wrapper.style.marginBottom = '8px';
+
+  // Header del ejercicio (siempre visible)
+  const header = document.createElement('div');
+  header.className = 'ejercicio-header';
+  header.style.display = 'flex';
+  header.style.alignItems = 'center';
+  header.style.gap = '8px';
+  header.style.padding = '12px';
+  header.style.background = 'var(--bg-card)';
+  header.style.borderRadius = '12px';
+  header.style.cursor = 'pointer';
+  header.style.boxShadow = 'var(--shadow-sm)';
+  header.style.transition = 'all 0.2s ease';
+  header.style.border = '1px solid transparent';
+
+  header.addEventListener('mouseenter', () => {
+    header.style.boxShadow = 'var(--shadow-md)';
+    header.style.borderColor = 'var(--border-color)';
+  });
+
+  header.addEventListener('mouseleave', () => {
+    if (ejercicioExpandido !== index) {
+      header.style.boxShadow = 'var(--shadow-sm)';
+      header.style.borderColor = 'transparent';
+    }
+  });
+
+  // Modo edición
+  if (ejercicio.editando) {
+    const input = document.createElement('input');
+    input.value = ejercicio.nombre || '';
+    input.placeholder = ejercicio.placeholder || 'Nombre del ejercicio';
+    input.style.flex = '1';
+    input.style.border = 'none';
+    input.style.background = 'transparent';
+    input.style.fontSize = '1rem';
+    input.style.fontWeight = '600';
+    requestAnimationFrame(() => setTimeout(() => { input.focus(); input.select(); }, 0));
+
+    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt => 
+      input.addEventListener(evt, e => e.stopPropagation())
+    );
+
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter') {
+        ejercicio.nombre = input.value || 'Sin nombre';
+        ejercicio.editando = false;
+        guardarDatos();
+        renderizar();
+      }
+    });
+
+    input.addEventListener('blur', () => {
+      ejercicio.nombre = input.value || 'Sin nombre';
+      ejercicio.editando = false;
+      guardarDatos();
+      renderizar();
+    });
+
+    header.appendChild(input);
+  } else {
+    // Icono expandir/contraer
+    const iconoExpand = document.createElement('span');
+    iconoExpand.textContent = ejercicioExpandido === index ? '▼' : '▶';
+    iconoExpand.style.fontSize = '0.8rem';
+    iconoExpand.style.color = 'var(--text-secondary)';
+    iconoExpand.style.transition = 'transform 0.2s ease';
+    iconoExpand.style.flexShrink = '0';
+    header.appendChild(iconoExpand);
+
+    // Contenedor de imagen del ejercicio
+    const imagenContainer = document.createElement('div');
+    imagenContainer.className = 'ejercicio-imagen';
+    imagenContainer.style.width = '48px';
+    imagenContainer.style.height = '48px';
+    imagenContainer.style.borderRadius = '8px';
+    imagenContainer.style.overflow = 'hidden';
+    imagenContainer.style.flexShrink = '0';
+    imagenContainer.style.background = 'var(--bg-main)';
+    imagenContainer.style.display = 'flex';
+    imagenContainer.style.alignItems = 'center';
+    imagenContainer.style.justifyContent = 'center';
+    
+    // Si existe imagen, mostrarla
+    if (ejercicio.imagen && ejercicio.imagen.trim() !== '') {
+      const img = document.createElement('img');
+      img.src = ejercicio.imagen;
+      img.alt = ejercicio.nombre;
+      img.style.width = '100%';
+      img.style.height = '100%';
+      img.style.objectFit = 'cover';
+      img.style.display = 'block';
+      
+      // Manejar error de carga de imagen
+      img.onerror = () => {
+        imagenContainer.innerHTML = '🏋️';
+        imagenContainer.style.fontSize = '1.5rem';
+        imagenContainer.style.color = 'var(--text-secondary)';
+      };
+      
+      imagenContainer.appendChild(img);
+    } else {
+      // Placeholder cuando no hay imagen
+      imagenContainer.innerHTML = '🏋️';
+      imagenContainer.style.fontSize = '1.5rem';
+      imagenContainer.style.color = 'var(--text-secondary)';
+    }
+    header.appendChild(imagenContainer);
+
+    // Nombre del ejercicio (justificado a la izquierda)
+    const nombre = document.createElement('div');
+    nombre.textContent = ejercicio.nombre;
+    nombre.style.flex = '1';
+    nombre.style.fontWeight = '600';
+    nombre.style.fontSize = '0.95rem';
+    nombre.style.textAlign = 'left';
+    nombre.style.paddingLeft = '8px';
+    header.appendChild(nombre);
+
+    // Contador de series
+    const seriesCount = document.createElement('div');
+    const numSeries = (ejercicio.series || []).length;
+    seriesCount.textContent = `${numSeries} ${numSeries === 1 ? 'serie' : 'series'}`;
+    seriesCount.style.fontSize = '0.8rem';
+    seriesCount.style.color = 'var(--text-secondary)';
+    seriesCount.style.marginRight = '8px';
+    header.appendChild(seriesCount);
+
+    // Botón opciones
+    const opcionesBtn = document.createElement('button');
+    opcionesBtn.className = "btn-opciones";
+    const punto = document.createElement('span');
+    opcionesBtn.appendChild(punto);
+    opcionesBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
+      mostrarMenuOpciones({
+        anchorElement: opcionesBtn,
+        onEditar: () => { ejercicio.editando = true; guardarDatos(); renderizar(); },
+        onEliminar: () => { 
+          mostrarConfirmacion(`¿Desea borrar "${ejercicio.nombre}"?`, () => { 
+            nivel.hijos.splice(index, 1); 
+            ejercicioExpandido = null;
+            guardarDatos(); 
+            renderizar(); 
+          }); 
+        },
+        onCopiar: () => { return { nivel: rutaActual.length, datos: structuredClone(ejercicio) }; }
+      });
+    });
+    header.appendChild(opcionesBtn);
+
+    // Click en header para expandir/contraer
+    header.addEventListener('click', (e) => {
+      if (e.target === opcionesBtn || opcionesBtn.contains(e.target)) return;
+      
+      if (ejercicioExpandido === index) {
+        ejercicioExpandido = null;
+      } else {
+        ejercicioExpandido = index;
+      }
+      renderizar();
+    });
+  }
+
+  wrapper.appendChild(header);
+
+  // Contenido expandible (series)
+  if (ejercicioExpandido === index && !ejercicio.editando) {
+    const contenidoExpandible = document.createElement('div');
+    contenidoExpandible.className = 'ejercicio-contenido';
+    contenidoExpandible.style.padding = '12px';
+    contenidoExpandible.style.background = 'var(--bg-main)';
+    contenidoExpandible.style.borderRadius = '0 0 12px 12px';
+    contenidoExpandible.style.marginTop = '-8px';
+
+    // Botón añadir serie (compacto)
+    const addSerieBtn = document.createElement('button');
+    addSerieBtn.textContent = '+ Serie';
+    addSerieBtn.className = 'btn-add-serie-compact';
+    addSerieBtn.style.width = '100%';
+    addSerieBtn.style.padding = '8px';
+    addSerieBtn.style.marginBottom = '12px';
+    addSerieBtn.style.background = 'var(--primary-mint)';
+    addSerieBtn.style.color = 'white';
+    addSerieBtn.style.border = 'none';
+    addSerieBtn.style.borderRadius = '8px';
+    addSerieBtn.style.fontSize = '0.85rem';
+    addSerieBtn.style.fontWeight = '700';
+    addSerieBtn.style.cursor = 'pointer';
+    addSerieBtn.onclick = (e) => {
+      e.stopPropagation();
+      if (!ejercicio.series) ejercicio.series = [];
+      ejercicio.series.push({});
+      guardarDatos();
+      renderizar();
+    };
+    contenidoExpandible.appendChild(addSerieBtn);
+
+    // Encabezados de series (compactos)
     const encabezados = document.createElement('div');
-    encabezados.className = 'series-header';
-    ['','REPS','PESO','RIR','DESCANSO','',''].forEach(txt => {
+    encabezados.className = 'series-header-compact';
+    encabezados.style.display = 'grid';
+    encabezados.style.gridTemplateColumns = '40px repeat(4, 1fr) 50px 40px';
+    encabezados.style.gap = '4px';
+    encabezados.style.marginBottom = '8px';
+    encabezados.style.fontSize = '0.7rem';
+    encabezados.style.fontWeight = '700';
+    encabezados.style.color = 'var(--text-secondary)';
+    encabezados.style.textTransform = 'uppercase';
+
+    ['', 'REPS', 'PESO', 'RIR', 'DESC', '', ''].forEach(txt => {
       const col = document.createElement('div');
       col.textContent = txt;
+      col.style.textAlign = 'center';
       encabezados.appendChild(col);
     });
-    contenido.appendChild(encabezados);
+    contenidoExpandible.appendChild(encabezados);
 
-    const seriesContainer = document.createElement('div');
-    seriesContainer.className = 'series-container';
-    nivel.series = nivel.series || [];
-    nivel.series.forEach((serie, idx) => {
+    // Series
+    ejercicio.series = ejercicio.series || [];
+    ejercicio.series.forEach((serie, idx) => {
       const serieDiv = document.createElement('div');
-      serieDiv.className = "serie-row";
+      serieDiv.className = "serie-row-compact";
+      serieDiv.style.display = 'grid';
+      serieDiv.style.gridTemplateColumns = '40px repeat(4, 1fr) 50px 40px';
+      serieDiv.style.gap = '4px';
+      serieDiv.style.marginBottom = '4px';
+      serieDiv.style.padding = '2px 4px';
+      serieDiv.style.background = 'transparent';
+      serieDiv.style.borderRadius = '8px';
+      serieDiv.style.alignItems = 'center';
+      serieDiv.style.transition = 'all 0.2s ease';
+      serieDiv.style.minHeight = 'auto';
+      serieDiv.style.height = 'auto';
 
+      // Botón número de serie
       const numBtn = document.createElement('button');
       numBtn.className = "serie-num";
       numBtn.textContent = serie.marca || (idx + 1);
+      numBtn.style.width = '32px';
+      numBtn.style.height = '32px';
+      numBtn.style.fontSize = '0.85rem';
+      numBtn.style.fontWeight = '700';
+      numBtn.style.border = 'none';
+      numBtn.style.borderRadius = '6px';
+      numBtn.style.background = 'transparent';
+      numBtn.style.cursor = 'pointer';
+      numBtn.style.color = 'var(--text-primary)';
+      numBtn.style.display = 'flex';
+      numBtn.style.alignItems = 'center';
+      numBtn.style.justifyContent = 'center';
+      numBtn.style.boxShadow = 'none';
       numBtn.addEventListener('click', e => {
         e.stopPropagation();
         mostrarSelectorMarca(serie, idx, () => { guardarDatos(); renderizar(); });
       });
 
-      const reps = document.createElement('input');
-      reps.placeholder = 'Reps'; reps.value = serie.reps || '';
-      reps.addEventListener('blur', e => {
-        serie.reps = e.target.value;
-        guardarDatos();
-        setTimeout(() => {
-          const active = document.activeElement;
-          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
-            return;
-          }
-          renderizar();
-        }, 0);
-      });
+      // Inputs (compactos)
+      const createInput = (placeholder, value, key) => {
+        const input = document.createElement('input');
+        input.placeholder = placeholder;
+        input.value = value || '';
+        input.style.width = '100%';
+        input.style.padding = '6px 4px';
+        input.style.fontSize = '0.85rem';
+        input.style.fontWeight = '600';
+        input.style.textAlign = 'center';
+        input.style.border = '1px solid rgba(0, 0, 0, 0.08)';
+        input.style.borderRadius = '6px';
+        input.style.background = 'transparent';
+        input.style.color = 'var(--text-primary)';
+        input.style.height = '32px';
+        input.addEventListener('blur', e => {
+          serie[key] = e.target.value;
+          guardarDatos();
+        });
+        return input;
+      };
 
-      const peso = document.createElement('input');
-      peso.placeholder = 'Peso'; peso.value = serie.peso || '';
-      peso.addEventListener('blur', e => {
-        serie.peso = e.target.value;
-        guardarDatos();
-        setTimeout(() => {
-          const active = document.activeElement;
-          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
-            return;
-          }
-          renderizar();
-        }, 0);
-      });
+      const reps = createInput('R', serie.reps, 'reps');
+      const peso = createInput('P', serie.peso, 'peso');
+      const rir = createInput('R', serie.rir, 'rir');
+      const descanso = createInput('D', serie.descanso, 'descanso');
 
-      const rir = document.createElement('input');
-      rir.placeholder = 'RIR'; rir.value = serie.rir || '';
-      rir.addEventListener('blur', e => {
-        serie.rir = e.target.value;
-        guardarDatos();
-        setTimeout(() => {
-          const active = document.activeElement;
-          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
-            return;
-          }
-          renderizar();
-        }, 0);
-      });
+      // Botón check/timer
+      const checkBtn = document.createElement('button');
+      checkBtn.style.width = '36px';
+      checkBtn.style.height = '36px';
+      checkBtn.style.border = 'none';
+      checkBtn.style.borderRadius = '6px';
+      checkBtn.style.fontSize = '1.2rem';
+      checkBtn.style.cursor = 'pointer';
+      checkBtn.style.transition = 'all 0.2s ease';
+      checkBtn.style.display = 'flex';
+      checkBtn.style.alignItems = 'center';
+      checkBtn.style.justifyContent = 'center';
+      checkBtn.style.margin = '0 auto';
+      checkBtn.style.boxShadow = 'none';
 
-      const descanso = document.createElement('input');
-      descanso.placeholder = 'Descanso'; descanso.value = serie.descanso || '';
-      descanso.addEventListener('blur', e => {
-        serie.descanso = e.target.value;
-        guardarDatos();
-        setTimeout(() => {
-          const active = document.activeElement;
-          if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA') && seriesContainer.contains(active)) {
-            return;
-          }
-          renderizar();
-        }, 0);
-      });
-
-      const temporizador = document.createElement('button');
-      temporizador.className = "btn-timer";
       if (serie.completada) {
-        temporizador.textContent = '✔️';
-        serieDiv.style.backgroundColor = '#d4edda';
-        serieDiv.style.borderColor = '#6fbe82ff';
+        checkBtn.textContent = '✔️';
+        checkBtn.style.background = 'transparent';
+        serieDiv.style.background = 'rgba(232, 245, 233, 0.6)';
       } else {
-        temporizador.textContent = '🕔';
-        serieDiv.style.backgroundColor = '';
-        serieDiv.style.borderColor = '#afafaf';
+        checkBtn.textContent = '🕔';
+        checkBtn.style.background = 'transparent';
       }
-      temporizador.addEventListener('click', () => {
+
+      checkBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         serie.completada = !serie.completada;
-        if (serie.completada) {
-          temporizador.textContent = '✔️';
-          serieDiv.style.backgroundColor = '#d4edda';
-          serieDiv.style.borderColor = '#6fbe82ff';
-          if (serie.descanso) iniciarTimer(serie.descanso);
-        } else {
-          temporizador.textContent = '🕔';
-          serieDiv.style.backgroundColor = '';
-          serieDiv.style.borderColor = '#afafaf';
+        if (serie.completada && serie.descanso) {
+          iniciarTimer(serie.descanso);
         }
         guardarDatos();
+        renderizar();
       });
 
-      const borrar = document.createElement('button');
-      borrar.className = "btn-delete"; borrar.textContent = '❌';
-      borrar.style.fontSize = '0.7rem';
-      borrar.addEventListener('click', () => {
+      // Botón eliminar
+      const deleteBtn = document.createElement('button');
+      deleteBtn.textContent = '❌';
+      deleteBtn.style.width = '32px';
+      deleteBtn.style.height = '32px';
+      deleteBtn.style.border = 'none';
+      deleteBtn.style.borderRadius = '6px';
+      deleteBtn.style.background = 'transparent';
+      deleteBtn.style.fontSize = '0.9rem';
+      deleteBtn.style.cursor = 'pointer';
+      deleteBtn.style.display = 'flex';
+      deleteBtn.style.alignItems = 'center';
+      deleteBtn.style.justifyContent = 'center';
+      deleteBtn.style.margin = '0 auto';
+      deleteBtn.style.boxShadow = 'none';
+      deleteBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
         mostrarConfirmacion("¿Desea borrar esta serie?", () => {
-          nivel.series.splice(idx, 1); guardarDatos(); renderizar();
+          ejercicio.series.splice(idx, 1);
+          guardarDatos();
+          renderizar();
         });
       });
 
-      [numBtn, reps, peso, rir, descanso, temporizador, borrar].forEach(el => serieDiv.appendChild(el));
-      seriesContainer.appendChild(serieDiv);
+      [numBtn, reps, peso, rir, descanso, checkBtn, deleteBtn].forEach(el => serieDiv.appendChild(el));
+      contenidoExpandible.appendChild(serieDiv);
     });
-    contenido.appendChild(seriesContainer);
 
-    // Stats box (volumen y 1RM)
+    // Stats compactos
     const statsBox = document.createElement('div');
-    statsBox.style.background = "#ffffffff";
-    statsBox.style.padding = "14px";
-    statsBox.style.margin = "12px";
-    statsBox.style.borderRadius = "10px";
-    statsBox.style.color = "#000";
-    statsBox.style.boxShadow = "0px 2px 10px #b6b6b6";
-    statsBox.style.width = "94%";
+    statsBox.style.background = 'var(--bg-card)';
+    statsBox.style.padding = '10px';
+    statsBox.style.marginTop = '12px';
+    statsBox.style.borderRadius = '8px';
+    statsBox.style.fontSize = '0.85rem';
+    statsBox.style.display = 'grid';
+    statsBox.style.gridTemplateColumns = '1fr 1fr';
+    statsBox.style.gap = '8px';
+    statsBox.style.textAlign = 'center';
 
     let volumenTotal = 0;
     let mejor1RM = 0;
-    nivel.series.forEach(serie => {
+    ejercicio.series.forEach(serie => {
       const peso = parseFloat(serie.peso) || 0;
       const reps = parseInt(serie.reps) || 0;
       volumenTotal += peso * reps;
@@ -766,36 +897,27 @@ function renderizar() {
       if (estimado > mejor1RM) mejor1RM = estimado;
     });
 
-    statsBox.innerHTML = `
-      <p><b>Volumen total:</b> ${volumenTotal.toFixed(2)} kg</p>
-      <p><b>1RM estimado:</b> ${mejor1RM.toFixed(2)} kg</p>
-    `;
-    contenido.appendChild(statsBox);
+    const volDiv = document.createElement('div');
+    volDiv.innerHTML = `<b>Volumen:</b><br>${volumenTotal.toFixed(1)} kg`;
+    const rmDiv = document.createElement('div');
+    rmDiv.innerHTML = `<b>1RM est:</b><br>${mejor1RM.toFixed(1)} kg`;
+    statsBox.appendChild(volDiv);
+    statsBox.appendChild(rmDiv);
+    contenidoExpandible.appendChild(statsBox);
 
-    // buscar ejercicio anterior y mostrar
-    function fechaATimestamp(fechaStr) {
-      if (!fechaStr || typeof fechaStr !== "string") return null;
-      const simpleDate = /^\d{4}-\d{2}-\d{2}$/.test(fechaStr);
-      const input = simpleDate ? (fechaStr + 'T00:00:00Z') : fechaStr;
-      const ts = Date.parse(input);
-      if (Number.isNaN(ts)) return null;
-      return ts;
-    }
-    
+    // Ejercicio anterior (compacto)
     function buscarEjercicioAnterior(datosArg, rutaArg, ejercicioActual) {
       if (!ejercicioActual || !datosArg) return null;
       const nombreEjercicioActual = (ejercicioActual.nombre || '').trim().toLowerCase();
 
       let sesionActual = null;
       if (Array.isArray(rutaArg) && rutaArg.length >= 3) {
-        const m = rutaArg[0];
-        const mi = rutaArg[1];
-        const s = rutaArg[2];
+        const m = rutaArg[0], mi = rutaArg[1], s = rutaArg[2];
         sesionActual = datosArg?.[m]?.hijos?.[mi]?.hijos?.[s] || null;
       }
 
       const fechaReferencia = (sesionActual && (sesionActual._fecha || sesionActual.fecha)) || ejercicioActual._fecha || ejercicioActual.fecha;
-      const timestampActual = fechaATimestamp(fechaReferencia);
+      const timestampActual = fechaReferencia ? Date.parse(fechaReferencia) : null;
 
       const sesionesPlan = [];
       let linearIndex = 0;
@@ -806,17 +928,8 @@ function renderizar() {
           for (let sk = 0; sk < (micro.hijos || []).length; sk++) {
             const ses = micro.hijos[sk];
             let fechaSesion = ses._fecha || ses.fecha || null;
-            if (!fechaSesion) {
-              for (const b of ses.hijos || []) {
-                if (b._fecha || b.fecha) { fechaSesion = b._fecha || b.fecha; break; }
-                for (const e of b.hijos || []) {
-                  if (e._fecha || e.fecha) { fechaSesion = e._fecha || e.fecha; break; }
-                }
-                if (fechaSesion) break;
-              }
-            }
-            const tsSesion = fechaATimestamp(fechaSesion);
-            sesionesPlan.push({ mesoIdx: mi, microIdx: mj, sesionIdx: sk, sesion: ses, fechaSesion, tsSesion, linearIndex });
+            const tsSesion = fechaSesion ? Date.parse(fechaSesion) : null;
+            sesionesPlan.push({ sesion: ses, fechaSesion, tsSesion, linearIndex });
             linearIndex++;
           }
         }
@@ -830,76 +943,42 @@ function renderizar() {
       }
 
       let mejor = null;
-
       for (const sInfo of sesionesPlan) {
         const sesion = sInfo.sesion;
         if (sesionActual && sesion === sesionActual) continue;
-
-        if (timestampActual !== null) {
-          if (sInfo.tsSesion === null) continue;
-          if (sInfo.tsSesion >= timestampActual) continue;
-        } else if (actualLinear !== null) {
-          if (sInfo.linearIndex >= actualLinear) continue;
-        } else {
-          continue;
-        }
+        if (timestampActual !== null && sInfo.tsSesion !== null && sInfo.tsSesion >= timestampActual) continue;
+        if (timestampActual === null && actualLinear !== null && sInfo.linearIndex >= actualLinear) continue;
 
         for (const bloque of sesion.hijos || []) {
           for (const ejerc of bloque.hijos || []) {
             if (((ejerc.nombre || '').trim().toLowerCase()) !== nombreEjercicioActual) continue;
             if (!ejerc.series || ejerc.series.length === 0) continue;
-            if (!mejor) {
+            if (!mejor || (timestampActual !== null ? (sInfo.tsSesion || 0) > (mejor.fechaTs || 0) : sInfo.linearIndex > (mejor.linearIndex || 0))) {
               mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
-            } else {
-              if (timestampActual !== null) {
-                if ((sInfo.tsSesion || 0) > (mejor.fechaTs || 0)) {
-                  mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
-                }
-              } else {
-                if (sInfo.linearIndex > (mejor.linearIndex || 0)) {
-                  mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
-                }
-              }
             }
           }
         }
       }
-
       return mejor;
     }
 
-    const sesionObj = datos?.[rutaActual[0]]?.hijos?.[rutaActual[1]]?.hijos?.[rutaActual[2]];
-    if (sesionObj?.hijos) {
-      for (const bloque of sesionObj.hijos) {
-        const bloqueFecha = bloque._fecha || bloque.fecha || sesionObj._fecha || sesionObj?.fecha || null;
-        if (bloque.hijos) {
-          for (const ejerc of bloque.hijos) {
-            ejerc._fecha = bloqueFecha || ejerc._fecha;
-          }
-        }
-      }
-    }
-    nivel._fecha = nivel._fecha || sesionObj?.fecha || sesionObj?._fecha || null;
-
-    const ejercicioAnteriorObj = buscarEjercicioAnterior(datos, rutaActual, nivel);
+    const ejercicioAnteriorObj = buscarEjercicioAnterior(datos, rutaActual, ejercicio);
     if (ejercicioAnteriorObj) {
       const ejercicioAnterior = ejercicioAnteriorObj.ejerc;
-      let fechaMostrar = ejercicioAnteriorObj.fechaRaw || ejercicioAnterior._fecha || ejercicioAnterior.fecha || '';
+      let fechaMostrar = ejercicioAnteriorObj.fechaRaw || '';
+      if (fechaMostrar && fechaMostrar.includes('T')) fechaMostrar = fechaMostrar.split('T')[0];
       if (fechaMostrar) {
-        if (fechaMostrar.includes('T')) {
-          fechaMostrar = fechaMostrar.split('T')[0];
-        }
         const d = new Date(fechaMostrar + 'T00:00:00');
         fechaMostrar = d.toLocaleDateString('es-ES');
       }
+
       const statsBoxAnt = document.createElement('div');
-      statsBoxAnt.style.background = "#ffffffff";
-      statsBoxAnt.style.padding = "14px";
-      statsBoxAnt.style.margin = "12px";
-      statsBoxAnt.style.borderRadius = "10px";
-      statsBoxAnt.style.color = "#000";
-      statsBoxAnt.style.boxShadow = "-2px 2px 5px #b6b6b6";
-      statsBoxAnt.style.width = "94%";
+      statsBoxAnt.style.background = '#f0f8ff';
+      statsBoxAnt.style.padding = '10px';
+      statsBoxAnt.style.marginTop = '8px';
+      statsBoxAnt.style.borderRadius = '8px';
+      statsBoxAnt.style.fontSize = '0.75rem';
+      statsBoxAnt.style.borderLeft = '3px solid var(--secondary-cyan)';
 
       let volumenAnt = 0, mejor1RMAnt = 0, pesoMax = 0;
       (ejercicioAnterior.series || []).forEach(serie => {
@@ -912,36 +991,31 @@ function renderizar() {
       });
 
       statsBoxAnt.innerHTML = `
-        <p><b>📅 Anterior (${fechaMostrar}):</b></p>
-        <p><b>Volumen total:</b> ${volumenAnt.toFixed(2)} kg</p>
-        <p><b>1RM estimado:</b> ${mejor1RMAnt.toFixed(2)} kg</p>
-        <p><b>Peso máximo:</b> ${pesoMax.toFixed(2)} kg</p>
+        <b>📅 Anterior (${fechaMostrar}):</b><br>
+        Vol: ${volumenAnt.toFixed(1)} kg | 1RM: ${mejor1RMAnt.toFixed(1)} kg | Max: ${pesoMax.toFixed(1)} kg
       `;
-      contenido.appendChild(statsBoxAnt);
+      contenidoExpandible.appendChild(statsBoxAnt);
     }
 
+    // Notas (compactas)
     const notas = document.createElement('textarea');
-    notas.placeholder = 'Notas del ejercicio...';
-    notas.value = nivel.notas || '';
-    notas.className = 'notes';
-    notas.addEventListener('input', e => { nivel.notas = e.target.value; guardarDatos(); });
-    contenido.appendChild(notas);
-    return;
+    notas.placeholder = 'Notas...';
+    notas.value = ejercicio.notas || '';
+    notas.style.width = '100%';
+    notas.style.height = '60px';
+    notas.style.marginTop = '8px';
+    notas.style.padding = '8px';
+    notas.style.border = '1px solid var(--border-color)';
+    notas.style.borderRadius = '8px';
+    notas.style.fontSize = '0.85rem';
+    notas.style.resize = 'vertical';
+    notas.addEventListener('input', e => { ejercicio.notas = e.target.value; guardarDatos(); });
+    contenidoExpandible.appendChild(notas);
+
+    wrapper.appendChild(contenidoExpandible);
   }
 
-  // Otros niveles (lista de hijos)
-  backButton.style.visibility = 'visible';
-  addButton.style.visibility  = 'visible';
-  const nombres = ['Mesociclos','Microciclos','Sesiones','Ejercicios'];
-  tituloNivel.textContent = nombres[rutaActual.length - 1] || nivel.nombre;
-
-  if (nivel.hijos && nivel.hijos.length) {
-    nivel.hijos.forEach((item, index) => {
-      const div = crearIndice(item, index, nivel);
-      // NO añadir listener de click aquí, ya está en crearIndice
-      contenido.appendChild(div);
-    });
-  }
+  return wrapper;
 }
 
 function asegurarContenidoVisible() {
@@ -956,10 +1030,13 @@ asegurarContenidoVisible();
 
 // ==================== CREAR INDICE (DRAG & DROP + UI ITEM) ====================
 let dragItem = null;
+let dragStartX = 0;
 let dragStartY = 0;
 let dragging = false;
 let dragStartIndex = null;
 let dragTimer = null;
+let hasMoved = false;
+const MOVEMENT_THRESHOLD = 10; // píxeles de holgura permitidos
 
 function startDrag(e) {
   if (e.type === "mousedown" && e.button !== 0) return;
@@ -968,15 +1045,49 @@ function startDrag(e) {
   if (!dragItem) return;
 
   dragging = false;
+  hasMoved = false;
   dragStartIndex = [...contenido.children].indexOf(dragItem);
 
   const touch = e.touches ? e.touches[0] : e;
+  dragStartX = touch.clientX;
   dragStartY = touch.clientY;
 
+  // Añadir listener temporal para detectar movimiento
+  const checkMovement = (moveEvent) => {
+    const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
+    const deltaX = Math.abs(moveTouch.clientX - dragStartX);
+    const deltaY = Math.abs(moveTouch.clientY - dragStartY);
+    
+    // Si se mueve más del umbral, cancelar el drag
+    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+      hasMoved = true;
+      clearTimeout(dragTimer);
+      dragTimer = null;
+      // Remover listener temporal
+      document.removeEventListener('mousemove', checkMovement);
+      document.removeEventListener('touchmove', checkMovement);
+    }
+  };
+
+  // Añadir listener temporal para detectar movimiento durante el timer
+  document.addEventListener('mousemove', checkMovement, { passive: true });
+  document.addEventListener('touchmove', checkMovement, { passive: true });
+
   dragTimer = setTimeout(() => {
-    dragging = true;
-    dragItem.classList.add("dragging");
-  }, 600);
+    // Remover listeners temporales
+    document.removeEventListener('mousemove', checkMovement);
+    document.removeEventListener('touchmove', checkMovement);
+    
+    // Solo activar drag si no hubo movimiento
+    if (!hasMoved) {
+      dragging = true;
+      dragItem.classList.add("dragging");
+      // Vibración háptica si está disponible (móviles)
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }
+  }, 3000);
 }
 
 function dragMove(e) {
@@ -1002,8 +1113,15 @@ function dragMove(e) {
 
 function dragEnd() {
   clearTimeout(dragTimer);
+  dragTimer = null;
 
-  if (!dragging || !dragItem) return;
+  if (!dragging || !dragItem) {
+    // Resetear estado si se canceló
+    dragItem = null;
+    dragStartIndex = null;
+    hasMoved = false;
+    return;
+  }
 
   dragging = false;
   dragItem.classList.remove("dragging");
@@ -1019,6 +1137,7 @@ function dragEnd() {
 
   dragItem = null;
   dragStartIndex = null;
+  hasMoved = false;
 }
 
 function crearIndice(item, index, nivel) {
@@ -1029,12 +1148,8 @@ function crearIndice(item, index, nivel) {
   
   // Click en el div completo
   div.addEventListener('click', (e) => {
-    // No navegar si estamos arrastrando
     if (dragging) return;
     
-    // No navegar si clickeamos en:
-    // - Botones (opciones, editar, etc)
-    // - Inputs de fecha
     const target = e.target;
     if (target.tagName === 'BUTTON' || 
         target.type === 'date' ||
@@ -1043,7 +1158,6 @@ function crearIndice(item, index, nivel) {
       return;
     }
     
-    // Navegar al siguiente nivel
     e.stopPropagation();
     navigatePush(index);
   });
@@ -1106,7 +1220,7 @@ function crearIndice(item, index, nivel) {
   else {
     const input = document.createElement('input');
     input.value = item.nombre;
-    input.readOnly = true; // Usar readonly en lugar de disabled
+    input.readOnly = true;
     input.style.flex = '1';
     input.style.cursor = 'pointer';
 
@@ -1130,8 +1244,8 @@ function crearIndice(item, index, nivel) {
       div.appendChild(fechaInput);
     }
 
-    // opciones botón - MODIFICADO CON NUEVA ESTRUCTURA
-    if (rutaActual.length >= 1 && rutaActual.length <= 4) {
+    // opciones botón
+    if (rutaActual.length >= 1 && rutaActual.length <= 3) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
       const punto = document.createElement('span');
@@ -1157,7 +1271,6 @@ function crearIndice(item, index, nivel) {
 function initGlobalListeners() {
   if (!isAppPage() || !contenido) return;
 
-  // ==================== FUNCIÓN DE RESTAURACIÓN ====================
   window.restaurarDesdeJSON = async function(jsonString) {
     try {
       const datosRecuperados = JSON.parse(jsonString);

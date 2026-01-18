@@ -1447,3 +1447,637 @@ main#contenido {
 .exercise-list::-webkit-scrollbar-thumb:hover {
   background: var(--text-light);
 }
+/* ==================== ACORDEÓN DE EJERCICIOS (NIVEL 4 UNIFICADO) ==================== */
+.ejercicio-acordeon {
+  margin-bottom: 8px;
+}
+
+.ejercicio-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.ejercicio-header:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.ejercicio-contenido {
+  padding: 12px;
+  background: var(--bg-main);
+  border-radius: 0 0 12px 12px;
+  margin-top: -8px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-add-serie-compact {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  background: var(--primary-mint);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-add-serie-compact:hover {
+  background: var(--mint-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.series-header-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.serie-row-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 6px;
+  padding: 8px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.serie-row-compact:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.serie-row-compact input {
+  width: 100%;
+  padding: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-main);
+  transition: all 0.2s ease;
+}
+
+.serie-row-compact input:focus {
+  border-color: var(--primary-mint);
+  background: var(--bg-card);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(61, 213, 152, 0.1);
+}
+
+.serie-num {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.serie-num:hover {
+  background: var(--primary-mint);
+  color: white;
+}
+
+/* Ajuste para hacer el contenido más compacto en nivel 4 */
+.ejercicio-acordeon + .ejercicio-acordeon {
+  margin-top: 4px;
+}
+/* ==================== ACORDEÓN DE EJERCICIOS (NIVEL 4 UNIFICADO) ==================== */
+.ejercicio-acordeon {
+  margin-bottom: 8px;
+}
+
+.ejercicio-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.ejercicio-header:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.ejercicio-contenido {
+  padding: 12px;
+  background: var(--bg-main);
+  border-radius: 0 0 12px 12px;
+  margin-top: -8px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-add-serie-compact {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  background: var(--primary-mint);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-add-serie-compact:hover {
+  background: var(--mint-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.series-header-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.serie-row-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 4px;
+  background: var(--bg-card);
+  border-radius: 8px;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  min-height: 36px;
+}
+
+.serie-row-compact:hover {
+  box-shadow: var(--shadow-md);
+}
+
+.serie-row-compact input {
+  width: 100%;
+  padding: 4px 2px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+}
+
+.serie-row-compact input:focus {
+  border: 1px solid var(--primary-mint);
+  background: var(--bg-main);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(61, 213, 152, 0.1);
+}
+
+.serie-num {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  background: var(--bg-main);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.serie-num:hover {
+  background: var(--primary-mint);
+  color: white;
+}
+
+/* Reducir padding del main para nivel 4 */
+main#contenido {
+  position: relative;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  padding-top: 116px;
+  padding-bottom: 75px;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Ajuste para hacer el contenido más compacto en nivel 4 */
+.ejercicio-acordeon + .ejercicio-acordeon {
+  margin-top: 4px;
+}
+
+/* ==================== ACORDEÓN DE EJERCICIOS (NIVEL 4 UNIFICADO) ==================== */
+.ejercicio-acordeon {
+  margin-bottom: 8px;
+}
+
+.ejercicio-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.ejercicio-header:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.ejercicio-contenido {
+  padding: 12px;
+  background: var(--bg-main);
+  border-radius: 0 0 12px 12px;
+  margin-top: -8px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-add-serie-compact {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  background: var(--primary-mint);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-add-serie-compact:hover {
+  background: var(--mint-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.series-header-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.serie-row-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  background: transparent;
+  border-radius: 8px;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: none;
+  min-height: auto;
+  height: auto;
+}
+
+.serie-row-compact:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.serie-row-compact input {
+  width: 100%;
+  padding: 6px 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  background: transparent;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  height: 32px;
+}
+
+.serie-row-compact input:focus {
+  border: 1px solid var(--primary-mint);
+  background: rgba(255, 255, 255, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(61, 213, 152, 0.1);
+}
+
+.serie-num {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none !important;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+}
+
+.serie-num:hover {
+  background: var(--primary-mint);
+  color: white;
+}
+
+.serie-num:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+
+/* Reducir padding del main para nivel 4 */
+main#contenido {
+  position: relative;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  padding-top: 116px;
+  padding-bottom: 75px;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Ajuste para hacer el contenido más compacto en nivel 4 */
+.ejercicio-acordeon + .ejercicio-acordeon {
+  margin-top: 4px;
+}
+/* ==================== ACORDEÓN DE EJERCICIOS (NIVEL 4 UNIFICADO) ==================== */
+.ejercicio-acordeon {
+  margin-bottom: 8px;
+}
+
+.ejercicio-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--bg-card);
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+  min-height: 64px;
+}
+
+.ejercicio-header:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
+  transform: translateY(-1px);
+}
+
+.ejercicio-imagen {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-main);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--text-secondary);
+  transition: all 0.2s ease;
+}
+
+.ejercicio-imagen img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.ejercicio-header:hover .ejercicio-imagen {
+  transform: scale(1.05);
+}
+
+.ejercicio-contenido {
+  padding: 12px;
+  background: var(--bg-main);
+  border-radius: 0 0 12px 12px;
+  margin-top: -8px;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.btn-add-serie-compact {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 12px;
+  background: var(--primary-mint);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-add-serie-compact:hover {
+  background: var(--mint-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+.series-header-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 8px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.serie-row-compact {
+  display: grid;
+  grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+  gap: 4px;
+  margin-bottom: 4px;
+  padding: 2px 4px;
+  background: transparent;
+  border-radius: 8px;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: none;
+  min-height: auto;
+  height: auto;
+}
+
+.serie-row-compact:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.serie-row-compact input {
+  width: 100%;
+  padding: 6px 4px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 6px;
+  background: transparent;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  height: 32px;
+}
+
+.serie-row-compact input:focus {
+  border: 1px solid var(--primary-mint);
+  background: rgba(255, 255, 255, 0.5);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(61, 213, 152, 0.1);
+}
+
+.serie-num {
+  width: 32px;
+  height: 32px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  border: none !important;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: none !important;
+}
+
+.serie-num:hover {
+  background: var(--primary-mint);
+  color: white;
+}
+
+.serie-num:focus {
+  outline: none;
+  box-shadow: none !important;
+}
+
+/* Reducir padding del main para nivel 4 */
+main#contenido {
+  position: relative;
+  z-index: 20;
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(10px);
+  padding-top: 116px;
+  padding-bottom: 75px;
+  min-height: 100vh;
+  overflow-y: auto;
+}
+
+/* Ajuste para hacer el contenido más compacto en nivel 4 */
+.ejercicio-acordeon + .ejercicio-acordeon {
+  margin-top: 4px;
+}
