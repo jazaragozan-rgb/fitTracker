@@ -528,6 +528,17 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
   wrapper.style.marginBottom = '8px';
+  wrapper.dataset.index = index;
+  wrapper.dataset.nivel = '4';
+
+  // ✅ AÑADIR DRAG & DROP AL WRAPPER
+  wrapper.addEventListener('mousedown', startDrag);
+  wrapper.addEventListener('touchstart', startDrag, { passive: true });
+  wrapper.addEventListener('mousemove', dragMove);
+  wrapper.addEventListener('touchmove', dragMove, { passive: false });
+  wrapper.addEventListener('mouseup', dragEnd);
+  wrapper.addEventListener('touchend', dragEnd);
+  wrapper.style.touchAction = 'none';
 
   // Header del ejercicio (siempre visible)
   const header = document.createElement('div');
@@ -682,6 +693,13 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
 
     // Click en header para expandir/contraer
     header.addEventListener('click', (e) => {
+      // No expandir/contraer si estamos arrastrando
+      if (dragging) {
+        e.preventDefault();
+        e.stopPropagation();
+        return;
+      }
+      
       if (e.target === opcionesBtn || opcionesBtn.contains(e.target)) return;
       
       if (ejercicioExpandido === index) {
@@ -1030,102 +1048,131 @@ asegurarContenidoVisible();
 
 // ==================== CREAR INDICE (DRAG & DROP + UI ITEM) ====================
 let dragItem = null;
-let dragStartX = 0;
+let dragGhost = null;
 let dragStartY = 0;
 let dragging = false;
 let dragStartIndex = null;
 let dragTimer = null;
-let hasMoved = false;
-const MOVEMENT_THRESHOLD = 10; // píxeles de holgura permitidos
 
 function startDrag(e) {
-  // PRIMERO: Prevenir comportamiento del navegador
-  if (e.cancelable) {
-    e.preventDefault();
-  }
+  console.log('[startDrag] Evento:', e.type);
   
-  // SEGUNDO: Verificar botón del mouse
   if (e.type === "mousedown" && e.button !== 0) return;
   
-  dragItem = e.currentTarget.closest(".list-item");
+  // Buscar tanto .list-item como .ejercicio-acordeon
+  dragItem = e.currentTarget.closest(".list-item") || e.currentTarget.closest(".ejercicio-acordeon");
   if (!dragItem) return;
 
   dragging = false;
-  hasMoved = false;
   dragStartIndex = [...contenido.children].indexOf(dragItem);
 
   const touch = e.touches ? e.touches[0] : e;
-  dragStartX = touch.clientX;
   dragStartY = touch.clientY;
 
-  // Listener temporal para detectar movimiento
-  const checkMovement = (moveEvent) => {
-    const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
-    const deltaX = Math.abs(moveTouch.clientX - dragStartX);
-    const deltaY = Math.abs(moveTouch.clientY - dragStartY);
-    
-    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
-      hasMoved = true;
-      clearTimeout(dragTimer);
-      dragTimer = null;
-      document.removeEventListener('mousemove', checkMovement);
-      document.removeEventListener('touchmove', checkMovement);
-    }
-  };
+  console.log('[startDrag] Esperando 600ms...');
 
-  document.addEventListener('mousemove', checkMovement, { passive: true });
-  document.addEventListener('touchmove', checkMovement, { passive: true });
-
-  // CAMBIO CRÍTICO: 600ms en lugar de 3000ms
   dragTimer = setTimeout(() => {
-    document.removeEventListener('mousemove', checkMovement);
-    document.removeEventListener('touchmove', checkMovement);
+    console.log('[startDrag] ¡Activando drag!');
+    dragging = true;
+    dragItem.classList.add("dragging");
     
-    if (!hasMoved) {
-      dragging = true;
-      dragItem.classList.add("dragging");
-      if (navigator.vibrate) {
-        navigator.vibrate(50);
-      }
+    // Crear elemento ghost visual
+    dragGhost = dragItem.cloneNode(true);
+    dragGhost.style.position = 'fixed';
+    dragGhost.style.zIndex = '9999';
+    dragGhost.style.width = dragItem.offsetWidth + 'px';
+    dragGhost.style.pointerEvents = 'none';
+    dragGhost.style.opacity = '0.8';
+    dragGhost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
+    dragGhost.style.borderRadius = '12px';
+    dragGhost.classList.add('drag-ghost');
+    
+    // Posicionar el ghost
+    const rect = dragItem.getBoundingClientRect();
+    dragGhost.style.left = rect.left + 'px';
+    dragGhost.style.top = rect.top + 'px';
+    
+    document.body.appendChild(dragGhost);
+    console.log('[startDrag] Ghost creado');
+    
+    // Hacer semi-transparente el original
+    dragItem.style.opacity = '0.3';
+    
+    // Bloquear selección
+    document.body.style.userSelect = 'none';
+    document.body.style.webkitUserSelect = 'none';
+    
+    if (navigator.vibrate) {
+      navigator.vibrate(50);
     }
-  }, 600);  // ← CAMBIADO DE 3000 a 600
+  }, 600);
 }
 
 function dragMove(e) {
-  if (!dragging || !dragItem) return;
+  if (!dragging || !dragItem || !dragGhost) {
+    return;
+  }
+  
+  console.log('[dragMove] Moviendo...');
+  
+  e.preventDefault();
+  e.stopPropagation();
 
   const touch = e.touches ? e.touches[0] : e;
+  const x = touch.clientX;
   const y = touch.clientY;
 
-  const items = [...document.querySelectorAll(".list-item:not(.dragging)")];
+  // Mover el ghost visual
+  dragGhost.style.left = (x - dragGhost.offsetWidth / 2) + 'px';
+  dragGhost.style.top = (y - dragGhost.offsetHeight / 2) + 'px';
+
+  // Reordenar en la lista - buscar ambos tipos de elementos
+  const items = [...document.querySelectorAll(".list-item:not(.dragging), .ejercicio-acordeon:not(.dragging)")];
+  let targetItem = null;
 
   for (const item of items) {
     const rect = item.getBoundingClientRect();
-    if (y < rect.top + rect.height / 2) {
-      item.parentNode.insertBefore(dragItem, item);
+    const itemMiddle = rect.top + rect.height / 2;
+    
+    if (y < itemMiddle) {
+      targetItem = item;
       break;
-    } else {
-      item.parentNode.appendChild(dragItem);
     }
   }
 
-  e.preventDefault();
+  // Mover el elemento en el DOM
+  if (targetItem) {
+    contenido.insertBefore(dragItem, targetItem);
+  } else if (items.length > 0) {
+    contenido.appendChild(dragItem);
+  }
 }
 
-function dragEnd() {
+function dragEnd(e) {
+  console.log('[dragEnd] Finalizando drag, dragging:', dragging);
+  
   clearTimeout(dragTimer);
   dragTimer = null;
+  
+  // Eliminar ghost
+  if (dragGhost) {
+    dragGhost.remove();
+    dragGhost = null;
+  }
+  
+  // Restaurar selección de texto
+  document.body.style.userSelect = '';
+  document.body.style.webkitUserSelect = '';
 
   if (!dragging || !dragItem) {
-    // Resetear estado si se canceló
     dragItem = null;
     dragStartIndex = null;
-    hasMoved = false;
     return;
   }
 
   dragging = false;
   dragItem.classList.remove("dragging");
+  dragItem.style.opacity = '1';
 
   const newIndex = [...contenido.children].indexOf(dragItem);
 
@@ -1138,7 +1185,6 @@ function dragEnd() {
 
   dragItem = null;
   dragStartIndex = null;
-  hasMoved = false;
 }
 
 function crearIndice(item, index, nivel) {
@@ -1149,7 +1195,11 @@ function crearIndice(item, index, nivel) {
   
   // Click en el div completo
   div.addEventListener('click', (e) => {
-    if (dragging) return;
+    if (dragging) {
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
     
     const target = e.target;
     if (target.tagName === 'BUTTON' || 
@@ -1163,8 +1213,16 @@ function crearIndice(item, index, nivel) {
     navigatePush(index);
   });
 
-  div.addEventListener('mousedown', startDrag, { passive: false, capture: true });
-  div.addEventListener('touchstart', startDrag, { passive: false, capture: true });
+  // Drag handlers en el div
+  div.addEventListener('mousedown', startDrag);
+  div.addEventListener('touchstart', startDrag, { passive: true });
+  
+  // Agregar listeners de movimiento directamente al div también
+  div.addEventListener('mousemove', dragMove);
+  div.addEventListener('touchmove', dragMove, { passive: false });
+  
+  div.addEventListener('mouseup', dragEnd);
+  div.addEventListener('touchend', dragEnd);
 
   div.style.display = 'flex';
   div.style.alignItems = 'center';
@@ -1172,6 +1230,7 @@ function crearIndice(item, index, nivel) {
   div.style.padding = '8px';
   div.style.borderBottom = '1px solid #ddd';
   div.style.cursor = 'pointer';
+  div.style.touchAction = 'none';
 
   if (!item.editando) item.editando = false;
 
@@ -1224,6 +1283,7 @@ function crearIndice(item, index, nivel) {
     input.readOnly = true;
     input.style.flex = '1';
     input.style.cursor = 'pointer';
+    input.style.pointerEvents = 'none';
 
     div.appendChild(input);
 
@@ -1272,6 +1332,8 @@ function crearIndice(item, index, nivel) {
 function initGlobalListeners() {
   if (!isAppPage() || !contenido) return;
 
+  console.log('[initGlobalListeners] Inicializando listeners');
+
   window.restaurarDesdeJSON = async function(jsonString) {
     try {
       const datosRecuperados = JSON.parse(jsonString);
@@ -1311,11 +1373,4 @@ function initGlobalListeners() {
   };
 
   console.log('💾 Función restaurarDesdeJSON() disponible. Uso: restaurarDesdeJSON(\'tu json aquí\')');
-
-  // Drag & drop global
-  document.addEventListener("mousemove", dragMove);
-  document.addEventListener("touchmove", dragMove, { passive: false });
-  document.addEventListener("mouseup", dragEnd);
-  document.addEventListener("touchend", dragEnd);
-  document.addEventListener("touchcancel", dragEnd);
 }
