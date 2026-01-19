@@ -344,6 +344,13 @@ button:hover {
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  /* ✅ Prevenir selección de texto durante drag & drop */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+  pointer-events: auto;
 }
 
 .list-item:hover {

@@ -1039,8 +1039,14 @@ let hasMoved = false;
 const MOVEMENT_THRESHOLD = 10; // píxeles de holgura permitidos
 
 function startDrag(e) {
+  // PRIMERO: Prevenir comportamiento del navegador
+  if (e.cancelable) {
+    e.preventDefault();
+  }
+  
+  // SEGUNDO: Verificar botón del mouse
   if (e.type === "mousedown" && e.button !== 0) return;
-
+  
   dragItem = e.currentTarget.closest(".list-item");
   if (!dragItem) return;
 
@@ -1052,42 +1058,37 @@ function startDrag(e) {
   dragStartX = touch.clientX;
   dragStartY = touch.clientY;
 
-  // Añadir listener temporal para detectar movimiento
+  // Listener temporal para detectar movimiento
   const checkMovement = (moveEvent) => {
     const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
     const deltaX = Math.abs(moveTouch.clientX - dragStartX);
     const deltaY = Math.abs(moveTouch.clientY - dragStartY);
     
-    // Si se mueve más del umbral, cancelar el drag
     if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
       hasMoved = true;
       clearTimeout(dragTimer);
       dragTimer = null;
-      // Remover listener temporal
       document.removeEventListener('mousemove', checkMovement);
       document.removeEventListener('touchmove', checkMovement);
     }
   };
 
-  // Añadir listener temporal para detectar movimiento durante el timer
   document.addEventListener('mousemove', checkMovement, { passive: true });
   document.addEventListener('touchmove', checkMovement, { passive: true });
 
+  // CAMBIO CRÍTICO: 600ms en lugar de 3000ms
   dragTimer = setTimeout(() => {
-    // Remover listeners temporales
     document.removeEventListener('mousemove', checkMovement);
     document.removeEventListener('touchmove', checkMovement);
     
-    // Solo activar drag si no hubo movimiento
     if (!hasMoved) {
       dragging = true;
       dragItem.classList.add("dragging");
-      // Vibración háptica si está disponible (móviles)
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
     }
-  }, 3000);
+  }, 600);  // ← CAMBIADO DE 3000 a 600
 }
 
 function dragMove(e) {
@@ -1162,7 +1163,7 @@ function crearIndice(item, index, nivel) {
     navigatePush(index);
   });
 
-  div.addEventListener('mousedown', startDrag, { capture: true });
+  div.addEventListener('mousedown', startDrag, { passive: false, capture: true });
   div.addEventListener('touchstart', startDrag, { passive: false, capture: true });
 
   div.style.display = 'flex';
