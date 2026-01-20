@@ -2088,3 +2088,272 @@ main#contenido {
 .ejercicio-acordeon + .ejercicio-acordeon {
   margin-top: 4px;
 }
+/* ==================== DASHBOARD REDISEÑADO ==================== */
+
+/* Grid principal del dashboard */
+.dashboard-container-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 16px;
+  padding: 16px 12px;
+  width: 100%;
+}
+
+/* Tarjetas del dashboard */
+.dashboard-card {
+  background: var(--bg-card);
+  padding: 20px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+  min-height: 200px;
+}
+
+.dashboard-card:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color);
+  transform: translateY(-2px);
+}
+
+.dashboard-card.full-width {
+  grid-column: 1 / -1;
+  min-height: auto;
+}
+
+.card-title {
+  margin: 0 0 16px 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: left;
+  border-bottom: 2px solid var(--primary-mint);
+  padding-bottom: 8px;
+}
+
+/* ==================== GRID DE ESTADÍSTICAS ==================== */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
+}
+
+.stat-item {
+  text-align: center;
+  padding: 16px 12px;
+  background: linear-gradient(135deg, var(--bg-main) 0%, var(--bg-card) 100%);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.stat-item:hover {
+  transform: scale(1.05);
+  box-shadow: var(--shadow-sm);
+  border-color: var(--primary-mint);
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--primary-mint);
+  margin-bottom: 4px;
+  line-height: 1;
+  background: linear-gradient(135deg, var(--primary-mint) 0%, var(--secondary-cyan) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.stat-unit {
+  font-size: 1rem;
+  margin-left: 4px;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+}
+
+/* ==================== CALENDARIO WRAPPER ==================== */
+.calendario-wrapper {
+  width: 100%;
+}
+
+.nombre-mes {
+  font-size: 0.9rem !important;
+  font-weight: 700 !important;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: left !important;
+}
+
+.detalle-dia {
+  margin-top: 16px;
+  padding: 12px;
+  background: var(--bg-main);
+  border-radius: 8px;
+  min-height: 60px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* ==================== GRÁFICOS ==================== */
+.dashboard-chart {
+  width: 100% !important;
+  height: 220px !important;
+  margin-top: 8px;
+}
+
+/* ==================== SELECTOR DE EJERCICIO ==================== */
+.selector-ejercicio {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-main);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin: 0;
+}
+
+.selector-ejercicio:focus {
+  outline: none;
+  border-color: var(--primary-mint);
+  background: var(--bg-card);
+  box-shadow: 0 0 0 3px rgba(61, 213, 152, 0.1);
+}
+
+.selector-ejercicio:hover {
+  border-color: var(--primary-mint);
+}
+
+/* ==================== TOP EJERCICIOS ==================== */
+.top-ejercicios-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.top-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: var(--bg-main);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  transition: all 0.2s ease;
+}
+
+.top-item:hover {
+  background: var(--bg-card);
+  border-color: var(--primary-mint);
+  transform: translateX(4px);
+  box-shadow: var(--shadow-sm);
+}
+
+.top-rank {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, var(--primary-mint) 0%, var(--secondary-cyan) 100%);
+  color: white;
+  border-radius: 50%;
+  font-weight: 900;
+  font-size: 0.9rem;
+  flex-shrink: 0;
+}
+
+.top-nombre {
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  text-align: left;
+}
+
+.top-cantidad {
+  font-weight: 700;
+  color: var(--primary-mint);
+  font-size: 1rem;
+  padding: 4px 12px;
+  background: rgba(61, 213, 152, 0.1);
+  border-radius: 12px;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width: 768px) {
+  .dashboard-container-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stat-value {
+    font-size: 1.75rem;
+  }
+  
+  .dashboard-chart {
+    height: 180px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .dashboard-card {
+    padding: 16px;
+  }
+}
+
+/* ==================== ANIMACIONES ==================== */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.dashboard-card {
+  animation: fadeInUp 0.4s ease;
+}
+
+.dashboard-card:nth-child(1) { animation-delay: 0s; }
+.dashboard-card:nth-child(2) { animation-delay: 0.1s; }
+.dashboard-card:nth-child(3) { animation-delay: 0.2s; }
+.dashboard-card:nth-child(4) { animation-delay: 0.3s; }
+.dashboard-card:nth-child(5) { animation-delay: 0.4s; }
+.dashboard-card:nth-child(6) { animation-delay: 0.5s; }
