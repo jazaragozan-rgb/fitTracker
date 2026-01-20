@@ -528,17 +528,9 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
   wrapper.style.marginBottom = '8px';
+  // Necesario para que el drag funcione
   wrapper.dataset.index = index;
-  wrapper.dataset.nivel = '4';
-
-  // ✅ AÑADIR DRAG & DROP AL WRAPPER
-  wrapper.addEventListener('mousedown', startDrag);
-  wrapper.addEventListener('touchstart', startDrag, { passive: true });
-  wrapper.addEventListener('mousemove', dragMove);
-  wrapper.addEventListener('touchmove', dragMove, { passive: false });
-  wrapper.addEventListener('mouseup', dragEnd);
-  wrapper.addEventListener('touchend', dragEnd);
-  wrapper.style.touchAction = 'none';
+  wrapper.dataset.nivel = rutaActual.length;
 
   // Header del ejercicio (siempre visible)
   const header = document.createElement('div');
@@ -553,6 +545,10 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
   header.style.boxShadow = 'var(--shadow-sm)';
   header.style.transition = 'all 0.2s ease';
   header.style.border = '1px solid transparent';
+
+  // ===== DRAG & DROP para ejercicios =====
+  wrapper.addEventListener('mousedown', startDragEjercicio, { passive: false, capture: true });
+  wrapper.addEventListener('touchstart', startDragEjercicio, { passive: false, capture: true });
 
   header.addEventListener('mouseenter', () => {
     header.style.boxShadow = 'var(--shadow-md)';
@@ -693,8 +689,8 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
 
     // Click en header para expandir/contraer
     header.addEventListener('click', (e) => {
-      // No expandir/contraer si estamos arrastrando
-      if (dragging) {
+      // Si estamos arrastrando, ignorar el click
+      if (draggingEjercicio) {
         e.preventDefault();
         e.stopPropagation();
         return;
@@ -1046,88 +1042,81 @@ function asegurarContenidoVisible() {
 }
 asegurarContenidoVisible();
 
-// ==================== CREAR INDICE (DRAG & DROP + UI ITEM) ====================
-let dragItem = null;
-let dragGhost = null;
-let dragStartY = 0;
-let dragging = false;
-let dragStartIndex = null;
-let dragTimer = null;
+// ==================== DRAG & DROP PARA EJERCICIOS (NIVEL 4) ====================
+let dragEjercicio = null;
+let dragEjercicioStartX = 0;
+let dragEjercicioStartY = 0;
+let draggingEjercicio = false;
+let dragEjercicioStartIndex = null;
+let dragEjercicioTimer = null;
+let hasMovedEjercicio = false;
 
-function startDrag(e) {
-  console.log('[startDrag] Evento:', e.type);
-  
+function startDragEjercicio(e) {
+  // No interferir con clicks normales
   if (e.type === "mousedown" && e.button !== 0) return;
   
-  // Buscar tanto .list-item como .ejercicio-acordeon
-  dragItem = e.currentTarget.closest(".list-item") || e.currentTarget.closest(".ejercicio-acordeon");
-  if (!dragItem) return;
+  dragEjercicio = e.currentTarget.closest(".ejercicio-acordeon");
+  if (!dragEjercicio) return;
 
-  dragging = false;
-  dragStartIndex = [...contenido.children].indexOf(dragItem);
+  draggingEjercicio = false;
+  hasMovedEjercicio = false;
+  dragEjercicioStartIndex = [...contenido.children].indexOf(dragEjercicio);
 
   const touch = e.touches ? e.touches[0] : e;
-  dragStartY = touch.clientY;
+  dragEjercicioStartX = touch.clientX;
+  dragEjercicioStartY = touch.clientY;
 
-  console.log('[startDrag] Esperando 600ms...');
-
-  dragTimer = setTimeout(() => {
-    console.log('[startDrag] ¡Activando drag!');
-    dragging = true;
-    dragItem.classList.add("dragging");
+  const checkMovement = (moveEvent) => {
+    const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
+    const deltaX = Math.abs(moveTouch.clientX - dragEjercicioStartX);
+    const deltaY = Math.abs(moveTouch.clientY - dragEjercicioStartY);
     
-    // Crear elemento ghost visual
-    dragGhost = dragItem.cloneNode(true);
-    dragGhost.style.position = 'fixed';
-    dragGhost.style.zIndex = '9999';
-    dragGhost.style.width = dragItem.offsetWidth + 'px';
-    dragGhost.style.pointerEvents = 'none';
-    dragGhost.style.opacity = '0.8';
-    dragGhost.style.boxShadow = '0 8px 16px rgba(0,0,0,0.2)';
-    dragGhost.style.borderRadius = '12px';
-    dragGhost.classList.add('drag-ghost');
-    
-    // Posicionar el ghost
-    const rect = dragItem.getBoundingClientRect();
-    dragGhost.style.left = rect.left + 'px';
-    dragGhost.style.top = rect.top + 'px';
-    
-    document.body.appendChild(dragGhost);
-    console.log('[startDrag] Ghost creado');
-    
-    // Hacer semi-transparente el original
-    dragItem.style.opacity = '0.3';
-    
-    // Bloquear selección
-    document.body.style.userSelect = 'none';
-    document.body.style.webkitUserSelect = 'none';
-    
-    if (navigator.vibrate) {
-      navigator.vibrate(50);
+    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+      hasMovedEjercicio = true;
+      clearTimeout(dragEjercicioTimer);
+      dragEjercicioTimer = null;
+      cleanup();
     }
-  }, 600);
+  };
+
+  const cleanup = () => {
+    document.removeEventListener('mousemove', checkMovement);
+    document.removeEventListener('touchmove', checkMovement);
+  };
+
+  document.addEventListener('mousemove', checkMovement, { passive: true });
+  document.addEventListener('touchmove', checkMovement, { passive: true });
+
+  dragEjercicioTimer = setTimeout(() => {
+    cleanup();
+    
+    if (!hasMovedEjercicio) {
+      draggingEjercicio = true;
+      dragEjercicio.classList.add("dragging");
+      
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      
+      dragEjercicio.style.opacity = '0.7';
+      dragEjercicio.style.transform = 'scale(1.02)';
+    }
+  }, LONG_PRESS_DURATION);
 }
 
-function dragMove(e) {
-  if (!dragging || !dragItem || !dragGhost) {
-    return;
-  }
-  
-  console.log('[dragMove] Moviendo...');
+function dragMoveEjercicio(e) {
+  if (!draggingEjercicio || !dragEjercicio) return;
   
   e.preventDefault();
-  e.stopPropagation();
 
   const touch = e.touches ? e.touches[0] : e;
-  const x = touch.clientX;
   const y = touch.clientY;
 
-  // Mover el ghost visual
-  dragGhost.style.left = (x - dragGhost.offsetWidth / 2) + 'px';
-  dragGhost.style.top = (y - dragGhost.offsetHeight / 2) + 'px';
-
-  // Reordenar en la lista - buscar ambos tipos de elementos
-  const items = [...document.querySelectorAll(".list-item:not(.dragging), .ejercicio-acordeon:not(.dragging)")];
+  const items = [...document.querySelectorAll(".ejercicio-acordeon:not(.dragging)")];
+  
   let targetItem = null;
 
   for (const item of items) {
@@ -1140,7 +1129,147 @@ function dragMove(e) {
     }
   }
 
-  // Mover el elemento en el DOM
+  if (targetItem) {
+    contenido.insertBefore(dragEjercicio, targetItem);
+  } else if (items.length > 0) {
+    contenido.appendChild(dragEjercicio);
+  }
+}
+
+function dragEndEjercicio() {
+  clearTimeout(dragEjercicioTimer);
+  dragEjercicioTimer = null;
+  
+  document.body.style.userSelect = '';
+  document.body.style.webkitUserSelect = '';
+
+  if (!draggingEjercicio || !dragEjercicio) {
+    dragEjercicio = null;
+    dragEjercicioStartIndex = null;
+    hasMovedEjercicio = false;
+    return;
+  }
+
+  dragEjercicio.style.opacity = '';
+  dragEjercicio.style.transform = '';
+  
+  draggingEjercicio = false;
+  dragEjercicio.classList.remove("dragging");
+
+  const newIndex = [...contenido.children].indexOf(dragEjercicio);
+
+  if (dragEjercicioStartIndex !== null && newIndex !== dragEjercicioStartIndex) {
+    const nivel = nivelActual();
+    const movedItem = nivel.hijos.splice(dragEjercicioStartIndex, 1)[0];
+    nivel.hijos.splice(newIndex, 0, movedItem);
+    guardarDatos();
+  }
+
+  dragEjercicio = null;
+  dragEjercicioStartIndex = null;
+  hasMovedEjercicio = false;
+}
+
+// ==================== CREAR INDICE (DRAG & DROP + UI ITEM) ====================
+let dragItem = null;
+let dragStartX = 0;
+let dragStartY = 0;
+let dragging = false;
+let dragStartIndex = null;
+let dragTimer = null;
+let hasMoved = false;
+const MOVEMENT_THRESHOLD = 10; // píxeles de holgura permitidos antes de cancelar drag
+const LONG_PRESS_DURATION = 500; // ms para activar drag
+
+function startDrag(e) {
+  // No interferir con clicks normales - NO preventDefault
+  if (e.type === "mousedown" && e.button !== 0) return;
+  
+  dragItem = e.currentTarget.closest(".list-item");
+  if (!dragItem) return;
+
+  dragging = false;
+  hasMoved = false;
+  dragStartIndex = [...contenido.children].indexOf(dragItem);
+
+  const touch = e.touches ? e.touches[0] : e;
+  dragStartX = touch.clientX;
+  dragStartY = touch.clientY;
+
+  // Listener temporal para detectar movimiento durante el long-press
+  const checkMovement = (moveEvent) => {
+    const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
+    const deltaX = Math.abs(moveTouch.clientX - dragStartX);
+    const deltaY = Math.abs(moveTouch.clientY - dragStartY);
+    
+    // Si el usuario se mueve demasiado, cancelar el drag (probablemente está haciendo scroll)
+    if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
+      hasMoved = true;
+      clearTimeout(dragTimer);
+      dragTimer = null;
+      cleanup();
+    }
+  };
+
+  const cleanup = () => {
+    document.removeEventListener('mousemove', checkMovement);
+    document.removeEventListener('touchmove', checkMovement);
+  };
+
+  // Listeners temporales - IMPORTANTE: { passive: true } para no bloquear scroll
+  document.addEventListener('mousemove', checkMovement, { passive: true });
+  document.addEventListener('touchmove', checkMovement, { passive: true });
+
+  // Timer para activar drag después del long-press
+  dragTimer = setTimeout(() => {
+    cleanup();
+    
+    // Solo activar drag si NO hubo movimiento
+    if (!hasMoved) {
+      dragging = true;
+      dragItem.classList.add("dragging");
+      
+      // Bloquear selección de texto solo cuando se activa el drag
+      document.body.style.userSelect = 'none';
+      document.body.style.webkitUserSelect = 'none';
+      
+      // Feedback háptico si está disponible
+      if (navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+      
+      // Añadir feedback visual
+      dragItem.style.opacity = '0.7';
+      dragItem.style.transform = 'scale(1.02)';
+    }
+  }, LONG_PRESS_DURATION);
+}
+
+function dragMove(e) {
+  // Solo procesar si estamos en modo drag activo
+  if (!dragging || !dragItem) return;
+  
+  // Ahora sí, prevenir scroll mientras arrastramos
+  e.preventDefault();
+
+  const touch = e.touches ? e.touches[0] : e;
+  const y = touch.clientY;
+
+  const items = [...document.querySelectorAll(".list-item:not(.dragging)")];
+  
+  let targetItem = null;
+
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    const itemMiddle = rect.top + rect.height / 2;
+    
+    if (y < itemMiddle) {
+      targetItem = item;
+      break;
+    }
+  }
+
+  // Reordenar elementos
   if (targetItem) {
     contenido.insertBefore(dragItem, targetItem);
   } else if (items.length > 0) {
@@ -1148,34 +1277,32 @@ function dragMove(e) {
   }
 }
 
-function dragEnd(e) {
-  console.log('[dragEnd] Finalizando drag, dragging:', dragging);
-  
+function dragEnd() {
   clearTimeout(dragTimer);
   dragTimer = null;
-  
-  // Eliminar ghost
-  if (dragGhost) {
-    dragGhost.remove();
-    dragGhost = null;
-  }
   
   // Restaurar selección de texto
   document.body.style.userSelect = '';
   document.body.style.webkitUserSelect = '';
 
+  // Si no estábamos en modo drag, simplemente limpiar
   if (!dragging || !dragItem) {
     dragItem = null;
     dragStartIndex = null;
+    hasMoved = false;
     return;
   }
 
+  // Restaurar estilos visuales
+  dragItem.style.opacity = '';
+  dragItem.style.transform = '';
+  
   dragging = false;
   dragItem.classList.remove("dragging");
-  dragItem.style.opacity = '1';
 
   const newIndex = [...contenido.children].indexOf(dragItem);
 
+  // Guardar cambios solo si hubo reordenamiento
   if (dragStartIndex !== null && newIndex !== dragStartIndex) {
     const nivel = nivelActual();
     const movedItem = nivel.hijos.splice(dragStartIndex, 1)[0];
@@ -1185,6 +1312,7 @@ function dragEnd(e) {
 
   dragItem = null;
   dragStartIndex = null;
+  hasMoved = false;
 }
 
 function crearIndice(item, index, nivel) {
@@ -1195,6 +1323,7 @@ function crearIndice(item, index, nivel) {
   
   // Click en el div completo
   div.addEventListener('click', (e) => {
+    // Si estamos arrastrando, ignorar el click
     if (dragging) {
       e.preventDefault();
       e.stopPropagation();
@@ -1213,16 +1342,8 @@ function crearIndice(item, index, nivel) {
     navigatePush(index);
   });
 
-  // Drag handlers en el div
-  div.addEventListener('mousedown', startDrag);
-  div.addEventListener('touchstart', startDrag, { passive: true });
-  
-  // Agregar listeners de movimiento directamente al div también
-  div.addEventListener('mousemove', dragMove);
-  div.addEventListener('touchmove', dragMove, { passive: false });
-  
-  div.addEventListener('mouseup', dragEnd);
-  div.addEventListener('touchend', dragEnd);
+  div.addEventListener('mousedown', startDrag, { passive: false, capture: true });
+  div.addEventListener('touchstart', startDrag, { passive: false, capture: true });
 
   div.style.display = 'flex';
   div.style.alignItems = 'center';
@@ -1230,7 +1351,6 @@ function crearIndice(item, index, nivel) {
   div.style.padding = '8px';
   div.style.borderBottom = '1px solid #ddd';
   div.style.cursor = 'pointer';
-  div.style.touchAction = 'none';
 
   if (!item.editando) item.editando = false;
 
@@ -1283,7 +1403,6 @@ function crearIndice(item, index, nivel) {
     input.readOnly = true;
     input.style.flex = '1';
     input.style.cursor = 'pointer';
-    input.style.pointerEvents = 'none';
 
     div.appendChild(input);
 
@@ -1332,8 +1451,6 @@ function crearIndice(item, index, nivel) {
 function initGlobalListeners() {
   if (!isAppPage() || !contenido) return;
 
-  console.log('[initGlobalListeners] Inicializando listeners');
-
   window.restaurarDesdeJSON = async function(jsonString) {
     try {
       const datosRecuperados = JSON.parse(jsonString);
@@ -1373,4 +1490,18 @@ function initGlobalListeners() {
   };
 
   console.log('💾 Función restaurarDesdeJSON() disponible. Uso: restaurarDesdeJSON(\'tu json aquí\')');
+
+  // Drag & drop global para listas normales
+  document.addEventListener("mousemove", dragMove);
+  document.addEventListener("touchmove", dragMove, { passive: false });
+  document.addEventListener("mouseup", dragEnd);
+  document.addEventListener("touchend", dragEnd);
+  document.addEventListener("touchcancel", dragEnd);
+  
+  // Drag & drop global para ejercicios (nivel 4)
+  document.addEventListener("mousemove", dragMoveEjercicio);
+  document.addEventListener("touchmove", dragMoveEjercicio, { passive: false });
+  document.addEventListener("mouseup", dragEndEjercicio);
+  document.addEventListener("touchend", dragEndEjercicio);
+  document.addEventListener("touchcancel", dragEndEjercicio);
 }
