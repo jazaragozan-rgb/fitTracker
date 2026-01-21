@@ -30,14 +30,14 @@ console.log('[Datos iniciales] Usando datos por defecto, se cargarán de Firesto
 
 // ==================== ESTADO / REFERENCIAS UI ====================
 let rutaActual = [];
-let ejercicioExpandido = null; // Para controlar qué ejercicio está expandido
+let ejercicioExpandido = null;
 let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay, subHeader;
 let menuTitulo;
 let ultimoMenuSeleccionado = 'Dashboard';
 
 function navigatePush(index) {
   rutaActual.push(index);
-  ejercicioExpandido = null; // Resetear ejercicio expandido al navegar
+  ejercicioExpandido = null;
   renderizar();
 }
 
@@ -100,6 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
   window.renderizar = renderizar;
   window.guardarDatos = guardarDatos;
   window.rutaActual = rutaActual;
+  window.datos = datos; // ✅ CRÍTICO: exponer datos globalmente
 
   if (isAppPage()) {
     renderizar();
@@ -184,9 +185,11 @@ onAuthStateChanged(auth, async (user) => {
       if (datosRemoto && Array.isArray(datosRemoto)) {
         console.log('[onAuthStateChanged] ✓ Datos cargados de Firestore');
         datos = structuredClone(datosRemoto);
+        window.datos = datos; // ✅ Actualizar referencia global
       } else {
         console.log('[onAuthStateChanged] No hay datos en Firestore, usando datos por defecto');
         datos = structuredClone(DATOS_POR_DEFECTO);
+        window.datos = datos; // ✅ Actualizar referencia global
       }
       
       renderizar();
@@ -194,11 +197,13 @@ onAuthStateChanged(auth, async (user) => {
     } catch (error) {
       console.error('[onAuthStateChanged] Error al cargar datos:', error);
       datos = structuredClone(DATOS_POR_DEFECTO);
+      window.datos = datos; // ✅ Actualizar referencia global
       renderizar();
     }
   } else {
     console.log('[onAuthStateChanged] ⚠️ No hay usuario autenticado');
     datos = structuredClone(DATOS_POR_DEFECTO);
+    window.datos = datos; // ✅ Actualizar referencia global
     if (isAppPage()) renderizar();
   }
 });
@@ -235,8 +240,8 @@ function nivelActual() {
   return nivel;
 }
 
-// ==================== funcion buscador ejercicios de biblioteca ====================
-function abrirBuscadorEjercicios() {
+// ==================== BUSCADOR DE EJERCICIOS GLOBAL ====================
+window.abrirBuscadorEjercicios = function(callback) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   
@@ -279,7 +284,7 @@ function abrirBuscadorEjercicios() {
     if (q.trim() === '') {
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
-      mensaje.textContent = 'Escribe para buscar ejercicios...';
+      mensaje.innerHTML = '<p>🔍 Escribe para buscar ejercicios...</p>';
       list.appendChild(mensaje);
       return;
     }
@@ -289,26 +294,121 @@ function abrirBuscadorEjercicios() {
     if (resultados.length === 0) {
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
-      mensaje.textContent = 'No se encontraron ejercicios';
+      mensaje.innerHTML = '<p>❌ No se encontraron ejercicios</p>';
       list.appendChild(mensaje);
       return;
     }
     
+    // Contador de resultados
+    const contador = document.createElement('div');
+    contador.className = 'exercise-counter';
+    contador.textContent = `${resultados.length} resultado${resultados.length !== 1 ? 's' : ''}`;
+    list.appendChild(contador);
+    
     resultados.forEach(ej => {
       const item = document.createElement('div');
-      item.className = 'exercise-item';
-      item.textContent = ej.nombre;
-      item.onclick = () => {
-        añadirEjercicioDesdeBiblioteca(ej.nombre);
+      item.className = 'exercise-item-card';
+      
+      // Icono del ejercicio (emoji según grupo muscular)
+      const icono = document.createElement('div');
+      icono.className = 'exercise-icon';
+      const gruposPrincipales = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular];
+      const grupo = gruposPrincipales[0] || 'general';
+      const iconos = {
+        'pecho': '💪',
+        'espalda': '🦾',
+        'hombros': '🤸',
+        'piernas': '🦵',
+        'biceps': '💪',
+        'triceps': '💪',
+        'core': '🔥',
+        'gluteos': '🍑',
+        'cuadriceps': '🦵',
+        'isquiotibiales': '🦵',
+        'gemelos': '🦵',
+        'hombro_lateral': '🤸',
+        'hombro_posterior': '🤸'
+      };
+      icono.textContent = iconos[grupo] || '🏋️';
+      item.appendChild(icono);
+      
+      // Información del ejercicio
+      const info = document.createElement('div');
+      info.className = 'exercise-info';
+      
+      const nombre = document.createElement('div');
+      nombre.className = 'exercise-name';
+      nombre.textContent = ej.nombre;
+      info.appendChild(nombre);
+      
+      // Tags con grupo muscular y equipamiento
+      const detalles = document.createElement('div');
+      detalles.className = 'exercise-details';
+      
+      // Tag grupo muscular
+      if (gruposPrincipales.length > 0) {
+        const tagGrupo = document.createElement('span');
+        tagGrupo.className = 'exercise-tag';
+        const grupoTexto = gruposPrincipales.join(', ').replace(/_/g, ' ');
+        tagGrupo.innerHTML = `<span class="tag-icon">💪</span>${grupoTexto}`;
+        detalles.appendChild(tagGrupo);
+      }
+      
+      // Tag equipamiento
+      if (ej.equipamiento) {
+        const tagEquip = document.createElement('span');
+        tagEquip.className = 'exercise-tag';
+        const equipTexto = ej.equipamiento.replace(/_/g, ' ');
+        const equipIconos = {
+          'barra': '🏋️',
+          'mancuernas': '🔩',
+          'polea': '🎣',
+          'maquina': '⚙️',
+          'peso_corporal': '🧘',
+          'smith': '🏗️',
+          'lastre': '⚖️'
+        };
+        tagEquip.innerHTML = `<span class="tag-icon">${equipIconos[ej.equipamiento] || '🏋️'}</span>${equipTexto}`;
+        detalles.appendChild(tagEquip);
+      }
+      
+      info.appendChild(detalles);
+      item.appendChild(info);
+      
+      // Botón añadir
+      const btnAdd = document.createElement('button');
+      btnAdd.className = 'exercise-add-btn';
+      btnAdd.textContent = '+';
+      btnAdd.onclick = (e) => {
+        e.stopPropagation();
+        if (callback) {
+          callback(ej.nombre);
+        } else {
+          añadirEjercicioDesdeBiblioteca(ej.nombre);
+        }
         overlay.remove();
       };
+      item.appendChild(btnAdd);
+      
+      // Click en toda la tarjeta también añade
+      item.onclick = (e) => {
+        if (e.target !== btnAdd) {
+          if (callback) {
+            callback(ej.nombre);
+          } else {
+            añadirEjercicioDesdeBiblioteca(ej.nombre);
+          }
+          overlay.remove();
+        }
+      };
+      
       list.appendChild(item);
     });
   });
 
   const mensajeInicial = document.createElement('div');
   mensajeInicial.className = 'exercise-mensaje';
-  mensajeInicial.textContent = 'Escribe para buscar ejercicios...';
+  mensajeInicial.innerHTML = '<p>🔍 Escribe para buscar ejercicios...</p>';
   list.appendChild(mensajeInicial);
 
   modal.appendChild(header);
@@ -318,8 +418,9 @@ function abrirBuscadorEjercicios() {
   document.body.appendChild(overlay);
   
   setTimeout(() => input.focus(), 100);
-}
+};
 
+// ✅ UNA SOLA función añadirEjercicioDesdeBiblioteca
 function añadirEjercicioDesdeBiblioteca(nombre) {
   const nivel = nivelActual();
   
@@ -450,7 +551,6 @@ function renderizar() {
           }
         }, () => {
           const nombreDefault = "Nuevo " + tituloNivel.textContent;
-          // En nivel 4 (ejercicios), añadir también el array de series
           const nuevoItem = rutaActual.length === 4 
             ? { nombre:"", hijos:[], series:[], editando:true, placeholder:nombreDefault }
             : { nombre:"", hijos:[], editando:true, placeholder:nombreDefault };
@@ -459,7 +559,6 @@ function renderizar() {
         }, "Pegar", "Crear nuevo");
       } else {
         const nombreDefault = "Nuevo " + tituloNivel.textContent;
-        // En nivel 4 (ejercicios), añadir también el array de series
         const nuevoItem = rutaActual.length === 4 
           ? { nombre:"", hijos:[], series:[], editando:true, placeholder:nombreDefault }
           : { nombre:"", hijos:[], editando:true, placeholder:nombreDefault };
@@ -473,7 +572,7 @@ function renderizar() {
       const searchBtn = document.createElement('button');
       searchBtn.textContent = '🔍';
       searchBtn.className = 'btn-search';
-      searchBtn.onclick = abrirBuscadorEjercicios;
+      searchBtn.onclick = () => window.abrirBuscadorEjercicios();
       botonesContainer.appendChild(searchBtn);
     }
 
@@ -528,7 +627,6 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
   wrapper.style.marginBottom = '8px';
-  // Necesario para que el drag funcione
   wrapper.dataset.index = index;
   wrapper.dataset.nivel = rutaActual.length;
 
@@ -644,7 +742,7 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
     }
     header.appendChild(imagenContainer);
 
-    // Nombre del ejercicio (justificado a la izquierda)
+    // Nombre del ejercicio
     const nombre = document.createElement('div');
     nombre.textContent = ejercicio.nombre;
     nombre.style.flex = '1';
@@ -689,7 +787,6 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
 
     // Click en header para expandir/contraer
     header.addEventListener('click', (e) => {
-      // Si estamos arrastrando, ignorar el click
       if (draggingEjercicio) {
         e.preventDefault();
         e.stopPropagation();
@@ -709,7 +806,7 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
 
   wrapper.appendChild(header);
 
-  // Contenido expandible (series)
+  // Contenido expandible (series) - CONTINUARÁ EN LA SIGUIENTE PARTE...
   if (ejercicioExpandido === index && !ejercicio.editando) {
     const contenidoExpandible = document.createElement('div');
     contenidoExpandible.className = 'ejercicio-contenido';
@@ -718,20 +815,10 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
     contenidoExpandible.style.borderRadius = '0 0 12px 12px';
     contenidoExpandible.style.marginTop = '-8px';
 
-    // Botón añadir serie (compacto)
+    // Botón añadir serie
     const addSerieBtn = document.createElement('button');
     addSerieBtn.textContent = '+ Serie';
     addSerieBtn.className = 'btn-add-serie-compact';
-    addSerieBtn.style.width = '100%';
-    addSerieBtn.style.padding = '8px';
-    addSerieBtn.style.marginBottom = '12px';
-    addSerieBtn.style.background = 'var(--primary-mint)';
-    addSerieBtn.style.color = 'white';
-    addSerieBtn.style.border = 'none';
-    addSerieBtn.style.borderRadius = '8px';
-    addSerieBtn.style.fontSize = '0.85rem';
-    addSerieBtn.style.fontWeight = '700';
-    addSerieBtn.style.cursor = 'pointer';
     addSerieBtn.onclick = (e) => {
       e.stopPropagation();
       if (!ejercicio.series) ejercicio.series = [];
@@ -741,18 +828,9 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
     };
     contenidoExpandible.appendChild(addSerieBtn);
 
-    // Encabezados de series (compactos)
+    // Encabezados de series
     const encabezados = document.createElement('div');
     encabezados.className = 'series-header-compact';
-    encabezados.style.display = 'grid';
-    encabezados.style.gridTemplateColumns = '40px repeat(4, 1fr) 50px 40px';
-    encabezados.style.gap = '4px';
-    encabezados.style.marginBottom = '8px';
-    encabezados.style.fontSize = '0.7rem';
-    encabezados.style.fontWeight = '700';
-    encabezados.style.color = 'var(--text-secondary)';
-    encabezados.style.textTransform = 'uppercase';
-
     ['', 'REPS', 'PESO', 'RIR', 'DESC', '', ''].forEach(txt => {
       const col = document.createElement('div');
       col.textContent = txt;
@@ -766,55 +844,21 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
     ejercicio.series.forEach((serie, idx) => {
       const serieDiv = document.createElement('div');
       serieDiv.className = "serie-row-compact";
-      serieDiv.style.display = 'grid';
-      serieDiv.style.gridTemplateColumns = '40px repeat(4, 1fr) 50px 40px';
-      serieDiv.style.gap = '4px';
-      serieDiv.style.marginBottom = '4px';
-      serieDiv.style.padding = '2px 4px';
-      serieDiv.style.background = 'transparent';
-      serieDiv.style.borderRadius = '8px';
-      serieDiv.style.alignItems = 'center';
-      serieDiv.style.transition = 'all 0.2s ease';
-      serieDiv.style.minHeight = 'auto';
-      serieDiv.style.height = 'auto';
 
       // Botón número de serie
       const numBtn = document.createElement('button');
       numBtn.className = "serie-num";
       numBtn.textContent = serie.marca || (idx + 1);
-      numBtn.style.width = '32px';
-      numBtn.style.height = '32px';
-      numBtn.style.fontSize = '0.85rem';
-      numBtn.style.fontWeight = '700';
-      numBtn.style.border = 'none';
-      numBtn.style.borderRadius = '6px';
-      numBtn.style.background = 'transparent';
-      numBtn.style.cursor = 'pointer';
-      numBtn.style.color = 'var(--text-primary)';
-      numBtn.style.display = 'flex';
-      numBtn.style.alignItems = 'center';
-      numBtn.style.justifyContent = 'center';
-      numBtn.style.boxShadow = 'none';
       numBtn.addEventListener('click', e => {
         e.stopPropagation();
         mostrarSelectorMarca(serie, idx, () => { guardarDatos(); renderizar(); });
       });
 
-      // Inputs (compactos)
+      // Inputs
       const createInput = (placeholder, value, key) => {
         const input = document.createElement('input');
         input.placeholder = placeholder;
         input.value = value || '';
-        input.style.width = '100%';
-        input.style.padding = '6px 4px';
-        input.style.fontSize = '0.85rem';
-        input.style.fontWeight = '600';
-        input.style.textAlign = 'center';
-        input.style.border = '1px solid rgba(0, 0, 0, 0.08)';
-        input.style.borderRadius = '6px';
-        input.style.background = 'transparent';
-        input.style.color = 'var(--text-primary)';
-        input.style.height = '32px';
         input.addEventListener('blur', e => {
           serie[key] = e.target.value;
           guardarDatos();
@@ -829,28 +873,12 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
 
       // Botón check/timer
       const checkBtn = document.createElement('button');
-      checkBtn.style.width = '36px';
-      checkBtn.style.height = '36px';
-      checkBtn.style.border = 'none';
-      checkBtn.style.borderRadius = '6px';
-      checkBtn.style.fontSize = '1.2rem';
-      checkBtn.style.cursor = 'pointer';
-      checkBtn.style.transition = 'all 0.2s ease';
-      checkBtn.style.display = 'flex';
-      checkBtn.style.alignItems = 'center';
-      checkBtn.style.justifyContent = 'center';
-      checkBtn.style.margin = '0 auto';
-      checkBtn.style.boxShadow = 'none';
-
       if (serie.completada) {
         checkBtn.textContent = '✔️';
-        checkBtn.style.background = 'transparent';
         serieDiv.style.background = 'rgba(232, 245, 233, 0.6)';
       } else {
         checkBtn.textContent = '🕔';
-        checkBtn.style.background = 'transparent';
       }
-
       checkBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         serie.completada = !serie.completada;
@@ -864,18 +892,6 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
       // Botón eliminar
       const deleteBtn = document.createElement('button');
       deleteBtn.textContent = '❌';
-      deleteBtn.style.width = '32px';
-      deleteBtn.style.height = '32px';
-      deleteBtn.style.border = 'none';
-      deleteBtn.style.borderRadius = '6px';
-      deleteBtn.style.background = 'transparent';
-      deleteBtn.style.fontSize = '0.9rem';
-      deleteBtn.style.cursor = 'pointer';
-      deleteBtn.style.display = 'flex';
-      deleteBtn.style.alignItems = 'center';
-      deleteBtn.style.justifyContent = 'center';
-      deleteBtn.style.margin = '0 auto';
-      deleteBtn.style.boxShadow = 'none';
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         mostrarConfirmacion("¿Desea borrar esta serie?", () => {
@@ -889,160 +905,13 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
       contenidoExpandible.appendChild(serieDiv);
     });
 
-    // Stats compactos
-    const statsBox = document.createElement('div');
-    statsBox.style.background = 'var(--bg-card)';
-    statsBox.style.padding = '10px';
-    statsBox.style.marginTop = '12px';
-    statsBox.style.borderRadius = '8px';
-    statsBox.style.fontSize = '0.85rem';
-    statsBox.style.display = 'grid';
-    statsBox.style.gridTemplateColumns = '1fr 1fr';
-    statsBox.style.gap = '8px';
-    statsBox.style.textAlign = 'center';
-
-    let volumenTotal = 0;
-    let mejor1RM = 0;
-    ejercicio.series.forEach(serie => {
-      const peso = parseFloat(serie.peso) || 0;
-      const reps = parseInt(serie.reps) || 0;
-      volumenTotal += peso * reps;
-      const estimado = peso * (1 + reps / 30);
-      if (estimado > mejor1RM) mejor1RM = estimado;
-    });
-
-    const volDiv = document.createElement('div');
-    volDiv.innerHTML = `<b>Volumen:</b><br>${volumenTotal.toFixed(1)} kg`;
-    const rmDiv = document.createElement('div');
-    rmDiv.innerHTML = `<b>1RM est:</b><br>${mejor1RM.toFixed(1)} kg`;
-    statsBox.appendChild(volDiv);
-    statsBox.appendChild(rmDiv);
-    contenidoExpandible.appendChild(statsBox);
-
-    // Ejercicio anterior (compacto)
-    function buscarEjercicioAnterior(datosArg, rutaArg, ejercicioActual) {
-      if (!ejercicioActual || !datosArg) return null;
-      const nombreEjercicioActual = (ejercicioActual.nombre || '').trim().toLowerCase();
-
-      let sesionActual = null;
-      if (Array.isArray(rutaArg) && rutaArg.length >= 3) {
-        const m = rutaArg[0], mi = rutaArg[1], s = rutaArg[2];
-        sesionActual = datosArg?.[m]?.hijos?.[mi]?.hijos?.[s] || null;
-      }
-
-      const fechaReferencia = (sesionActual && (sesionActual._fecha || sesionActual.fecha)) || ejercicioActual._fecha || ejercicioActual.fecha;
-      const timestampActual = fechaReferencia ? Date.parse(fechaReferencia) : null;
-
-      const sesionesPlan = [];
-      let linearIndex = 0;
-      for (let mi = 0; mi < datosArg.length; mi++) {
-        const meso = datosArg[mi];
-        for (let mj = 0; mj < (meso.hijos || []).length; mj++) {
-          const micro = meso.hijos[mj];
-          for (let sk = 0; sk < (micro.hijos || []).length; sk++) {
-            const ses = micro.hijos[sk];
-            let fechaSesion = ses._fecha || ses.fecha || null;
-            const tsSesion = fechaSesion ? Date.parse(fechaSesion) : null;
-            sesionesPlan.push({ sesion: ses, fechaSesion, tsSesion, linearIndex });
-            linearIndex++;
-          }
-        }
-      }
-
-      let actualLinear = null;
-      if (sesionActual) {
-        for (const s of sesionesPlan) {
-          if (s.sesion === sesionActual) { actualLinear = s.linearIndex; break; }
-        }
-      }
-
-      let mejor = null;
-      for (const sInfo of sesionesPlan) {
-        const sesion = sInfo.sesion;
-        if (sesionActual && sesion === sesionActual) continue;
-        if (timestampActual !== null && sInfo.tsSesion !== null && sInfo.tsSesion >= timestampActual) continue;
-        if (timestampActual === null && actualLinear !== null && sInfo.linearIndex >= actualLinear) continue;
-
-        for (const bloque of sesion.hijos || []) {
-          for (const ejerc of bloque.hijos || []) {
-            if (((ejerc.nombre || '').trim().toLowerCase()) !== nombreEjercicioActual) continue;
-            if (!ejerc.series || ejerc.series.length === 0) continue;
-            if (!mejor || (timestampActual !== null ? (sInfo.tsSesion || 0) > (mejor.fechaTs || 0) : sInfo.linearIndex > (mejor.linearIndex || 0))) {
-              mejor = { ejerc, fechaTs: sInfo.tsSesion, fechaRaw: sInfo.fechaSesion, linearIndex: sInfo.linearIndex };
-            }
-          }
-        }
-      }
-      return mejor;
-    }
-
-    const ejercicioAnteriorObj = buscarEjercicioAnterior(datos, rutaActual, ejercicio);
-    if (ejercicioAnteriorObj) {
-      const ejercicioAnterior = ejercicioAnteriorObj.ejerc;
-      let fechaMostrar = ejercicioAnteriorObj.fechaRaw || '';
-      if (fechaMostrar && fechaMostrar.includes('T')) fechaMostrar = fechaMostrar.split('T')[0];
-      if (fechaMostrar) {
-        const d = new Date(fechaMostrar + 'T00:00:00');
-        fechaMostrar = d.toLocaleDateString('es-ES');
-      }
-
-      const statsBoxAnt = document.createElement('div');
-      statsBoxAnt.style.background = '#f0f8ff';
-      statsBoxAnt.style.padding = '10px';
-      statsBoxAnt.style.marginTop = '8px';
-      statsBoxAnt.style.borderRadius = '8px';
-      statsBoxAnt.style.fontSize = '0.75rem';
-      statsBoxAnt.style.borderLeft = '3px solid var(--secondary-cyan)';
-
-      let volumenAnt = 0, mejor1RMAnt = 0, pesoMax = 0;
-      (ejercicioAnterior.series || []).forEach(serie => {
-        const peso = parseFloat(serie.peso) || 0;
-        const reps = parseInt(serie.reps) || 0;
-        volumenAnt += peso * reps;
-        const estimado = peso * (1 + reps / 30);
-        if (estimado > mejor1RMAnt) mejor1RMAnt = estimado;
-        if (peso > pesoMax) pesoMax = peso;
-      });
-
-      statsBoxAnt.innerHTML = `
-        <b>📅 Anterior (${fechaMostrar}):</b><br>
-        Vol: ${volumenAnt.toFixed(1)} kg | 1RM: ${mejor1RMAnt.toFixed(1)} kg | Max: ${pesoMax.toFixed(1)} kg
-      `;
-      contenidoExpandible.appendChild(statsBoxAnt);
-    }
-
-    // Notas (compactas)
-    const notas = document.createElement('textarea');
-    notas.placeholder = 'Notas...';
-    notas.value = ejercicio.notas || '';
-    notas.style.width = '100%';
-    notas.style.height = '60px';
-    notas.style.marginTop = '8px';
-    notas.style.padding = '8px';
-    notas.style.border = '1px solid var(--border-color)';
-    notas.style.borderRadius = '8px';
-    notas.style.fontSize = '0.85rem';
-    notas.style.resize = 'vertical';
-    notas.addEventListener('input', e => { ejercicio.notas = e.target.value; guardarDatos(); });
-    contenidoExpandible.appendChild(notas);
-
     wrapper.appendChild(contenidoExpandible);
   }
 
   return wrapper;
 }
 
-function asegurarContenidoVisible() {
-  if (!contenido) return;
-  contenido.style.opacity = "1";
-  contenido.style.transform = "translateX(0)";
-  contenido.style.transition = "none";
-  contenido.style.pointerEvents = "auto";
-  document.querySelectorAll('[data-clon], .drag-ghost, .clon').forEach(el => el.remove());
-}
-asegurarContenidoVisible();
-
-// ==================== DRAG & DROP PARA EJERCICIOS (NIVEL 4) ====================
+// ==================== DRAG & DROP PARA EJERCICIOS ====================
 let dragEjercicio = null;
 let dragEjercicioStartX = 0;
 let dragEjercicioStartY = 0;
@@ -1052,7 +921,6 @@ let dragEjercicioTimer = null;
 let hasMovedEjercicio = false;
 
 function startDragEjercicio(e) {
-  // No interferir con clicks normales
   if (e.type === "mousedown" && e.button !== 0) return;
   
   dragEjercicio = e.currentTarget.closest(".ejercicio-acordeon");
@@ -1178,11 +1046,10 @@ let dragging = false;
 let dragStartIndex = null;
 let dragTimer = null;
 let hasMoved = false;
-const MOVEMENT_THRESHOLD = 10; // píxeles de holgura permitidos antes de cancelar drag
-const LONG_PRESS_DURATION = 500; // ms para activar drag
+const MOVEMENT_THRESHOLD = 10;
+const LONG_PRESS_DURATION = 500;
 
 function startDrag(e) {
-  // No interferir con clicks normales - NO preventDefault
   if (e.type === "mousedown" && e.button !== 0) return;
   
   dragItem = e.currentTarget.closest(".list-item");
@@ -1196,13 +1063,11 @@ function startDrag(e) {
   dragStartX = touch.clientX;
   dragStartY = touch.clientY;
 
-  // Listener temporal para detectar movimiento durante el long-press
   const checkMovement = (moveEvent) => {
     const moveTouch = moveEvent.touches ? moveEvent.touches[0] : moveEvent;
     const deltaX = Math.abs(moveTouch.clientX - dragStartX);
     const deltaY = Math.abs(moveTouch.clientY - dragStartY);
     
-    // Si el usuario se mueve demasiado, cancelar el drag (probablemente está haciendo scroll)
     if (deltaX > MOVEMENT_THRESHOLD || deltaY > MOVEMENT_THRESHOLD) {
       hasMoved = true;
       clearTimeout(dragTimer);
@@ -1216,29 +1081,23 @@ function startDrag(e) {
     document.removeEventListener('touchmove', checkMovement);
   };
 
-  // Listeners temporales - IMPORTANTE: { passive: true } para no bloquear scroll
   document.addEventListener('mousemove', checkMovement, { passive: true });
   document.addEventListener('touchmove', checkMovement, { passive: true });
 
-  // Timer para activar drag después del long-press
   dragTimer = setTimeout(() => {
     cleanup();
     
-    // Solo activar drag si NO hubo movimiento
     if (!hasMoved) {
       dragging = true;
       dragItem.classList.add("dragging");
       
-      // Bloquear selección de texto solo cuando se activa el drag
       document.body.style.userSelect = 'none';
       document.body.style.webkitUserSelect = 'none';
       
-      // Feedback háptico si está disponible
       if (navigator.vibrate) {
         navigator.vibrate(50);
       }
       
-      // Añadir feedback visual
       dragItem.style.opacity = '0.7';
       dragItem.style.transform = 'scale(1.02)';
     }
@@ -1246,10 +1105,8 @@ function startDrag(e) {
 }
 
 function dragMove(e) {
-  // Solo procesar si estamos en modo drag activo
   if (!dragging || !dragItem) return;
   
-  // Ahora sí, prevenir scroll mientras arrastramos
   e.preventDefault();
 
   const touch = e.touches ? e.touches[0] : e;
@@ -1269,7 +1126,6 @@ function dragMove(e) {
     }
   }
 
-  // Reordenar elementos
   if (targetItem) {
     contenido.insertBefore(dragItem, targetItem);
   } else if (items.length > 0) {
@@ -1281,11 +1137,9 @@ function dragEnd() {
   clearTimeout(dragTimer);
   dragTimer = null;
   
-  // Restaurar selección de texto
   document.body.style.userSelect = '';
   document.body.style.webkitUserSelect = '';
 
-  // Si no estábamos en modo drag, simplemente limpiar
   if (!dragging || !dragItem) {
     dragItem = null;
     dragStartIndex = null;
@@ -1293,7 +1147,6 @@ function dragEnd() {
     return;
   }
 
-  // Restaurar estilos visuales
   dragItem.style.opacity = '';
   dragItem.style.transform = '';
   
@@ -1302,7 +1155,6 @@ function dragEnd() {
 
   const newIndex = [...contenido.children].indexOf(dragItem);
 
-  // Guardar cambios solo si hubo reordenamiento
   if (dragStartIndex !== null && newIndex !== dragStartIndex) {
     const nivel = nivelActual();
     const movedItem = nivel.hijos.splice(dragStartIndex, 1)[0];
@@ -1321,9 +1173,7 @@ function crearIndice(item, index, nivel) {
   div.dataset.index = index;
   div.dataset.nivel = rutaActual.length;
   
-  // Click en el div completo
   div.addEventListener('click', (e) => {
-    // Si estamos arrastrando, ignorar el click
     if (dragging) {
       e.preventDefault();
       e.stopPropagation();
@@ -1345,16 +1195,8 @@ function crearIndice(item, index, nivel) {
   div.addEventListener('mousedown', startDrag, { passive: false, capture: true });
   div.addEventListener('touchstart', startDrag, { passive: false, capture: true });
 
-  div.style.display = 'flex';
-  div.style.alignItems = 'center';
-  div.style.gap = '4px';
-  div.style.padding = '8px';
-  div.style.borderBottom = '1px solid #ddd';
-  div.style.cursor = 'pointer';
-
   if (!item.editando) item.editando = false;
 
-  // MODO EDICIÓN
   if (item.editando) {
     const input = document.createElement('input');
     input.value = item.nombre || '';
@@ -1395,9 +1237,7 @@ function crearIndice(item, index, nivel) {
       });
       div.appendChild(fechaInput);
     }
-  }
-  // MODO VISUAL
-  else {
+  } else {
     const input = document.createElement('input');
     input.value = item.nombre;
     input.readOnly = true;
@@ -1424,7 +1264,6 @@ function crearIndice(item, index, nivel) {
       div.appendChild(fechaInput);
     }
 
-    // opciones botón
     if (rutaActual.length >= 1 && rutaActual.length <= 3) {
       const opcionesBtn = document.createElement('button');
       opcionesBtn.className = "btn-opciones";
@@ -1477,7 +1316,7 @@ function initGlobalListeners() {
       }, { merge: true });
       
       datos = structuredClone(datosRecuperados);
-      localStorage.setItem("misDatos", JSON.stringify(datos));
+      window.datos = datos;
       
       console.log('✅ Datos restaurados correctamente');
       alert('✅ Datos restaurados correctamente');
@@ -1491,14 +1330,12 @@ function initGlobalListeners() {
 
   console.log('💾 Función restaurarDesdeJSON() disponible. Uso: restaurarDesdeJSON(\'tu json aquí\')');
 
-  // Drag & drop global para listas normales
   document.addEventListener("mousemove", dragMove);
   document.addEventListener("touchmove", dragMove, { passive: false });
   document.addEventListener("mouseup", dragEnd);
   document.addEventListener("touchend", dragEnd);
   document.addEventListener("touchcancel", dragEnd);
   
-  // Drag & drop global para ejercicios (nivel 4)
   document.addEventListener("mousemove", dragMoveEjercicio);
   document.addEventListener("touchmove", dragMoveEjercicio, { passive: false });
   document.addEventListener("mouseup", dragEndEjercicio);

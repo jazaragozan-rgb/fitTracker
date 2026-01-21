@@ -41,60 +41,76 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
             ruta: [i, j, k],
             nombre: sesion.nombre || "Sesión sin nombre"
           });
-
-          // Calcular volumen de la sesión
-          let volumenSesion = 0;
-          (sesion.hijos || []).forEach(bloque => {
-            (bloque.hijos || []).forEach(ejerc => {
-              (ejerc.series || []).forEach(serie => {
-                const peso = parseFloat(serie.peso) || 0;
-                const reps = parseInt(serie.reps) || 0;
-                volumenSesion += peso * reps;
-              });
-            });
-          });
-
-          // Agrupar por semana
-          const inicioSemana = new Date(fechaObj);
-          inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
-          const semanaKey = inicioSemana.toISOString().split('T')[0];
-          const semanaExistente = volumenPorSemana.find(s => s.semana === semanaKey);
-          if (semanaExistente) {
-            semanaExistente.volumen += volumenSesion;
-          } else {
-            volumenPorSemana.push({ semana: semanaKey, volumen: volumenSesion });
-          }
         }
       });
     });
   });
 
-  // Recolectar ejercicios con datos
-  datos.forEach(meso => {
+  // Recolectar ejercicios con datos Y calcular volumen por sesión
+  const volumenPorFecha = {};
+  
+  datos[0]?.hijos?.forEach(meso => {
     (meso.hijos || []).forEach(micro => {
       (micro.hijos || []).forEach(sesion => {
-        (sesion.hijos || []).forEach(subSesion => {
-          const fechaSubSesion = subSesion.fecha;
-          const fechaSubSesionTS = new Date(fechaSubSesion).getTime() || 0;
-          if (fechaSubSesionTS <= hoy.getTime()) {
-            (subSesion.series ? [subSesion] : (subSesion.hijos || [])).forEach(ej => {
-              const ejercicios = ej.series ? [ej] : (ej.hijos || []);
-              ejercicios.forEach(ejercicio => {
+        let fechaSesion = sesion.fecha;
+        if (!fechaSesion && sesion.hijos && sesion.hijos.length > 0) {
+          for (const subNivel of sesion.hijos) {
+            if (subNivel.fecha) {
+              fechaSesion = subNivel.fecha;
+              break;
+            }
+          }
+        }
+        
+        if (fechaSesion) {
+          // Calcular volumen total de esta sesión
+          let volumenSesion = 0;
+          
+          (sesion.hijos || []).forEach(bloque => {
+            (bloque.hijos || []).forEach(ejercicio => {
+              if (ejercicio.series) {
+                ejercicio.series.forEach(serie => {
+                  const peso = parseFloat(serie.peso) || 0;
+                  const reps = parseInt(serie.reps) || 0;
+                  volumenSesion += peso * reps;
+                });
+                
+                // Recolectar para ejercicios
                 const pesoMax = Math.max(...(ejercicio.series?.map(s => parseFloat(s.peso) || 0) || [0]));
                 if (pesoMax > 0) {
                   ejerciciosTodos.push({
                     nombre: ejercicio.nombre,
-                    fecha: fechaSubSesion,
+                    fecha: fechaSesion,
                     pesoMax,
                     series: ejercicio.series
                   });
                 }
-              });
+              }
             });
+          });
+          
+          // Agrupar por fecha para luego convertir a semanas
+          if (volumenSesion > 0) {
+            volumenPorFecha[fechaSesion] = (volumenPorFecha[fechaSesion] || 0) + volumenSesion;
           }
-        });
+        }
       });
     });
+  });
+  
+  // Convertir volumen por fecha a volumen por semana
+  Object.keys(volumenPorFecha).forEach(fecha => {
+    const fechaObj = new Date(fecha);
+    const inicioSemana = new Date(fechaObj);
+    inicioSemana.setDate(inicioSemana.getDate() - inicioSemana.getDay());
+    const semanaKey = inicioSemana.toISOString().split('T')[0];
+    
+    const semanaExistente = volumenPorSemana.find(s => s.semana === semanaKey);
+    if (semanaExistente) {
+      semanaExistente.volumen += volumenPorFecha[fecha];
+    } else {
+      volumenPorSemana.push({ semana: semanaKey, volumen: volumenPorFecha[fecha] });
+    }
   });
 
   // ==================== 1. RESUMEN RÁPIDO ====================
@@ -351,7 +367,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   volumenPorSemana.sort((a, b) => new Date(a.semana) - new Date(b.semana));
   const ultimasSemanas = volumenPorSemana.slice(-8);
 
-  if (window.Chart) {
+  if (window.Chart && ultimasSemanas.length > 0) {
     new Chart(chartVolumen, {
       type: 'line',
       data: {
@@ -397,6 +413,12 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
         }
       }
     });
+  } else {
+    // Mostrar mensaje si no hay datos
+    const mensajeVacio = document.createElement('div');
+    mensajeVacio.className = 'empty-state';
+    mensajeVacio.textContent = 'No hay datos de volumen disponibles. Completa sesiones con series registradas para ver este gráfico.';
+    cardVolumen.appendChild(mensajeVacio);
   }
 
   dashboard.appendChild(cardVolumen);
