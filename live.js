@@ -1,5 +1,5 @@
 // live.js
-// Lógica para el entrenamiento en vivo
+// Lógica para el entrenamiento en vivo nueva
 
 // Variable global para almacenar el estado del entrenamiento
 let entrenamientoActual = {
