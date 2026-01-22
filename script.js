@@ -43,6 +43,39 @@ function navigatePush(index) {
 
 // ==================== DOMContentLoaded: inicialización UI ====================
 document.addEventListener("DOMContentLoaded", () => {
+  // ✅ PRIMERO: Toggle Login/Register - Debe funcionar en TODAS las páginas
+  const formLogin = $("form-login");
+  const formRegister = $("form-register");
+  const showRegisterBtn = $("showRegisterBtn");
+  const showLoginBtn = $("showLoginBtn");
+
+  if (showRegisterBtn && formLogin && formRegister) {
+    console.log('[DOMContentLoaded] ✓ Botón "Crear cuenta nueva" encontrado, añadiendo listener');
+    showRegisterBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      console.log('[showRegisterBtn] Click detectado');
+      formLogin.classList.add("hidden");
+      formRegister.classList.remove("hidden");
+      const logMsg = $("log-msg");
+      if (logMsg) logMsg.textContent = "";
+    });
+  } else {
+    console.log('[DOMContentLoaded] ⚠️ No se encontraron elementos de login/register');
+  }
+  
+  if (showLoginBtn && formLogin && formRegister) {
+    console.log('[DOMContentLoaded] ✓ Botón "Ya tengo cuenta" encontrado, añadiendo listener');
+    showLoginBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      console.log('[showLoginBtn] Click detectado');
+      formRegister.classList.add("hidden");
+      formLogin.classList.remove("hidden");
+      const regMsg = $("reg-msg");
+      if (regMsg) regMsg.textContent = "";
+    });
+  }
+
+  // ✅ DESPUÉS: Inicializar elementos de la app (solo si estamos en la página de app)
   contenido = $('contenido');
   tituloNivel = $('tituloNivel');
   headerButtons = $('headerButtons');
@@ -57,7 +90,7 @@ document.addEventListener("DOMContentLoaded", () => {
   menuTitulo = $('menuTitulo');
   subHeader = $('subHeader');
 
-  // Botones principales
+  // Botones principales (solo si existen)
   if (backButton) backButton.addEventListener("click", () => {
     if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
@@ -82,19 +115,6 @@ document.addEventListener("DOMContentLoaded", () => {
       sideMenu.style.left = "-70%";
       menuOverlay.classList.add("hidden");
     });
-  });
-
-  // Toggle Login/Register
-  const formLogin = $("form-login");
-  const formRegister = $("form-register");
-  const showRegisterBtn = $("showRegisterBtn");
-  const showLoginBtn = $("showLoginBtn");
-
-  if (showRegisterBtn) showRegisterBtn.addEventListener("click", () => {
-    hide(formLogin); show(formRegister); $("log-msg").textContent = "";
-  });
-  if (showLoginBtn) showLoginBtn.addEventListener("click", () => {
-    hide(formRegister); show(formLogin); $("reg-msg").textContent = "";
   });
 
   window.renderizar = renderizar;
@@ -806,7 +826,7 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
 
   wrapper.appendChild(header);
 
-  // Contenido expandible (series) - CONTINUARÁ EN LA SIGUIENTE PARTE...
+  // Contenido expandible (series)
   if (ejercicioExpandido === index && !ejercicio.editando) {
     const contenidoExpandible = document.createElement('div');
     contenidoExpandible.className = 'ejercicio-contenido';
