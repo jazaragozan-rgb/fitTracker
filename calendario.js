@@ -139,16 +139,46 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
           }
         }
         if (fechaSesion) {
+          // Determinar si la sesión está completada
+          // Una sesión está completada solo si TODAS sus series están marcadas como completadas
+          let completada = false;
+          let totalSeries = 0;
+          let seriesCompletadas = 0;
+          
+          // Contar todas las series y las completadas
+          if (sesion.hijos && sesion.hijos.length > 0) {
+            sesion.hijos.forEach(item => {
+              // Si el item tiene series directamente (es un ejercicio)
+              if (item.series && item.series.length > 0) {
+                totalSeries += item.series.length;
+                seriesCompletadas += item.series.filter(s => s.completada).length;
+              }
+              // Si el item tiene hijos (es un bloque que contiene ejercicios)
+              if (item.hijos && item.hijos.length > 0) {
+                item.hijos.forEach(ej => {
+                  if (ej.series && ej.series.length > 0) {
+                    totalSeries += ej.series.length;
+                    seriesCompletadas += ej.series.filter(s => s.completada).length;
+                  }
+                });
+              }
+            });
+          }
+          
+          // La sesión está completada solo si tiene series Y todas están completadas
+          completada = totalSeries > 0 && totalSeries === seriesCompletadas;
+          
           sesiones.push({
             fecha: fechaSesion,
             nombre: sesion.nombre || "Sesión sin nombre",
             ejercicios: sesion.hijos || [],
             ruta: [0, i, j, k],
-            completada: (sesion.hijos || []).some(bloque => 
-              (bloque.hijos || []).some(ej => 
-                (ej.series || []).some(s => s.completada)
-              )
-            )
+            completada: completada,
+            // Guardar stats para debug
+            _stats: {
+              totalSeries,
+              seriesCompletadas
+            }
           });
         }
       });
@@ -330,6 +360,29 @@ function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar
       sesiones.forEach(s => totalEjercicios += s.ejercicios.length);
     }
   });
+  
+  // Debug: Log estadísticas
+  if (sesionesDelMes > 0) {
+    console.log(`[Calendario] ${meses[fecha.getMonth()]} ${fecha.getFullYear()}:`, {
+      sesionesDelMes,
+      sesionesCompletadas,
+      totalEjercicios,
+      porcentaje: Math.round((sesionesCompletadas / sesionesDelMes) * 100)
+    });
+    
+    // Log detallado de cada sesión para debug
+    Object.keys(sesionesPorFecha).forEach(fechaStr => {
+      const fechaSesion = new Date(fechaStr + 'T00:00:00');
+      if (fechaSesion >= primerDiaMes && fechaSesion <= ultimoDiaMes) {
+        const sesiones = sesionesPorFecha[fechaStr];
+        sesiones.forEach(s => {
+          if (s._stats) {
+            console.log(`  └─ ${s.nombre}: ${s._stats.seriesCompletadas}/${s._stats.totalSeries} series completadas ${s.completada ? '✅' : '❌'}`);
+          }
+        });
+      }
+    });
+  }
 
   // Panel de estadísticas (solo si hay sesiones en el mes)
   if (sesionesDelMes > 0) {
@@ -355,11 +408,13 @@ function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar
     // Completadas
     const statCompletadas = document.createElement('div');
     statCompletadas.style.textAlign = 'center';
+    statCompletadas.style.position = 'relative';
     const porcentaje = Math.round((sesionesCompletadas / sesionesDelMes) * 100);
     statCompletadas.innerHTML = `
       <div style="font-size: 1.5rem; font-weight: 700; color: ${porcentaje === 100 ? '#4CAF50' : porcentaje >= 50 ? '#FFA500' : '#FF6B6B'};">${porcentaje}%</div>
-      <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600, text-transform: uppercase;">Completado</div>
+      <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;" title="Sesiones con TODAS las series marcadas como completadas (✔️)">Completado</div>
     `;
+    statCompletadas.style.cursor = 'help';
     statsPanel.appendChild(statCompletadas);
 
     // Ejercicios totales
