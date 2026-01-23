@@ -69,19 +69,6 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   controlesNav.appendChild(btnHoy);
   subHeader.appendChild(controlesNav);
 
-  // Breadcrumb dinámico (se actualizará con el scroll)
-  const breadcrumb = document.createElement('div');
-  breadcrumb.id = 'breadcrumb-mes';
-  breadcrumb.style.fontSize = '0.75rem';
-  breadcrumb.style.color = 'var(--text-secondary)';
-  breadcrumb.style.textAlign = 'center';
-  breadcrumb.style.marginTop = '8px';
-  breadcrumb.style.fontWeight = '600';
-  breadcrumb.style.textTransform = 'uppercase';
-  breadcrumb.style.letterSpacing = '0.5px';
-  breadcrumb.textContent = `${mesesNombres[mesActual]} ${añoActual}`;
-  subHeader.appendChild(breadcrumb);
-
   // Limpiar contenido
   contenido.innerHTML = '';
 
@@ -89,8 +76,9 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   const calendarioContainer = document.createElement('div');
   calendarioContainer.className = 'calendario-container';
   calendarioContainer.style.padding = '16px';
+  calendarioContainer.style.paddingTop = '80px'; // Aumentado para que el primer mes sea visible
   calendarioContainer.style.overflowY = 'auto';
-  calendarioContainer.style.height = 'calc(100vh - 116px - 64px)'; // header + subheader + footer
+  calendarioContainer.style.height = 'calc(100vh - 200px)';
   calendarioContainer.style.scrollBehavior = 'smooth';
 
   // Obtener todas las sesiones con fecha
@@ -197,7 +185,6 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
           const relativeTop = rect.top - containerTop;
           
           if (relativeTop <= 100 && relativeTop >= -rect.height / 2) {
-            breadcrumb.textContent = `${mesesNombres[mes.fecha.getMonth()]} ${mes.fecha.getFullYear()}`;
             selectorMes.value = mes.offset;
             break;
           }
@@ -284,7 +271,7 @@ function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar
     const porcentaje = Math.round((sesionesCompletadas / sesionesDelMes) * 100);
     statCompletadas.innerHTML = `
       <div style="font-size: 1.5rem; font-weight: 700; color: ${porcentaje === 100 ? '#4CAF50' : porcentaje >= 50 ? '#FFA500' : '#FF6B6B'};">${porcentaje}%</div>
-      <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600; text-transform: uppercase;">Completado</div>
+      <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600, text-transform: uppercase;">Completado</div>
     `;
     statsPanel.appendChild(statCompletadas);
 
@@ -364,7 +351,9 @@ function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar
   for (let i = 0; i < primerDiaSemana; i++) {
     const diaVacio = document.createElement('div');
     diaVacio.className = 'dia-vacio';
-    diaVacio.style.padding = '12px';
+    diaVacio.style.padding = '8px';
+    diaVacio.style.minHeight = '50px';
+    diaVacio.style.borderRadius = '8px';
     diasGrid.appendChild(diaVacio);
   }
 
@@ -447,8 +436,9 @@ function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar
     diaDiv.style.padding = '8px';
     diaDiv.style.borderRadius = '8px';
     diaDiv.style.textAlign = 'center';
-    diaDiv.style.cursor = 'pointer'; // Siempre clicable
+    diaDiv.style.cursor = 'pointer';
     diaDiv.style.minHeight = '50px';
+    diaDiv.style.height = '80px'; // Altura fija para todos
     diaDiv.style.display = 'flex';
     diaDiv.style.flexDirection = 'column';
     diaDiv.style.alignItems = 'center';
@@ -532,7 +522,7 @@ function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar
       badge.style.background = todasCompletadas 
         ? 'rgba(76, 175, 80, 0.2)' 
         : hayCompletadas 
-          ? 'rgba(255, 193, 7, 0.2)'
+          ? 'rgba(255,193,7, 0.2)'
           : 'rgba(255, 165, 0, 0.2)';
       badge.style.color = todasCompletadas 
         ? '#4CAF50' 
