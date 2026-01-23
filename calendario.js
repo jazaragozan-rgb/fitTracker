@@ -76,11 +76,54 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   const calendarioContainer = document.createElement('div');
   calendarioContainer.className = 'calendario-container';
   calendarioContainer.style.padding = '16px';
-  calendarioContainer.style.paddingTop = '120px'; // Aumentado para que el primer mes sea visible
   calendarioContainer.style.overflowY = 'auto';
-  calendarioContainer.style.height = 'calc(100vh - 140px - 65px)';
   calendarioContainer.style.scrollBehavior = 'smooth';
-  calendarioContainer.style.marginTop = '15px';
+  
+  // ✅ SOLUCIÓN: Calcular dinámicamente el espacio superior basándose en header + subheader
+  const calcularAlturaSuperior = () => {
+    const header = document.querySelector('header');
+    const subHeaderEl = document.getElementById('subHeader');
+    const footer = document.getElementById('footerNav');
+    
+    const headerHeight = header ? header.offsetHeight : 48;
+    const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+    const footerHeight = footer ? footer.offsetHeight : 64;
+    
+    // Menos padding porque el scroll con offset se encarga del posicionamiento correcto
+    const totalTopHeight = headerHeight + subHeaderHeight;
+    
+    calendarioContainer.style.paddingTop = `${totalTopHeight}px`;
+    calendarioContainer.style.height = `calc(100vh - ${totalTopHeight}px - ${footerHeight}px)`;
+    
+    console.log('[Calendario] Alturas calculadas:', {
+      header: headerHeight,
+      subHeader: subHeaderHeight,
+      footer: footerHeight,
+      paddingTop: totalTopHeight,
+      viewportHeight: window.innerHeight
+    });
+  };
+  
+  // Calcular inmediatamente y después de que el DOM se actualice
+  requestAnimationFrame(() => {
+    calcularAlturaSuperior();
+    // Segundo cálculo después de un pequeño delay para asegurar que todo está renderizado
+    setTimeout(calcularAlturaSuperior, 100);
+  });
+  
+  // Recalcular si cambia el tamaño de la ventana
+  let resizeTimeout;
+  const handleResize = () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(calcularAlturaSuperior, 100);
+  };
+  window.addEventListener('resize', handleResize);
+  
+  // Limpiar el listener cuando se destruya el componente
+  calendarioContainer.addEventListener('DOMNodeRemoved', () => {
+    window.removeEventListener('resize', handleResize);
+  });
+
   // Obtener todas las sesiones con fecha
   const sesiones = [];
   datos[0]?.hijos?.forEach((meso, i) => {
@@ -147,15 +190,46 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     const offset = parseInt(e.target.value);
     const mesCard = mesesCards.find(m => m.offset === offset);
     if (mesCard) {
-      mesCard.card.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      const header = document.querySelector('header');
+      const subHeaderEl = document.getElementById('subHeader');
+      const headerHeight = header ? header.offsetHeight : 48;
+      const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+      const scrollOffset = headerHeight + subHeaderHeight + 16; // 16px de margen extra
+      
+      // Scroll con offset manual
+      const elementPosition = mesCard.card.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + calendarioContainer.scrollTop - scrollOffset;
+      
+      calendarioContainer.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
     }
   });
 
   // Event listener para el botón "Hoy"
   btnHoy.addEventListener('click', () => {
     if (mesActualCard) {
-      mesActualCard.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      selectorMes.value = '0';
+      // Recalcular alturas antes de hacer scroll (por si acaso cambió algo)
+      calcularAlturaSuperior();
+      setTimeout(() => {
+        const header = document.querySelector('header');
+        const subHeaderEl = document.getElementById('subHeader');
+        const headerHeight = header ? header.offsetHeight : 48;
+        const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+        const offset = headerHeight + subHeaderHeight + 16; // 16px de margen extra
+        
+        // Scroll con offset manual
+        const elementPosition = mesActualCard.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + calendarioContainer.scrollTop - offset;
+        
+        calendarioContainer.scrollTo({
+          top: offsetPosition,
+          behavior: 'smooth'
+        });
+        
+        selectorMes.value = '0';
+      }, 50);
     }
   });
 
@@ -199,8 +273,21 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   // Hacer scroll al mes actual después de renderizar
   if (mesActualCard) {
     setTimeout(() => {
-      mesActualCard.scrollIntoView({ block: 'start', behavior: 'smooth' });
-    }, 100);
+      const header = document.querySelector('header');
+      const subHeaderEl = document.getElementById('subHeader');
+      const headerHeight = header ? header.offsetHeight : 48;
+      const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+      const offset = headerHeight + subHeaderHeight + 16; // 16px de margen extra
+      
+      // Scroll con offset manual
+      const elementPosition = mesActualCard.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + calendarioContainer.scrollTop - offset;
+      
+      calendarioContainer.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }, 200);
   }
 }
 
