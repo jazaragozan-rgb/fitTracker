@@ -1,29 +1,127 @@
 // calendario.js
-// Renderizado del calendario con scroll infinito y resaltado de microciclos/mesociclos
+// Renderizado del calendario con vista mensual y semanal
 
 export function renderizarCalendario(datos, contenido, subHeader, rutaActual, renderizar) {
   // Limpiar subheader
   subHeader.innerHTML = '';
   
-  // Título del calendario
+  // Estado de la vista (guardar en sessionStorage para persistir)
+  let vistaActual = sessionStorage.getItem('calendarioVista') || 'mensual';
+  
+  // ===== ESTRUCTURA DEL SUBHEADER =====
+  // Contenedor principal con layout horizontal
+  const subHeaderContent = document.createElement('div');
+  subHeaderContent.style.display = 'flex';
+  subHeaderContent.style.justifyContent = 'space-between';
+  subHeaderContent.style.alignItems = 'flex-end'; // Alinear por la parte inferior
+  subHeaderContent.style.width = '100%';
+  subHeaderContent.style.gap = '12px';
+  subHeaderContent.style.padding = '8px 12px 4px 12px'; // Padding inferior reducido para compactar
+  subHeaderContent.style.position = 'relative';
+
+  // ===== LADO IZQUIERDO: Selector de vista =====
+  const leftSide = document.createElement('div');
+  leftSide.style.display = 'flex';
+  leftSide.style.flexDirection = 'column';
+  leftSide.style.gap = '0px';
+  leftSide.style.flex = '1';
+
+  // Selector de vista (Mes/Semana) - 70px de altura
+  const selectorVista = document.createElement('div');
+  selectorVista.style.display = 'flex';
+  selectorVista.style.background = 'var(--bg-main)';
+  selectorVista.style.borderRadius = '8px';
+  selectorVista.style.paddingBottom = '2px';
+  selectorVista.style.border = '1px solid var(--border-color)';
+  selectorVista.style.height = '60px'; // 70px de altura total
+
+  const btnMensual = document.createElement('button');
+  btnMensual.textContent = '📅 Mes';
+  btnMensual.style.flex = '1';
+  btnMensual.style.padding = '6px 12px';
+  btnMensual.style.border = 'none';
+  btnMensual.style.borderRadius = '6px';
+  btnMensual.style.fontSize = '0.8rem';
+  btnMensual.style.fontWeight = '700';
+  btnMensual.style.cursor = 'pointer';
+  btnMensual.style.transition = 'all 0.2s ease';
+  btnMensual.style.background = vistaActual === 'mensual' ? 'var(--primary-mint)' : 'transparent';
+  btnMensual.style.color = vistaActual === 'mensual' ? '#ffffff' : 'var(--text-secondary)';
+
+  const btnSemanal = document.createElement('button');
+  btnSemanal.textContent = '📆 Semana';
+  btnSemanal.style.flex = '1';
+  btnSemanal.style.padding = '6px 12px';
+  btnSemanal.style.border = 'none';
+  btnSemanal.style.borderRadius = '6px';
+  btnSemanal.style.fontSize = '0.8rem';
+  btnSemanal.style.fontWeight = '700';
+  btnSemanal.style.cursor = 'pointer';
+  btnSemanal.style.transition = 'all 0.2s ease';
+  btnSemanal.style.background = vistaActual === 'semanal' ? 'var(--primary-mint)' : 'transparent';
+  btnSemanal.style.color = vistaActual === 'semanal' ? '#ffffff' : 'var(--text-secondary)';
+
+  selectorVista.appendChild(btnMensual);
+  selectorVista.appendChild(btnSemanal);
+  leftSide.appendChild(selectorVista);
+
+  // ===== CENTRO: Título (posición absoluta para centrarlo) =====
   const h2Nivel = document.createElement('h2');
   h2Nivel.id = 'tituloNivel';
-  h2Nivel.textContent = 'Calendario';
-  subHeader.appendChild(h2Nivel);
+  h2Nivel.textContent = '';
+  h2Nivel.style.position = 'absolute';
+  h2Nivel.style.left = '50%';
+  h2Nivel.style.top = '8px';
+  h2Nivel.style.transform = 'translateX(-50%)';
+  h2Nivel.style.margin = '0';
+  h2Nivel.style.fontSize = '1rem';
+  h2Nivel.style.fontWeight = '700';
+  h2Nivel.style.color = 'var(--primary-mint)';
+  h2Nivel.style.textTransform = 'uppercase';
+  h2Nivel.style.letterSpacing = '0.5px';
+  h2Nivel.style.pointerEvents = 'none'; // Para que no interfiera con los clicks
+  h2Nivel.style.zIndex = '1';
 
-  // Contenedor de controles de navegación
-  const controlesNav = document.createElement('div');
-  controlesNav.id = 'subHeaderButtons';
-  controlesNav.style.display = 'flex';
-  controlesNav.style.gap = '8px';
-  controlesNav.style.justifyContent = 'center';
-  controlesNav.style.alignItems = 'center';
-  controlesNav.style.marginTop = '8px';
+  // ===== LADO DERECHO: Navegación (Hoy + Selector mes) =====
+  // Total: 70px = btnHoy (altura variable) + gap (espacio) + selectorMes (32px)
+  // Calculamos: btnHoy = 70px - 32px - 6px(gap) = 32px
+  const rightSide = document.createElement('div');
+  rightSide.style.display = 'flex';
+  rightSide.style.flexDirection = 'column';
+  rightSide.style.justifyContent = 'space-between'; // Distribuir espacio
+  rightSide.style.height = '70px'; // Altura total de 70px
+  rightSide.style.minWidth = '180px';
+  rightSide.style.flex = '1';
+  rightSide.style.alignItems = 'flex-end';
 
-  // Selector de mes
+  // Botón "Hoy" - altura calculada para que el total sea 70px
+  const btnHoy = document.createElement('button');
+  btnHoy.textContent = '📍 Hoy';
+  btnHoy.className = 'btn-hoy-calendario';
+  btnHoy.style.width = '100%';
+  btnHoy.style.height = '22px'; // 32px para el botón Hoy
+  btnHoy.style.padding = '0 12px';
+  btnHoy.style.background = 'var(--primary-mint)';
+  btnHoy.style.color = 'white';
+  btnHoy.style.border = 'none';
+  btnHoy.style.borderRadius = '8px';
+  btnHoy.style.fontSize = '0.85rem';
+  btnHoy.style.fontWeight = '700';
+  btnHoy.style.cursor = 'pointer';
+  btnHoy.style.transition = 'all 0.2s ease';
+  btnHoy.style.textTransform = 'uppercase';
+  btnHoy.style.letterSpacing = '0.5px';
+  btnHoy.style.display = 'flex';
+  btnHoy.style.alignItems = 'center';
+  btnHoy.style.justifyContent = 'center';
+  btnHoy.style.flexShrink = '0'; // No permitir que se encoja
+
+  // Selector de mes - 32px fijo
   const selectorMes = document.createElement('select');
   selectorMes.className = 'selector-mes-calendario';
-  selectorMes.style.padding = '8px 12px';
+  selectorMes.style.width = '100%';
+  selectorMes.style.height = '22px'; // 32px para el selector
+  selectorMes.style.padding = '0 12px';
   selectorMes.style.border = '1px solid var(--border-color)';
   selectorMes.style.borderRadius = '8px';
   selectorMes.style.fontSize = '0.85rem';
@@ -31,6 +129,8 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   selectorMes.style.background = 'var(--bg-card)';
   selectorMes.style.color = 'var(--text-primary)';
   selectorMes.style.cursor = 'pointer';
+  selectorMes.style.display = vistaActual === 'mensual' ? 'block' : 'none';
+  selectorMes.style.flexShrink = '0'; // No permitir que se encoja
   
   const mesesNombres = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 
                         'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -49,25 +149,14 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     selectorMes.appendChild(option);
   }
 
-  // Botón "Hoy"
-  const btnHoy = document.createElement('button');
-  btnHoy.textContent = '📍 Hoy';
-  btnHoy.className = 'btn-hoy-calendario';
-  btnHoy.style.padding = '8px 16px';
-  btnHoy.style.background = 'var(--primary-mint)';
-  btnHoy.style.color = 'white';
-  btnHoy.style.border = 'none';
-  btnHoy.style.borderRadius = '8px';
-  btnHoy.style.fontSize = '0.85rem';
-  btnHoy.style.fontWeight = '700';
-  btnHoy.style.cursor = 'pointer';
-  btnHoy.style.transition = 'all 0.2s ease';
-  btnHoy.style.textTransform = 'uppercase';
-  btnHoy.style.letterSpacing = '0.5px';
+  rightSide.appendChild(btnHoy);
+  rightSide.appendChild(selectorMes);
 
-  controlesNav.appendChild(selectorMes);
-  controlesNav.appendChild(btnHoy);
-  subHeader.appendChild(controlesNav);
+  // Ensamblar subheader
+  subHeaderContent.appendChild(leftSide);
+  subHeaderContent.appendChild(h2Nivel); // Título con posición absoluta
+  subHeaderContent.appendChild(rightSide);
+  subHeader.appendChild(subHeaderContent);
 
   // Limpiar contenido
   contenido.innerHTML = '';
@@ -75,11 +164,12 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   // Contenedor principal del calendario
   const calendarioContainer = document.createElement('div');
   calendarioContainer.className = 'calendario-container';
+  calendarioContainer.id = 'calendarioContainer';
   calendarioContainer.style.padding = '16px';
   calendarioContainer.style.overflowY = 'auto';
   calendarioContainer.style.scrollBehavior = 'smooth';
   
-  // ✅ SOLUCIÓN: Calcular dinámicamente el espacio superior basándose en header + subheader
+  // Calcular dinámicamente el espacio superior
   const calcularAlturaSuperior = () => {
     const header = document.querySelector('header');
     const subHeaderEl = document.getElementById('subHeader');
@@ -89,29 +179,17 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
     const footerHeight = footer ? footer.offsetHeight : 64;
     
-    // Menos padding porque el scroll con offset se encarga del posicionamiento correcto
     const totalTopHeight = headerHeight + subHeaderHeight;
     
     calendarioContainer.style.paddingTop = `${totalTopHeight}px`;
     calendarioContainer.style.height = `calc(100vh - ${totalTopHeight}px - ${footerHeight}px)`;
-    
-    console.log('[Calendario] Alturas calculadas:', {
-      header: headerHeight,
-      subHeader: subHeaderHeight,
-      footer: footerHeight,
-      paddingTop: totalTopHeight,
-      viewportHeight: window.innerHeight
-    });
   };
   
-  // Calcular inmediatamente y después de que el DOM se actualice
   requestAnimationFrame(() => {
     calcularAlturaSuperior();
-    // Segundo cálculo después de un pequeño delay para asegurar que todo está renderizado
     setTimeout(calcularAlturaSuperior, 100);
   });
   
-  // Recalcular si cambia el tamaño de la ventana
   let resizeTimeout;
   const handleResize = () => {
     clearTimeout(resizeTimeout);
@@ -119,13 +197,63 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   };
   window.addEventListener('resize', handleResize);
   
-  // Limpiar el listener cuando se destruya el componente
   calendarioContainer.addEventListener('DOMNodeRemoved', () => {
     window.removeEventListener('resize', handleResize);
   });
 
   // Obtener todas las sesiones con fecha
+  const sesiones = obtenerSesiones(datos);
+  const sesionesPorFecha = crearMapaSesionesPorFecha(sesiones);
+
+  // Función para renderizar la vista correspondiente
+  const renderizarVista = (vista) => {
+    calendarioContainer.innerHTML = '';
+    vistaActual = vista;
+    sessionStorage.setItem('calendarioVista', vista);
+    
+    // Actualizar estilos de los botones
+    btnMensual.style.background = vista === 'mensual' ? 'var(--primary-mint)' : 'transparent';
+    btnMensual.style.color = vista === 'mensual' ? '#ffffff' : 'var(--text-secondary)';
+    btnSemanal.style.background = vista === 'semanal' ? 'var(--primary-mint)' : 'transparent';
+    btnSemanal.style.color = vista === 'semanal' ? '#ffffff' : 'var(--text-secondary)';
+    
+    // Mostrar/ocultar selector de mes según la vista
+    selectorMes.style.display = vista === 'mensual' ? 'block' : 'none';
+    
+    if (vista === 'mensual') {
+      renderizarVistaMensual(calendarioContainer, sesionesPorFecha, hoy, rutaActual, renderizar, selectorMes);
+    } else {
+      renderizarVistaSemanal(calendarioContainer, sesionesPorFecha, hoy, rutaActual, renderizar, btnHoy);
+    }
+  };
+
+  // Event listeners para cambiar de vista
+  btnMensual.addEventListener('click', () => renderizarVista('mensual'));
+  btnSemanal.addEventListener('click', () => renderizarVista('semanal'));
+
+  // Event listeners para hover
+  btnHoy.addEventListener('mouseenter', () => {
+    btnHoy.style.background = 'var(--mint-light)';
+    btnHoy.style.transform = 'translateY(-1px)';
+    btnHoy.style.boxShadow = 'var(--shadow-sm)';
+  });
+
+  btnHoy.addEventListener('mouseleave', () => {
+    btnHoy.style.background = 'var(--primary-mint)';
+    btnHoy.style.transform = 'translateY(0)';
+    btnHoy.style.boxShadow = 'none';
+  });
+
+  contenido.appendChild(calendarioContainer);
+  
+  // Renderizar la vista inicial
+  renderizarVista(vistaActual);
+}
+
+// ==================== OBTENER SESIONES ====================
+function obtenerSesiones(datos) {
   const sesiones = [];
+  
   datos[0]?.hijos?.forEach((meso, i) => {
     meso.hijos?.forEach((micro, j) => {
       micro.hijos?.forEach((sesion, k) => {
@@ -139,21 +267,16 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
           }
         }
         if (fechaSesion) {
-          // Determinar si la sesión está completada
-          // Una sesión está completada solo si TODAS sus series están marcadas como completadas
           let completada = false;
           let totalSeries = 0;
           let seriesCompletadas = 0;
           
-          // Contar todas las series y las completadas
           if (sesion.hijos && sesion.hijos.length > 0) {
             sesion.hijos.forEach(item => {
-              // Si el item tiene series directamente (es un ejercicio)
               if (item.series && item.series.length > 0) {
                 totalSeries += item.series.length;
                 seriesCompletadas += item.series.filter(s => s.completada).length;
               }
-              // Si el item tiene hijos (es un bloque que contiene ejercicios)
               if (item.hijos && item.hijos.length > 0) {
                 item.hijos.forEach(ej => {
                   if (ej.series && ej.series.length > 0) {
@@ -165,7 +288,6 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
             });
           }
           
-          // La sesión está completada solo si tiene series Y todas están completadas
           completada = totalSeries > 0 && totalSeries === seriesCompletadas;
           
           sesiones.push({
@@ -174,26 +296,32 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
             ejercicios: sesion.hijos || [],
             ruta: [0, i, j, k],
             completada: completada,
-            // Guardar stats para debug
-            _stats: {
-              totalSeries,
-              seriesCompletadas
-            }
+            _stats: { totalSeries, seriesCompletadas }
           });
         }
       });
     });
   });
+  
+  return sesiones;
+}
 
-  // Crear un mapa de sesiones por fecha
-  const sesionesPorFecha = {};
+function crearMapaSesionesPorFecha(sesiones) {
+  const mapa = {};
   sesiones.forEach(s => {
-    if (!sesionesPorFecha[s.fecha]) {
-      sesionesPorFecha[s.fecha] = [];
+    if (!mapa[s.fecha]) {
+      mapa[s.fecha] = [];
     }
-    sesionesPorFecha[s.fecha].push(s);
+    mapa[s.fecha].push(s);
   });
+  return mapa;
+}
 
+// ==================== VISTA MENSUAL ====================
+function renderizarVistaMensual(container, sesionesPorFecha, hoy, rutaActual, renderizar, selectorMes) {
+  const mesActual = hoy.getMonth();
+  const añoActual = hoy.getFullYear();
+  
   let mesActualCard = null;
   const mesesCards = [];
 
@@ -202,7 +330,6 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     const fecha = new Date(añoActual, mesActual + offset, 1);
     const mesCard = crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar);
     
-    // Marcar el mes actual para hacer scroll después
     if (offset === 0) {
       mesActualCard = mesCard;
       mesCard.id = 'mes-actual-calendario';
@@ -210,10 +337,8 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     
     mesCard.dataset.offset = offset;
     mesesCards.push({ offset, card: mesCard, fecha });
-    calendarioContainer.appendChild(mesCard);
+    container.appendChild(mesCard);
   }
-
-  contenido.appendChild(calendarioContainer);
 
   // Event listener para el selector de mes
   selectorMes.addEventListener('change', (e) => {
@@ -224,66 +349,26 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
       const subHeaderEl = document.getElementById('subHeader');
       const headerHeight = header ? header.offsetHeight : 48;
       const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
-      const scrollOffset = headerHeight + subHeaderHeight + 16; // 16px de margen extra
+      const scrollOffset = headerHeight + subHeaderHeight + 16;
       
-      // Scroll con offset manual
       const elementPosition = mesCard.card.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + calendarioContainer.scrollTop - scrollOffset;
+      const offsetPosition = elementPosition + container.scrollTop - scrollOffset;
       
-      calendarioContainer.scrollTo({
+      container.scrollTo({
         top: offsetPosition,
         behavior: 'smooth'
       });
     }
   });
 
-  // Event listener para el botón "Hoy"
-  btnHoy.addEventListener('click', () => {
-    if (mesActualCard) {
-      // Recalcular alturas antes de hacer scroll (por si acaso cambió algo)
-      calcularAlturaSuperior();
-      setTimeout(() => {
-        const header = document.querySelector('header');
-        const subHeaderEl = document.getElementById('subHeader');
-        const headerHeight = header ? header.offsetHeight : 48;
-        const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
-        const offset = headerHeight + subHeaderHeight + 16; // 16px de margen extra
-        
-        // Scroll con offset manual
-        const elementPosition = mesActualCard.getBoundingClientRect().top;
-        const offsetPosition = elementPosition + calendarioContainer.scrollTop - offset;
-        
-        calendarioContainer.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        });
-        
-        selectorMes.value = '0';
-      }, 50);
-    }
-  });
-
-  btnHoy.addEventListener('mouseenter', () => {
-    btnHoy.style.background = 'var(--mint-light)';
-    btnHoy.style.transform = 'translateY(-1px)';
-    btnHoy.style.boxShadow = 'var(--shadow-sm)';
-  });
-
-  btnHoy.addEventListener('mouseleave', () => {
-    btnHoy.style.background = 'var(--primary-mint)';
-    btnHoy.style.transform = 'translateY(0)';
-    btnHoy.style.boxShadow = 'none';
-  });
-
-  // Actualizar breadcrumb y selector al hacer scroll
+  // Actualizar selector al hacer scroll
   let ticking = false;
-  calendarioContainer.addEventListener('scroll', () => {
+  container.addEventListener('scroll', () => {
     if (!ticking) {
       window.requestAnimationFrame(() => {
-        const scrollTop = calendarioContainer.scrollTop;
-        const containerTop = calendarioContainer.getBoundingClientRect().top;
+        const scrollTop = container.scrollTop;
+        const containerTop = container.getBoundingClientRect().top;
         
-        // Encontrar qué mes está visible
         for (const mes of mesesCards) {
           const rect = mes.card.getBoundingClientRect();
           const relativeTop = rect.top - containerTop;
@@ -300,25 +385,348 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     }
   });
 
-  // Hacer scroll al mes actual después de renderizar
+  // Scroll al mes actual
   if (mesActualCard) {
     setTimeout(() => {
       const header = document.querySelector('header');
       const subHeaderEl = document.getElementById('subHeader');
       const headerHeight = header ? header.offsetHeight : 48;
       const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
-      const offset = headerHeight + subHeaderHeight + 16; // 16px de margen extra
+      const offset = headerHeight + subHeaderHeight + 16;
       
-      // Scroll con offset manual
       const elementPosition = mesActualCard.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + calendarioContainer.scrollTop - offset;
+      const offsetPosition = elementPosition + container.scrollTop - offset;
       
-      calendarioContainer.scrollTo({
+      container.scrollTo({
         top: offsetPosition,
         behavior: 'smooth'
       });
     }, 200);
   }
+}
+
+// ==================== VISTA SEMANAL ====================
+function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, renderizar, btnHoy) {
+  // Estado de la semana actual (guardar en sessionStorage)
+  let semanaOffset = parseInt(sessionStorage.getItem('calendarioSemanaOffset')) || 0;
+  
+  // Contenedor de navegación de semana
+  const navSemana = document.createElement('div');
+  navSemana.style.display = 'flex';
+  navSemana.style.justifyContent = 'space-between';
+  navSemana.style.alignItems = 'center';
+  navSemana.style.padding = '12px';
+  navSemana.style.background = 'var(--bg-card)';
+  navSemana.style.borderRadius = '12px';
+  navSemana.style.marginBottom = '16px';
+  navSemana.style.boxShadow = 'var(--shadow-sm)';
+
+  const btnAnterior = document.createElement('button');
+  btnAnterior.innerHTML = '←';
+  btnAnterior.style.padding = '8px 16px';
+  btnAnterior.style.background = 'var(--bg-main)';
+  btnAnterior.style.border = '1px solid var(--border-color)';
+  btnAnterior.style.borderRadius = '8px';
+  btnAnterior.style.fontSize = '1.2rem';
+  btnAnterior.style.fontWeight = '700';
+  btnAnterior.style.cursor = 'pointer';
+  btnAnterior.style.transition = 'all 0.2s ease';
+  btnAnterior.style.width = '50px';
+  btnAnterior.style.color = 'var(--primary-mint)';
+  btnAnterior.style.marginLeft = '1px';
+
+  const tituloSemana = document.createElement('div');
+  tituloSemana.style.fontSize = '1.5rem';
+  tituloSemana.style.fontWeight = '700';
+  tituloSemana.style.color = 'var(--primary-mint)';
+  tituloSemana.style.textAlign = 'center';
+  tituloSemana.style.flex = '1';
+
+  const btnSiguiente = document.createElement('button');
+  btnSiguiente.innerHTML = '→';
+  btnSiguiente.style.padding = '8px 16px';
+  btnSiguiente.style.background = 'var(--bg-main)';
+  btnSiguiente.style.border = '1px solid var(--border-color)';
+  btnSiguiente.style.borderRadius = '8px';
+  btnSiguiente.style.fontSize = '1.2rem';
+  btnSiguiente.style.fontWeight = '700';
+  btnSiguiente.style.cursor = 'pointer';
+  btnSiguiente.style.transition = 'all 0.2s ease';
+  btnSiguiente.style.width = '50px';
+  btnSiguiente.style.color = 'var(--primary-mint)';
+
+  navSemana.appendChild(btnAnterior);
+  navSemana.appendChild(tituloSemana);
+  navSemana.appendChild(btnSiguiente);
+  container.appendChild(navSemana);
+
+  // Contenedor de días de la semana
+  const diasContainer = document.createElement('div');
+  diasContainer.style.display = 'flex';
+  diasContainer.style.flexDirection = 'column';
+  diasContainer.style.gap = '12px';
+  container.appendChild(diasContainer);
+
+  const renderizarSemana = () => {
+    // Calcular inicio de la semana (lunes)
+    const inicioSemana = new Date(hoy);
+    inicioSemana.setDate(hoy.getDate() - hoy.getDay() + 1 + (semanaOffset * 7));
+    if (hoy.getDay() === 0) { // Si es domingo
+      inicioSemana.setDate(inicioSemana.getDate() - 7);
+    }
+
+    const finSemana = new Date(inicioSemana);
+    finSemana.setDate(inicioSemana.getDate() + 6);
+
+    // Actualizar título
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    const mesInicio = meses[inicioSemana.getMonth()];
+    const mesFin = meses[finSemana.getMonth()];
+    
+    if (inicioSemana.getMonth() === finSemana.getMonth()) {
+      tituloSemana.textContent = `${inicioSemana.getDate()} - ${finSemana.getDate()} ${mesInicio} ${inicioSemana.getFullYear()}`;
+    } else {
+      tituloSemana.textContent = `${inicioSemana.getDate()} ${mesInicio} - ${finSemana.getDate()} ${mesFin} ${inicioSemana.getFullYear()}`;
+    }
+
+    // Limpiar días
+    diasContainer.innerHTML = '';
+
+    // Renderizar cada día de la semana
+    const diasSemana = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
+    for (let i = 0; i < 7; i++) {
+      const fechaDia = new Date(inicioSemana);
+      fechaDia.setDate(inicioSemana.getDate() + i);
+      
+      const diaCard = crearDiaSemanaSemanal(fechaDia, diasSemana[i], sesionesPorFecha, hoy, rutaActual, renderizar);
+      diasContainer.appendChild(diaCard);
+    }
+
+    sessionStorage.setItem('calendarioSemanaOffset', semanaOffset);
+  };
+
+  btnAnterior.addEventListener('click', () => {
+    semanaOffset--;
+    renderizarSemana();
+  });
+
+  btnSiguiente.addEventListener('click', () => {
+    semanaOffset++;
+    renderizarSemana();
+  });
+
+  btnAnterior.addEventListener('mouseenter', () => {
+    btnAnterior.style.background = 'var(--primary-mint)';
+    btnAnterior.style.color = '#ffffff';
+  });
+
+  btnAnterior.addEventListener('mouseleave', () => {
+    btnAnterior.style.background = 'var(--bg-main)';
+    btnAnterior.style.color = 'var(--text-primary)';
+  });
+
+  btnSiguiente.addEventListener('mouseenter', () => {
+    btnSiguiente.style.background = 'var(--primary-mint)';
+    btnSiguiente.style.color = '#ffffff';
+  });
+
+  btnSiguiente.addEventListener('mouseleave', () => {
+    btnSiguiente.style.background = 'var(--bg-main)';
+    btnSiguiente.style.color = 'var(--text-primary)';
+  });
+
+  // Botón "Hoy" vuelve a la semana actual
+  btnHoy.onclick = () => {
+    semanaOffset = 0;
+    renderizarSemana();
+  };
+
+  renderizarSemana();
+}
+
+function crearDiaSemanaSemanal(fechaDia, nombreDia, sesionesPorFecha, hoy, rutaActual, renderizar) {
+  const fechaStr = fechaDia.getFullYear() + '-' + 
+                   String(fechaDia.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(fechaDia.getDate()).padStart(2, '0');
+  
+  const sesionesDia = sesionesPorFecha[fechaStr] || [];
+  const esHoy = fechaDia.toDateString() === hoy.toDateString();
+
+  const card = document.createElement('div');
+  card.style.background = 'var(--bg-card)';
+  card.style.borderRadius = '12px';
+  card.style.padding = '16px';
+  card.style.boxShadow = 'var(--shadow-sm)';
+  card.style.transition = 'all 0.2s ease';
+  
+  if (esHoy) {
+    card.style.border = '2px solid var(--primary-mint)';
+  }
+
+  // Header del día
+  const header = document.createElement('div');
+  header.style.display = 'flex';
+  header.style.justifyContent = 'space-between';
+  header.style.alignItems = 'center';
+  header.style.marginBottom = '12px';
+  header.style.paddingBottom = '12px';
+  header.style.borderBottom = '2px solid var(--bg-main)';
+
+  const infoFecha = document.createElement('div');
+  
+  const nombre = document.createElement('div');
+  nombre.textContent = nombreDia;
+  nombre.style.fontSize = '0.9rem';
+  nombre.style.fontWeight = '700';
+  nombre.style.color = esHoy ? 'var(--primary-mint)' : 'var(--text-secondary)';
+  nombre.style.textTransform = 'uppercase';
+  nombre.style.letterSpacing = '0.5px';
+  
+  const numero = document.createElement('div');
+  numero.textContent = fechaDia.getDate();
+  numero.style.fontSize = '2rem';
+  numero.style.fontWeight = '900';
+  numero.style.color = esHoy ? 'var(--primary-mint)' : 'var(--text-primary)';
+  numero.style.lineHeight = '1';
+  
+  infoFecha.appendChild(nombre);
+  infoFecha.appendChild(numero);
+  header.appendChild(infoFecha);
+
+  // Badge con número de sesiones
+  if (sesionesDia.length > 0) {
+    const badge = document.createElement('div');
+    const hayCompletadas = sesionesDia.some(s => s.completada);
+    const todasCompletadas = sesionesDia.every(s => s.completada);
+    
+    badge.textContent = `${sesionesDia.length} ${sesionesDia.length === 1 ? 'sesión' : 'sesiones'}`;
+    badge.style.padding = '6px 12px';
+    badge.style.borderRadius = '20px';
+    badge.style.fontSize = '0.75rem';
+    badge.style.fontWeight = '700';
+    badge.style.background = todasCompletadas 
+      ? 'rgba(76, 175, 80, 0.2)' 
+      : hayCompletadas 
+        ? 'rgba(255, 193, 7, 0.2)'
+        : 'rgba(255, 165, 0, 0.2)';
+    badge.style.color = todasCompletadas 
+      ? '#4CAF50' 
+      : hayCompletadas 
+        ? '#F57C00'
+        : '#FF9800';
+    badge.style.border = `1px solid ${todasCompletadas 
+      ? '#4CAF50' 
+      : hayCompletadas 
+        ? '#F57C00'
+        : '#FF9800'}`;
+    header.appendChild(badge);
+  }
+
+  card.appendChild(header);
+
+  // Sesiones
+  if (sesionesDia.length > 0) {
+    sesionesDia.forEach(sesion => {
+      const sesionDiv = document.createElement('div');
+      sesionDiv.style.background = 'var(--bg-main)';
+      sesionDiv.style.padding = '12px';
+      sesionDiv.style.borderRadius = '8px';
+      sesionDiv.style.marginBottom = '8px';
+      sesionDiv.style.cursor = 'pointer';
+      sesionDiv.style.transition = 'all 0.2s ease';
+      sesionDiv.style.border = '1px solid transparent';
+
+      const nombreSesion = document.createElement('div');
+      nombreSesion.textContent = sesion.nombre;
+      nombreSesion.style.fontWeight = '700';
+      nombreSesion.style.marginBottom = '6px';
+      nombreSesion.style.color = 'var(--text-primary)';
+      sesionDiv.appendChild(nombreSesion);
+
+      const infoSesion = document.createElement('div');
+      infoSesion.style.display = 'flex';
+      infoSesion.style.justifyContent = 'space-between';
+      infoSesion.style.fontSize = '0.8rem';
+      infoSesion.style.color = 'var(--text-secondary)';
+      
+      const ejercicios = document.createElement('span');
+      ejercicios.textContent = `${sesion.ejercicios.length} ejercicio${sesion.ejercicios.length !== 1 ? 's' : ''}`;
+      
+      const estado = document.createElement('span');
+      if (sesion.completada) {
+        estado.textContent = '✅ Completada';
+        estado.style.color = '#4CAF50';
+        estado.style.fontWeight = '600';
+      } else if (sesion._stats.seriesCompletadas > 0) {
+        estado.textContent = `${sesion._stats.seriesCompletadas}/${sesion._stats.totalSeries} series`;
+        estado.style.color = '#F57C00';
+        estado.style.fontWeight = '600';
+      } else {
+        estado.textContent = '⏳ Pendiente';
+        estado.style.color = '#FF9800';
+        estado.style.fontWeight = '600';
+      }
+      
+      infoSesion.appendChild(ejercicios);
+      infoSesion.appendChild(estado);
+      sesionDiv.appendChild(infoSesion);
+
+      sesionDiv.addEventListener('mouseenter', () => {
+        sesionDiv.style.background = 'var(--primary-mint)';
+        sesionDiv.style.color = '#ffffff';
+        sesionDiv.style.border = '1px solid var(--primary-mint)';
+        nombreSesion.style.color = '#ffffff';
+        infoSesion.style.color = '#ffffff';
+        ejercicios.style.color = '#ffffff';
+        estado.style.color = '#ffffff';
+      });
+
+      sesionDiv.addEventListener('mouseleave', () => {
+        sesionDiv.style.background = 'var(--bg-main)';
+        sesionDiv.style.color = 'var(--text-primary)';
+        sesionDiv.style.border = '1px solid transparent';
+        nombreSesion.style.color = 'var(--text-primary)';
+        infoSesion.style.color = 'var(--text-secondary)';
+        ejercicios.style.color = 'var(--text-secondary)';
+        
+        if (sesion.completada) {
+          estado.style.color = '#4CAF50';
+        } else if (sesion._stats.seriesCompletadas > 0) {
+          estado.style.color = '#F57C00';
+        } else {
+          estado.style.color = '#FF9800';
+        }
+      });
+
+      sesionDiv.addEventListener('click', () => {
+        rutaActual.length = 0;
+        rutaActual.push(...sesion.ruta);
+        renderizar();
+      });
+
+      card.appendChild(sesionDiv);
+    });
+  } else {
+    const sinSesiones = document.createElement('div');
+    sinSesiones.style.textAlign = 'center';
+    sinSesiones.style.padding = '20px';
+    sinSesiones.style.color = 'var(--text-light)';
+    sinSesiones.style.fontSize = '0.9rem';
+    sinSesiones.innerHTML = `
+      <div style="font-size: 2rem; margin-bottom: 8px; opacity: 0.3;">💤</div>
+      <div>Sin sesiones programadas</div>
+    `;
+    card.appendChild(sinSesiones);
+  }
+
+  // Click en la card para ver detalles
+  card.style.cursor = 'pointer';
+  card.addEventListener('click', (e) => {
+    if (e.target.closest('.sesionDiv')) return; // No abrir modal si se hace click en una sesión
+    mostrarInfoDia(fechaStr, fechaDia, sesionesDia, rutaActual, renderizar);
+  });
+
+  return card;
 }
 
 function crearMesCalendario(fecha, sesionesPorFecha, hoy, rutaActual, renderizar) {
