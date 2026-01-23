@@ -76,11 +76,11 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   const calendarioContainer = document.createElement('div');
   calendarioContainer.className = 'calendario-container';
   calendarioContainer.style.padding = '16px';
-  calendarioContainer.style.paddingTop = '80px'; // Aumentado para que el primer mes sea visible
+  calendarioContainer.style.paddingTop = '120px'; // Aumentado para que el primer mes sea visible
   calendarioContainer.style.overflowY = 'auto';
-  calendarioContainer.style.height = 'calc(100vh - 200px)';
+  calendarioContainer.style.height = 'calc(100vh - 140px - 65px)';
   calendarioContainer.style.scrollBehavior = 'smooth';
-
+  calendarioContainer.style.marginTop = '15px';
   // Obtener todas las sesiones con fecha
   const sesiones = [];
   datos[0]?.hijos?.forEach((meso, i) => {
