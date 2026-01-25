@@ -29,11 +29,11 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   // Selector de vista (Mes/Semana) - 70px de altura
   const selectorVista = document.createElement('div');
   selectorVista.style.display = 'flex';
-  selectorVista.style.background = 'var(--bg-main)';
-  selectorVista.style.borderRadius = '8px';
+  //selectorVista.style.background = 'var(--bg-main)';
+  //selectorVista.style.borderRadius = '8px';
   selectorVista.style.paddingBottom = '2px';
-  selectorVista.style.border = '1px solid var(--border-color)';
-  selectorVista.style.height = '60px'; // 70px de altura total
+  //selectorVista.style.border = '1px solid var(--border-color)';
+  selectorVista.style.height = '70px'; // 70px de altura total
 
   const btnMensual = document.createElement('button');
   btnMensual.textContent = '📅 Mes';
@@ -115,6 +115,33 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   btnHoy.style.alignItems = 'center';
   btnHoy.style.justifyContent = 'center';
   btnHoy.style.flexShrink = '0'; // No permitir que se encoja
+
+  // Después de definir btnHoy y ANTES de rightSide.appendChild(btnHoy);
+btnHoy.addEventListener('click', () => {
+  if (vistaActual === 'semanal') {
+    sessionStorage.setItem('calendarioSemanaOffset', '0');
+    renderizarVista('semanal');
+  } else {
+    // Scroll al mes actual en vista mensual
+    const mesActualCard = document.getElementById('mes-actual-calendario');
+    if (mesActualCard) {
+      const header = document.querySelector('header');
+      const subHeaderEl = document.getElementById('subHeader');
+      const headerHeight = header ? header.offsetHeight : 48;
+      const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+      const offset = headerHeight + subHeaderHeight + 16;
+      
+      const elementPosition = mesActualCard.getBoundingClientRect().top;
+      const calendarioContainer = document.getElementById('calendarioContainer');
+      const offsetPosition = elementPosition + calendarioContainer.scrollTop - offset;
+      
+      calendarioContainer.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  }
+});
 
   // Selector de mes - 32px fijo
   const selectorMes = document.createElement('select');
@@ -534,13 +561,6 @@ function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, re
     btnSiguiente.style.background = 'var(--bg-main)';
     btnSiguiente.style.color = 'var(--text-primary)';
   });
-
-  // Botón "Hoy" vuelve a la semana actual
-  btnHoy.onclick = () => {
-    semanaOffset = 0;
-    renderizarSemana();
-  };
-
   renderizarSemana();
 }
 

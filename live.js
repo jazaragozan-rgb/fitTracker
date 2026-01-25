@@ -1,16 +1,22 @@
 // live.js
 // Lógica para el entrenamiento en vivo nueva
 
+// Importar funciones del timer
+import { iniciarTimer } from './timer.js';
+
 // Variable global para almacenar el estado del entrenamiento
 let entrenamientoActual = {
   ejercicios: [],
   fecha: ''
 };
 
-// Variables del temporizador
+// Variables del temporizador interno del live
 let timerInterval = null;
 let timerSeconds = 0;
 let timerPaused = false;
+
+// Variable para controlar qué ejercicio está expandido
+let ejercicioExpandidoLive = null;
 
 // Inicia el flujo de entrenamiento en vivo
 export function iniciarEntrenamiento() {
@@ -20,6 +26,7 @@ export function iniciarEntrenamiento() {
   };
   timerSeconds = 0;
   timerPaused = false;
+  ejercicioExpandidoLive = null;
   abrirEntrenamientoEnVivo();
 }
 
@@ -322,7 +329,7 @@ function updateTimerDisplay(display) {
   display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
-// Renderiza los ejercicios (estilo nivel 4)
+// Renderiza los ejercicios (estilo nivel 4 con acordeón)
 function renderizarEjerciciosLive() {
   const zona = document.getElementById("zonaEjercicios");
   if (!zona) return;
@@ -350,19 +357,35 @@ function renderizarEjerciciosLive() {
     ejercicioDiv.style.cssText = `
       background: var(--bg-card);
       border-radius: 12px;
-      padding: 12px;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       box-shadow: var(--shadow-sm);
+      transition: all 0.2s ease;
+      border: 1px solid transparent;
     `;
     
-    // Header del ejercicio
+    // Header del ejercicio (siempre visible y clicable)
     const headerEj = document.createElement("div");
     headerEj.style.cssText = `
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 12px;
+      padding: 12px;
+      cursor: pointer;
+      border-radius: 12px;
+      transition: all 0.2s ease;
     `;
+    
+    // Icono de expandir/contraer
+    const iconoExpand = document.createElement("span");
+    iconoExpand.textContent = ejercicioExpandidoLive === ejIdx ? '▼' : '▶';
+    iconoExpand.style.cssText = `
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-right: 8px;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    `;
+    headerEj.appendChild(iconoExpand);
     
     const nombreEj = document.createElement("h3");
     nombreEj.textContent = ejercicio.nombre;
@@ -371,142 +394,327 @@ function renderizarEjerciciosLive() {
       font-size: 1rem;
       font-weight: 700;
       color: var(--text-primary);
+      flex: 1;
+      text-align: left;
+      user-select: none;
     `;
     headerEj.appendChild(nombreEj);
+    
+    // Contador de series
+    const seriesCount = document.createElement("div");
+    const numSeries = (ejercicio.series || []).length;
+    seriesCount.textContent = `${numSeries} ${numSeries === 1 ? 'serie' : 'series'}`;
+    seriesCount.style.cssText = `
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-right: 8px;
+      flex-shrink: 0;
+    `;
+    headerEj.appendChild(seriesCount);
     
     const btnEliminar = document.createElement("button");
     btnEliminar.textContent = "🗑️";
     btnEliminar.style.cssText = `
       background: transparent;
       border: none;
-      font-size: 1.1rem;
+      font-size: 0.85rem;
       cursor: pointer;
       padding: 4px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      opacity: 0.6;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
     `;
-    btnEliminar.onclick = () => {
+    btnEliminar.onmouseover = () => {
+      btnEliminar.style.background = "rgba(255, 107, 107, 0.1)";
+      btnEliminar.style.opacity = "1";
+    };
+    btnEliminar.onmouseout = () => {
+      btnEliminar.style.background = "transparent";
+      btnEliminar.style.opacity = "0.6";
+    };
+    btnEliminar.onclick = (e) => {
+      e.stopPropagation(); // Evitar que se expanda/contraiga al eliminar
       if (confirm(`¿Eliminar ${ejercicio.nombre}?`)) {
         entrenamientoActual.ejercicios.splice(ejIdx, 1);
+        ejercicioExpandidoLive = null;
         renderizarEjerciciosLive();
       }
     };
     headerEj.appendChild(btnEliminar);
+    
+    // Click en header para expandir/contraer
+    headerEj.addEventListener('click', (e) => {
+      // Si el click es en el botón eliminar, no hacer nada
+      if (e.target === btnEliminar || btnEliminar.contains(e.target)) return;
+      
+      if (ejercicioExpandidoLive === ejIdx) {
+        ejercicioExpandidoLive = null;
+      } else {
+        ejercicioExpandidoLive = ejIdx;
+      }
+      renderizarEjerciciosLive();
+    });
+    
+    // Efectos hover
+    headerEj.addEventListener('mouseenter', () => {
+      if (ejercicioExpandidoLive !== ejIdx) {
+        headerEj.style.background = 'var(--bg-main)';
+      }
+    });
+    
+    headerEj.addEventListener('mouseleave', () => {
+      headerEj.style.background = 'transparent';
+    });
+    
     ejercicioDiv.appendChild(headerEj);
     
-    // Encabezados de series
-    const encabezado = document.createElement("div");
-    encabezado.style.cssText = `
-      display: grid;
-      grid-template-columns: 40px 1fr 1fr 1fr 1fr 40px;
-      gap: 4px;
-      margin-bottom: 8px;
-      font-size: 0.7rem;
-      font-weight: 700;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      text-align: center;
-    `;
-    ['#', 'REPS', 'PESO', 'RIR', 'DESC', ''].forEach(txt => {
-      const col = document.createElement("div");
-      col.textContent = txt;
-      encabezado.appendChild(col);
-    });
-    ejercicioDiv.appendChild(encabezado);
-    
-    // Series
-    ejercicio.series.forEach((serie, serieIdx) => {
-      const serieDiv = document.createElement("div");
-      serieDiv.style.cssText = `
-        display: grid;
-        grid-template-columns: 40px 1fr 1fr 1fr 1fr 40px;
-        gap: 4px;
-        margin-bottom: 6px;
-        align-items: center;
+    // Contenido expandible (solo si está expandido)
+    if (ejercicioExpandidoLive === ejIdx) {
+      const contenidoExpandible = document.createElement("div");
+      contenidoExpandible.style.cssText = `
+        padding: 0 12px 12px 12px;
+        background: var(--bg-main);
+        border-radius: 0 0 12px 12px;
+        margin-top: -4px;
+        animation: slideDown 0.2s ease;
       `;
       
-      // Número
-      const num = document.createElement("div");
-      num.textContent = serieIdx + 1;
-      num.style.cssText = `
-        text-align: center;
-        font-weight: 700;
-        color: var(--primary-mint);
-        font-size: 0.9rem;
-      `;
-      serieDiv.appendChild(num);
-      
-      // Inputs
-      const crearInput = (valor, placeholder, campo) => {
-        const input = document.createElement("input");
-        input.type = "text";
-        input.value = valor || '';
-        input.placeholder = placeholder;
-        input.style.cssText = `
-          padding: 8px 4px;
-          border: 1px solid var(--border-color);
-          border-radius: 6px;
-          text-align: center;
-          font-size: 0.85rem;
-          background: var(--bg-main);
-        `;
-        input.addEventListener("input", () => {
-          serie[campo] = input.value;
-        });
-        return input;
-      };
-      
-      serieDiv.appendChild(crearInput(serie.reps, 'Reps', 'reps'));
-      serieDiv.appendChild(crearInput(serie.peso, 'Peso', 'peso'));
-      serieDiv.appendChild(crearInput(serie.rir, 'RIR', 'rir'));
-      serieDiv.appendChild(crearInput(serie.descanso, 'Desc', 'descanso'));
-      
-      // Botón eliminar serie
-      const btnEliminarSerie = document.createElement("button");
-      btnEliminarSerie.textContent = "❌";
-      btnEliminarSerie.style.cssText = `
-        background: transparent;
+      // Botón añadir serie
+      const btnAñadirSerie = document.createElement("button");
+      btnAñadirSerie.textContent = "+ Serie";
+      btnAñadirSerie.style.cssText = `
+        width: 100%;
+        padding: 8px;
+        margin-bottom: 12px;
+        background: var(--primary-mint);
+        color: white;
         border: none;
+        border-radius: 8px;
         font-size: 0.85rem;
+        font-weight: 700;
         cursor: pointer;
-        padding: 4px;
+        transition: all 0.2s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
       `;
-      btnEliminarSerie.onclick = () => {
-        ejercicio.series.splice(serieIdx, 1);
+      btnAñadirSerie.onmouseover = () => {
+        btnAñadirSerie.style.background = "var(--mint-light)";
+        btnAñadirSerie.style.transform = "translateY(-1px)";
+        btnAñadirSerie.style.boxShadow = "var(--shadow-sm)";
+      };
+      btnAñadirSerie.onmouseout = () => {
+        btnAñadirSerie.style.background = "var(--primary-mint)";
+        btnAñadirSerie.style.transform = "translateY(0)";
+        btnAñadirSerie.style.boxShadow = "none";
+      };
+      btnAñadirSerie.onclick = (e) => {
+        e.stopPropagation();
+        ejercicio.series.push({ reps: '', peso: '', rir: '', descanso: '', completada: false });
         renderizarEjerciciosLive();
       };
-      serieDiv.appendChild(btnEliminarSerie);
+      contenidoExpandible.appendChild(btnAñadirSerie);
       
-      ejercicioDiv.appendChild(serieDiv);
-    });
-    
-    // Botón añadir serie
-    const btnAñadirSerie = document.createElement("button");
-    btnAñadirSerie.textContent = "+ Añadir serie";
-    btnAñadirSerie.style.cssText = `
-      width: 100%;
-      padding: 8px;
-      margin-top: 8px;
-      background: var(--bg-main);
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
-      font-size: 0.85rem;
-      font-weight: 600;
-      color: var(--text-primary);
-      cursor: pointer;
-      transition: all 0.2s;
-    `;
-    btnAñadirSerie.onmouseover = () => {
-      btnAñadirSerie.style.background = "var(--primary-mint)";
-      btnAñadirSerie.style.color = "white";
-    };
-    btnAñadirSerie.onmouseout = () => {
-      btnAñadirSerie.style.background = "var(--bg-main)";
-      btnAñadirSerie.style.color = "var(--text-primary)";
-    };
-    btnAñadirSerie.onclick = () => {
-      ejercicio.series.push({ reps: '', peso: '', rir: '', descanso: '' });
-      renderizarEjerciciosLive();
-    };
-    ejercicioDiv.appendChild(btnAñadirSerie);
+      // Encabezados de series
+      const encabezado = document.createElement("div");
+      encabezado.style.cssText = `
+        display: grid;
+        grid-template-columns: 40px repeat(4, 1fr) 50px;
+        gap: 4px;
+        margin-bottom: 8px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        text-align: center;
+      `;
+      ['', 'REPS', 'PESO', 'RIR', 'DESC', ''].forEach(txt => {
+        const col = document.createElement("div");
+        col.textContent = txt;
+        encabezado.appendChild(col);
+      });
+      contenidoExpandible.appendChild(encabezado);
+      
+      // Series
+      ejercicio.series.forEach((serie, serieIdx) => {
+        const serieDiv = document.createElement("div");
+        serieDiv.style.cssText = `
+          display: grid;
+          grid-template-columns: 40px repeat(4, 1fr) 50px;
+          gap: 4px;
+          margin-bottom: 4px;
+          padding: 2px 4px;
+          align-items: center;
+          border-radius: 8px;
+          transition: all 0.2s;
+          min-height: auto;
+          height: auto;
+        `;
+        
+        // Cambiar fondo si está completada
+        if (serie.completada) {
+          serieDiv.style.background = 'rgba(61, 213, 152, 0.1)';
+        } else {
+          serieDiv.style.background = 'transparent';
+        }
+        
+        serieDiv.addEventListener('mouseenter', () => {
+          if (!serie.completada) {
+            serieDiv.style.background = 'rgba(255, 255, 255, 0.3)';
+          }
+        });
+        
+        serieDiv.addEventListener('mouseleave', () => {
+          if (serie.completada) {
+            serieDiv.style.background = 'rgba(61, 213, 152, 0.1)';
+          } else {
+            serieDiv.style.background = 'transparent';
+          }
+        });
+        
+        // Número de serie
+        const num = document.createElement("div");
+        num.textContent = serieIdx + 1;
+        num.style.cssText = `
+          text-align: center;
+          font-weight: 700;
+          color: var(--text-primary);
+          font-size: 0.85rem;
+        `;
+        serieDiv.appendChild(num);
+        
+        // Inputs
+        const crearInput = (valor, placeholder, campo) => {
+          const input = document.createElement("input");
+          input.type = "text";
+          input.value = valor || '';
+          input.placeholder = placeholder;
+          input.style.cssText = `
+            padding: 6px 4px;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+            border-radius: 6px;
+            text-align: center;
+            font-size: 0.85rem;
+            background: transparent;
+            color: var(--text-primary);
+            height: 32px;
+          `;
+          input.addEventListener('focus', () => {
+            input.style.border = '1px solid var(--primary-mint)';
+            input.style.background = 'rgba(255, 255, 255, 0.5)';
+            input.style.outline = 'none';
+            input.style.boxShadow = '0 0 0 2px rgba(61, 213, 152, 0.1)';
+          });
+          input.addEventListener('blur', () => {
+            input.style.border = '1px solid rgba(0, 0, 0, 0.08)';
+            input.style.background = 'transparent';
+            input.style.boxShadow = 'none';
+          });
+          input.addEventListener("input", () => {
+            serie[campo] = input.value;
+          });
+          return input;
+        };
+        
+        serieDiv.appendChild(crearInput(serie.reps, 'R', 'reps'));
+        serieDiv.appendChild(crearInput(serie.peso, 'P', 'peso'));
+        serieDiv.appendChild(crearInput(serie.rir, 'R', 'rir'));
+        serieDiv.appendChild(crearInput(serie.descanso, 'D', 'descanso'));
+        
+        // Contenedor de botones (check + eliminar)
+        const botonesContainer = document.createElement("div");
+        botonesContainer.style.cssText = `
+          display: flex;
+          gap: 2px;
+          justify-content: center;
+          align-items: center;
+        `;
+        
+        // Botón check/timer
+        const btnCheck = document.createElement("button");
+        if (serie.completada) {
+          btnCheck.textContent = '✔️';
+        } else {
+          btnCheck.textContent = '🕔';
+        }
+        btnCheck.style.cssText = `
+          border: none;
+          font-size: 0.9rem;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 6px;
+          transition: all 0.2s;
+          background: transparent;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        `;
+        btnCheck.onmouseover = () => {
+          btnCheck.style.background = serie.completada ? 'rgba(61, 213, 152, 0.3)' : 'var(--bg-main)';
+        };
+        btnCheck.onmouseout = () => {
+          btnCheck.style.background = 'transparent';
+        };
+        btnCheck.onclick = (e) => {
+          e.stopPropagation();
+          serie.completada = !serie.completada;
+          
+          // Si se marca como completada y tiene tiempo de descanso, iniciar timer
+          if (serie.completada && serie.descanso) {
+            // Usar iniciarTimer importado de timer.js
+            iniciarTimer(serie.descanso);
+          }
+          
+          renderizarEjerciciosLive();
+        };
+        botonesContainer.appendChild(btnCheck);
+        
+        // Botón eliminar serie
+        const btnEliminarSerie = document.createElement("button");
+        btnEliminarSerie.textContent = "❌";
+        btnEliminarSerie.style.cssText = `
+          background: transparent;
+          border: none;
+          font-size: 0.7rem;
+          cursor: pointer;
+          padding: 4px;
+          border-radius: 4px;
+          transition: all 0.2s;
+          opacity: 0.4;
+          width: 20px;
+          height: 20px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        `;
+        btnEliminarSerie.onmouseover = () => {
+          btnEliminarSerie.style.background = "rgba(255, 107, 107, 0.1)";
+          btnEliminarSerie.style.opacity = "1";
+        };
+        btnEliminarSerie.onmouseout = () => {
+          btnEliminarSerie.style.background = "transparent";
+          btnEliminarSerie.style.opacity = "0.4";
+        };
+        btnEliminarSerie.onclick = (e) => {
+          e.stopPropagation();
+          ejercicio.series.splice(serieIdx, 1);
+          renderizarEjerciciosLive();
+        };
+        botonesContainer.appendChild(btnEliminarSerie);
+        
+        serieDiv.appendChild(botonesContainer);
+        contenidoExpandible.appendChild(serieDiv);
+      });
+      
+      ejercicioDiv.appendChild(contenidoExpandible);
+    }
     
     zona.appendChild(ejercicioDiv);
   });

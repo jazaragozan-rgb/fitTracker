@@ -576,7 +576,7 @@ button:hover {
   bottom: 70px;
   left: 50%;
   transform: translateX(-50%);
-  background: var(--primary-coral);
+  background: none;
   color: #ffffff;
   font-size: 3rem;
   font-weight: 900;
@@ -594,7 +594,6 @@ button:hover {
 }
 
 #timerContainer.timer-warning { 
-  background: var(--danger);
   animation: pulse 1s infinite;
 }
 
@@ -2357,3 +2356,45 @@ main#contenido {
 .dashboard-card:nth-child(4) { animation-delay: 0.3s; }
 .dashboard-card:nth-child(5) { animation-delay: 0.4s; }
 .dashboard-card:nth-child(6) { animation-delay: 0.5s; }
+
+/* Añadir al final de tu style.css existente */
+
+/* ==================== TIMER MEJORADO ==================== */
+#timerContainer {
+  position: fixed;
+  bottom: 70px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  z-index: 20000;
+}
+
+#timerContainer.timer-active {
+  display: flex;
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+/* Estilos para el timer en live.js también */
+.timer-active {
+  animation: slideUp 0.3s ease;
+}

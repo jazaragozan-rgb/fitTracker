@@ -49,6 +49,44 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   // Recolectar ejercicios con datos Y calcular volumen por sesión
   const volumenPorFecha = {};
   
+  // Función recursiva para extraer ejercicios con series de cualquier nivel
+  const extraerEjercicios = (nodo, fechaSesion, volumenAcumulado) => {
+    if (!nodo) return volumenAcumulado;
+    
+    // Si el nodo tiene series directamente, es un ejercicio
+    if (nodo.series && Array.isArray(nodo.series) && nodo.series.length > 0) {
+      let volumenEjercicio = 0;
+      
+      nodo.series.forEach(serie => {
+        const peso = parseFloat(serie.peso) || 0;
+        const reps = parseInt(serie.reps) || 0;
+        volumenEjercicio += peso * reps;
+      });
+      
+      volumenAcumulado += volumenEjercicio;
+      
+      // Recolectar para ejercicios (para gráficos de progreso)
+      const pesoMax = Math.max(...nodo.series.map(s => parseFloat(s.peso) || 0), 0);
+      if (pesoMax > 0 && nodo.nombre) {
+        ejerciciosTodos.push({
+          nombre: nodo.nombre,
+          fecha: fechaSesion,
+          pesoMax,
+          series: nodo.series
+        });
+      }
+    }
+    
+    // Continuar recursivamente con los hijos
+    if (nodo.hijos && Array.isArray(nodo.hijos)) {
+      nodo.hijos.forEach(hijo => {
+        volumenAcumulado = extraerEjercicios(hijo, fechaSesion, volumenAcumulado);
+      });
+    }
+    
+    return volumenAcumulado;
+  };
+  
   datos[0]?.hijos?.forEach(meso => {
     (meso.hijos || []).forEach(micro => {
       (micro.hijos || []).forEach(sesion => {
@@ -63,31 +101,8 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
         }
         
         if (fechaSesion) {
-          // Calcular volumen total de esta sesión
-          let volumenSesion = 0;
-          
-          (sesion.hijos || []).forEach(bloque => {
-            (bloque.hijos || []).forEach(ejercicio => {
-              if (ejercicio.series) {
-                ejercicio.series.forEach(serie => {
-                  const peso = parseFloat(serie.peso) || 0;
-                  const reps = parseInt(serie.reps) || 0;
-                  volumenSesion += peso * reps;
-                });
-                
-                // Recolectar para ejercicios
-                const pesoMax = Math.max(...(ejercicio.series?.map(s => parseFloat(s.peso) || 0) || [0]));
-                if (pesoMax > 0) {
-                  ejerciciosTodos.push({
-                    nombre: ejercicio.nombre,
-                    fecha: fechaSesion,
-                    pesoMax,
-                    series: ejercicio.series
-                  });
-                }
-              }
-            });
-          });
+          // Calcular volumen total de esta sesión usando la función recursiva
+          const volumenSesion = extraerEjercicios(sesion, fechaSesion, 0);
           
           // Agrupar por fecha para luego convertir a semanas
           if (volumenSesion > 0) {
@@ -185,7 +200,10 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   const cardCalendario = crearCard('Esta Semana', '');
   
   let primerDiaSemana = new Date();
-  primerDiaSemana.setDate(primerDiaSemana.getDate() - primerDiaSemana.getDay());
+  // Ajustar para que lunes sea el primer día (0=domingo -> 6, 1=lunes -> 0)
+  const diaSemana = primerDiaSemana.getDay();
+  const diasHastaLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+  primerDiaSemana.setDate(primerDiaSemana.getDate() - diasHastaLunes);
   
   const calendarioWrapper = document.createElement('div');
   calendarioWrapper.className = 'calendario-wrapper';
@@ -217,7 +235,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   detalleDiv.className = "detalle-dia";
   calendarioWrapper.appendChild(detalleDiv);
 
-  const diasLetra = ["D","L","M","X","J","V","S"];
+  const diasLetra = ["L","M","X","J","V","S","D"];
 
   function renderDias() {
     daysRow.innerHTML = '';
