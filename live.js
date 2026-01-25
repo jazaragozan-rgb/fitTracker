@@ -53,18 +53,25 @@ function abrirEntrenamientoEnVivo() {
     position: sticky;
     top: 0;
     background: var(--bg-card);
-    padding: 12px;
+    padding: 8px 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
   `;
+  
+  // Contenedor izquierdo (vacío para centrar título)
+  const headerLeft = document.createElement("div");
+  headerLeft.style.cssText = `
+    width: 36px;
+  `;
+  header.appendChild(headerLeft);
   
   // Botón cerrar (arriba derecha)
   const btnCerrar = document.createElement("button");
   btnCerrar.textContent = "✖";
   btnCerrar.style.cssText = `
-    position: absolute;
-    top: 8px;
-    right: 12px;
     background: transparent;
     border: none;
     font-size: 1.3rem;
@@ -87,7 +94,7 @@ function abrirEntrenamientoEnVivo() {
       overlay.remove();
     }
   };
-  header.appendChild(btnCerrar);
+  headerLeft.appendChild(btnCerrar);
   
   // Título centrado
   const titulo = document.createElement("h2");
@@ -100,8 +107,48 @@ function abrirEntrenamientoEnVivo() {
     color: var(--primary-mint);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    flex: 1;
   `;
   header.appendChild(titulo);
+  
+  // Fecha (input compacto a la derecha)
+  const fechaInput = document.createElement("input");
+  fechaInput.type = "date";
+  fechaInput.id = "fechaEntrenamiento";
+  fechaInput.value = entrenamientoActual.fecha;
+  fechaInput.style.cssText = `
+    padding: 4px 6px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--primary-mint);
+    width: 100px;
+  `;
+  fechaInput.addEventListener("change", (e) => {
+    entrenamientoActual.fecha = e.target.value;
+  });
+  header.appendChild(fechaInput);
+  
+  overlay.appendChild(header);
+  
+  // Header secundario con temporizador
+  const headerTimer = document.createElement("div");
+  headerTimer.style.cssText = `
+    background: var(--bg-card);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+  `;
+  
+  const timerDisplay = document.createElement("div");
+  timerDisplay.id = "timerDisplay";
+  timerDisplay.textContent = "00:00";
+  timerDisplay.style.cssText = `
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary-mint);
+    font-family: monospace;
+  `;
   
   // Temporizador
   const timerDiv = document.createElement("div");
@@ -110,32 +157,20 @@ function abrirEntrenamientoEnVivo() {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    margin-top: 12px;
+    gap: 10px;
   `;
-  
-  const timerDisplay = document.createElement("div");
-  timerDisplay.id = "timerDisplay";
-  timerDisplay.textContent = "00:00";
-  timerDisplay.style.cssText = `
-    font-size: 1.8rem;
-    font-weight: 700;
-    color: var(--primary-mint);
-    font-family: monospace;
-  `;
-  timerDiv.appendChild(timerDisplay);
   
   const btnStart = document.createElement("button");
   btnStart.id = "btnStartTimer";
   btnStart.textContent = "▶";
   btnStart.style.cssText = `
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     border: none;
     border-radius: 50%;
     background: var(--primary-mint);
     color: white;
-    font-size: 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -144,18 +179,19 @@ function abrirEntrenamientoEnVivo() {
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   `;
   btnStart.onclick = () => startTimer(timerDisplay, btnStart);
+  timerDiv.appendChild(timerDisplay);
   timerDiv.appendChild(btnStart);
   
   const btnReset = document.createElement("button");
   btnReset.textContent = "↻";
   btnReset.style.cssText = `
-    width: 36px;
-    height: 36px;
+    width: 32px;
+    height: 32px;
     border: none;
     border-radius: 50%;
     background: var(--bg-main);
     color: var(--text-secondary);
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -165,46 +201,8 @@ function abrirEntrenamientoEnVivo() {
   btnReset.onclick = () => resetTimer(timerDisplay, btnStart);
   timerDiv.appendChild(btnReset);
   
-  header.appendChild(timerDiv);
-  
-  // Fecha
-  const fechaContainer = document.createElement("div");
-  fechaContainer.style.cssText = `
-    margin-top: 12px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-  `;
-  
-  const fechaLabel = document.createElement("span");
-  fechaLabel.textContent = "Fecha:";
-  fechaLabel.style.cssText = `
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--text-secondary);
-  `;
-  fechaContainer.appendChild(fechaLabel);
-  
-  const fechaInput = document.createElement("input");
-  fechaInput.type = "date";
-  fechaInput.id = "fechaEntrenamiento";
-  fechaInput.value = entrenamientoActual.fecha;
-  fechaInput.style.cssText = `
-    padding: 6px 10px;
-    border: 1px solid var(--border-color);
-    border-radius: 6px;
-    font-size: 0.85rem;
-    font-weight: 600;
-    color: var(--primary-mint);
-  `;
-  fechaInput.addEventListener("change", (e) => {
-    entrenamientoActual.fecha = e.target.value;
-  });
-  fechaContainer.appendChild(fechaInput);
-  
-  header.appendChild(fechaContainer);
-  overlay.appendChild(header);
+  headerTimer.appendChild(timerDiv);
+  overlay.appendChild(headerTimer);
   
   // Zona de ejercicios
   const zonaEjercicios = document.createElement("div");
@@ -644,14 +642,14 @@ function renderizarEjerciciosLive() {
         }
         btnCheck.style.cssText = `
           border: none;
-          font-size: 0.9rem;
+          font-size: 1rem;
           cursor: pointer;
-          padding: 4px;
+          padding: 0;
           border-radius: 6px;
           transition: all 0.2s;
           background: transparent;
-          width: 24px;
-          height: 24px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -682,14 +680,14 @@ function renderizarEjerciciosLive() {
         btnEliminarSerie.style.cssText = `
           background: transparent;
           border: none;
-          font-size: 0.7rem;
+          font-size: 1rem;
           cursor: pointer;
-          padding: 4px;
-          border-radius: 4px;
+          padding: 0;
+          border-radius: 6px;
           transition: all 0.2s;
           opacity: 0.4;
-          width: 20px;
-          height: 20px;
+          width: 32px;
+          height: 32px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -1016,6 +1014,10 @@ function mostrarFormularioNuevaSesion(overlayEntrenamiento) {
   addLabel("Mesociclo:");
   const selectMeso = addSelect();
   
+  // Variables para rastrear selecciones personalizadas
+  let nuevoMesoNombre = null;
+  let nuevoMicroNombre = null;
+  
   if (datos && datos[0] && datos[0].hijos) {
     datos[0].hijos.forEach((meso, idx) => {
       const option = document.createElement("option");
@@ -1025,20 +1027,43 @@ function mostrarFormularioNuevaSesion(overlayEntrenamiento) {
     });
   }
   
+  // Opción para crear nuevo mesociclo
+  const optionNuevoMeso = document.createElement("option");
+  optionNuevoMeso.value = "nuevo";
+  optionNuevoMeso.textContent = "➕ Crear nuevo mesociclo";
+  selectMeso.appendChild(optionNuevoMeso);
+  
   addLabel("Microciclo:");
   const selectMicro = addSelect();
   
   function actualizarMicrociclos() {
     selectMicro.innerHTML = '';
-    const mesoIdx = parseInt(selectMeso.value);
-    if (datos && datos[0] && datos[0].hijos && datos[0].hijos[mesoIdx]) {
-      const micros = datos[0].hijos[mesoIdx].hijos || [];
-      micros.forEach((micro, idx) => {
-        const option = document.createElement("option");
-        option.value = idx;
-        option.textContent = micro.nombre || `Microciclo ${idx + 1}`;
-        selectMicro.appendChild(option);
-      });
+    const mesoValue = selectMeso.value;
+    
+    if (mesoValue === "nuevo") {
+      // Si se seleccionó crear nuevo mesociclo, mostrar opción para crear nuevo microciclo
+      const optionNuevoMicro = document.createElement("option");
+      optionNuevoMicro.value = "nuevo";
+      optionNuevoMicro.textContent = "➕ Crear nuevo microciclo";
+      selectMicro.appendChild(optionNuevoMicro);
+      selectMicro.value = "nuevo";
+    } else {
+      const mesoIdx = parseInt(mesoValue);
+      if (datos && datos[0] && datos[0].hijos && datos[0].hijos[mesoIdx]) {
+        const micros = datos[0].hijos[mesoIdx].hijos || [];
+        micros.forEach((micro, idx) => {
+          const option = document.createElement("option");
+          option.value = idx;
+          option.textContent = micro.nombre || `Microciclo ${idx + 1}`;
+          selectMicro.appendChild(option);
+        });
+      }
+      
+      // Agregar opción para crear nuevo microciclo
+      const optionNuevoMicro = document.createElement("option");
+      optionNuevoMicro.value = "nuevo";
+      optionNuevoMicro.textContent = "➕ Crear nuevo microciclo";
+      selectMicro.appendChild(optionNuevoMicro);
     }
   }
   
@@ -1076,9 +1101,47 @@ function mostrarFormularioNuevaSesion(overlayEntrenamiento) {
   `;
   btnCrear.onclick = () => {
     const nombreSesion = inputNombre.value.trim() || "Sesión sin nombre";
-    const mesoIdx = parseInt(selectMeso.value);
-    const microIdx = parseInt(selectMicro.value);
-    crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntrenamiento);
+    const mesoValue = selectMeso.value;
+    const microValue = selectMicro.value;
+    
+    // Manejar creación de nuevo mesociclo
+    if (mesoValue === "nuevo") {
+      const nuevoNombreMeso = prompt("Nombre del nuevo mesociclo:");
+      if (!nuevoNombreMeso || !nuevoNombreMeso.trim()) {
+        alert("❌ Debes ingresar un nombre para el mesociclo");
+        return;
+      }
+      nuevoMesoNombre = nuevoNombreMeso.trim();
+      
+      // Si además crea nuevo microciclo
+      if (microValue === "nuevo") {
+        const nuevoNombreMicro = prompt("Nombre del nuevo microciclo:");
+        if (!nuevoNombreMicro || !nuevoNombreMicro.trim()) {
+          alert("❌ Debes ingresar un nombre para el microciclo");
+          return;
+        }
+        nuevoMicroNombre = nuevoNombreMicro.trim();
+        crearYGuardarNuevaSesion("nuevo", "nuevo", nombreSesion, overlayEntrenamiento, nuevoMesoNombre, nuevoMicroNombre);
+      } else {
+        crearYGuardarNuevaSesion("nuevo", parseInt(microValue), nombreSesion, overlayEntrenamiento, nuevoMesoNombre);
+      }
+    } else {
+      const mesoIdx = parseInt(mesoValue);
+      
+      // Manejar creación de nuevo microciclo
+      if (microValue === "nuevo") {
+        const nuevoNombreMicro = prompt("Nombre del nuevo microciclo:");
+        if (!nuevoNombreMicro || !nuevoNombreMicro.trim()) {
+          alert("❌ Debes ingresar un nombre para el microciclo");
+          return;
+        }
+        nuevoMicroNombre = nuevoNombreMicro.trim();
+        crearYGuardarNuevaSesion(mesoIdx, "nuevo", nombreSesion, overlayEntrenamiento, null, nuevoMicroNombre);
+      } else {
+        // Caso normal
+        crearYGuardarNuevaSesion(mesoIdx, parseInt(microValue), nombreSesion, overlayEntrenamiento);
+      }
+    }
     modal.remove();
   };
   contenido.appendChild(btnCrear);
@@ -1106,11 +1169,34 @@ function mostrarFormularioNuevaSesion(overlayEntrenamiento) {
 }
 
 // Crear y guardar nueva sesión
-function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntrenamiento) {
+function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntrenamiento, nuevoMesoNombre = null, nuevoMicroNombre = null) {
   const datos = window.datos || [];
   
   try {
-    const micro = datos[0].hijos[mesoIdx].hijos[microIdx];
+    let mesoIndex = mesoIdx;
+    let microIndex = microIdx;
+    
+    // Crear nuevo mesociclo si es necesario
+    if (mesoIdx === "nuevo") {
+      const nuevoMeso = {
+        nombre: nuevoMesoNombre || "Nuevo Mesociclo",
+        hijos: []
+      };
+      datos[0].hijos.push(nuevoMeso);
+      mesoIndex = datos[0].hijos.length - 1;
+    }
+    
+    // Crear nuevo microciclo si es necesario
+    if (microIdx === "nuevo") {
+      const nuevoMicro = {
+        nombre: nuevoMicroNombre || "Nuevo Microciclo",
+        hijos: []
+      };
+      datos[0].hijos[mesoIndex].hijos.push(nuevoMicro);
+      microIndex = datos[0].hijos[mesoIndex].hijos.length - 1;
+    }
+    
+    const micro = datos[0].hijos[mesoIndex].hijos[microIndex];
     
     if (!micro.hijos) micro.hijos = [];
     
@@ -1145,7 +1231,7 @@ function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntren
     
     if (window.rutaActual && typeof window.renderizar === 'function') {
       window.rutaActual.length = 0;
-      window.rutaActual.push(0, mesoIdx, microIdx, sesionIdx);
+      window.rutaActual.push(0, mesoIndex, microIndex, sesionIdx);
       window.renderizar();
     }
     

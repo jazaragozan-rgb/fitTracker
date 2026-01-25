@@ -1217,6 +1217,43 @@ function crearIndice(item, index, nivel) {
 
   if (!item.editando) item.editando = false;
 
+  // Contenedor para icono + input
+  const contentContainer = document.createElement('div');
+  contentContainer.style.display = 'flex';
+  contentContainer.style.alignItems = 'center';
+  contentContainer.style.gap = '8px';
+  contentContainer.style.flex = '1';
+
+  // Función para detectar si un item tiene ejercicios en el siguiente nivel
+  const tieneEjercicios = (item) => {
+    if (!item.hijos || item.hijos.length === 0) return false;
+    // Buscar solo en el siguiente nivel si hay ejercicios
+    return item.hijos.some(hijo => hijo.series);
+  };
+
+  // Icono para diferenciar carpeta vs sesión (nivel 1-3)
+  if (rutaActual.length >= 1 && rutaActual.length <= 3) {
+    const iconoContainer = document.createElement('div');
+    iconoContainer.style.width = '32px';
+    iconoContainer.style.height = '32px';
+    iconoContainer.style.borderRadius = '6px';
+    iconoContainer.style.display = 'flex';
+    iconoContainer.style.alignItems = 'center';
+    iconoContainer.style.justifyContent = 'center';
+    iconoContainer.style.flexShrink = '0';
+    iconoContainer.style.background = 'var(--bg-main)';
+    iconoContainer.style.fontSize = '1.2rem';
+    
+    // Mostrar sesión (💪) si tiene ejercicios, carpeta (📁) si no
+    if (tieneEjercicios(item)) {
+      iconoContainer.textContent = '💪';
+    } else {
+      iconoContainer.textContent = '📁';
+    }
+    
+    contentContainer.appendChild(iconoContainer);
+  }
+
   if (item.editando) {
     const input = document.createElement('input');
     input.value = item.nombre || '';
@@ -1238,7 +1275,8 @@ function crearIndice(item, index, nivel) {
       item.editando = false; guardarDatos(); renderizar();
     });
 
-    div.appendChild(input);
+    contentContainer.appendChild(input);
+    div.appendChild(contentContainer);
 
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
@@ -1264,7 +1302,8 @@ function crearIndice(item, index, nivel) {
     input.style.flex = '1';
     input.style.cursor = 'pointer';
 
-    div.appendChild(input);
+    contentContainer.appendChild(input);
+    div.appendChild(contentContainer);
 
     if (rutaActual.length === 3) {
       const fechaInput = document.createElement('input');
