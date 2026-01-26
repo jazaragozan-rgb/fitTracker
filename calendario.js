@@ -29,10 +29,7 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   // Selector de vista (Mes/Semana) - 70px de altura
   const selectorVista = document.createElement('div');
   selectorVista.style.display = 'flex';
-  //selectorVista.style.background = 'var(--bg-main)';
-  //selectorVista.style.borderRadius = '8px';
   selectorVista.style.paddingBottom = '2px';
-  //selectorVista.style.border = '1px solid var(--border-color)';
   selectorVista.style.height = '70px'; // 70px de altura total
 
   const btnMensual = document.createElement('button');
@@ -83,8 +80,6 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   h2Nivel.style.zIndex = '1';
 
   // ===== LADO DERECHO: Navegación (Hoy + Selector mes) =====
-  // Total: 70px = btnHoy (altura variable) + gap (espacio) + selectorMes (32px)
-  // Calculamos: btnHoy = 70px - 32px - 6px(gap) = 32px
   const rightSide = document.createElement('div');
   rightSide.style.display = 'flex';
   rightSide.style.flexDirection = 'column';
@@ -115,33 +110,6 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   btnHoy.style.alignItems = 'center';
   btnHoy.style.justifyContent = 'center';
   btnHoy.style.flexShrink = '0'; // No permitir que se encoja
-
-  // Después de definir btnHoy y ANTES de rightSide.appendChild(btnHoy);
-btnHoy.addEventListener('click', () => {
-  if (vistaActual === 'semanal') {
-    sessionStorage.setItem('calendarioSemanaOffset', '0');
-    renderizarVista('semanal');
-  } else {
-    // Scroll al mes actual en vista mensual
-    const mesActualCard = document.getElementById('mes-actual-calendario');
-    if (mesActualCard) {
-      const header = document.querySelector('header');
-      const subHeaderEl = document.getElementById('subHeader');
-      const headerHeight = header ? header.offsetHeight : 48;
-      const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
-      const offset = headerHeight + subHeaderHeight + 16;
-      
-      const elementPosition = mesActualCard.getBoundingClientRect().top;
-      const calendarioContainer = document.getElementById('calendarioContainer');
-      const offsetPosition = elementPosition + calendarioContainer.scrollTop - offset;
-      
-      calendarioContainer.scrollTo({
-        top: offsetPosition,
-        behavior: 'smooth'
-      });
-    }
-  }
-});
 
   // Selector de mes - 32px fijo
   const selectorMes = document.createElement('select');
@@ -192,7 +160,6 @@ btnHoy.addEventListener('click', () => {
   const calendarioContainer = document.createElement('div');
   calendarioContainer.className = 'calendario-container';
   calendarioContainer.id = 'calendarioContainer';
-  calendarioContainer.style.padding = '16px';
   calendarioContainer.style.overflowY = 'auto';
   calendarioContainer.style.scrollBehavior = 'smooth';
   
@@ -208,8 +175,15 @@ btnHoy.addEventListener('click', () => {
     
     const totalTopHeight = headerHeight + subHeaderHeight;
     
-    calendarioContainer.style.paddingTop = `${totalTopHeight}px`;
-    calendarioContainer.style.height = `calc(100vh - ${totalTopHeight}px - ${footerHeight}px)`;
+    // En vista semanal, no necesitamos padding-top porque el encabezado es sticky
+    // Solo ajustamos la altura del container
+    if (vistaActual === 'semanal') {
+      calendarioContainer.style.paddingTop = `${totalTopHeight}px`;
+      calendarioContainer.style.height = `calc(100vh - ${totalTopHeight}px - ${footerHeight}px)`;
+    } else {
+      calendarioContainer.style.paddingTop = `${totalTopHeight}px`;
+      calendarioContainer.style.height = `calc(100vh - ${totalTopHeight}px - ${footerHeight}px)`;
+    }
   };
   
   requestAnimationFrame(() => {
@@ -247,8 +221,15 @@ btnHoy.addEventListener('click', () => {
     // Mostrar/ocultar selector de mes según la vista
     selectorMes.style.display = vista === 'mensual' ? 'block' : 'none';
     
+    // Aplicar padding según la vista
     if (vista === 'mensual') {
-      renderizarVistaMensual(calendarioContainer, sesionesPorFecha, hoy, rutaActual, renderizar, selectorMes);
+      calendarioContainer.style.padding = '16px';
+    } else {
+      calendarioContainer.style.padding = '0';
+    }
+    
+    if (vista === 'mensual') {
+      renderizarVistaMensual(calendarioContainer, sesionesPorFecha, hoy, rutaActual, renderizar, selectorMes, btnHoy);
     } else {
       renderizarVistaSemanal(calendarioContainer, sesionesPorFecha, hoy, rutaActual, renderizar, btnHoy);
     }
@@ -345,7 +326,7 @@ function crearMapaSesionesPorFecha(sesiones) {
 }
 
 // ==================== VISTA MENSUAL ====================
-function renderizarVistaMensual(container, sesionesPorFecha, hoy, rutaActual, renderizar, selectorMes) {
+function renderizarVistaMensual(container, sesionesPorFecha, hoy, rutaActual, renderizar, selectorMes, btnHoy) {
   const mesActual = hoy.getMonth();
   const añoActual = hoy.getFullYear();
   
@@ -412,6 +393,25 @@ function renderizarVistaMensual(container, sesionesPorFecha, hoy, rutaActual, re
     }
   });
 
+  // Botón "Hoy" para scroll al mes actual
+  btnHoy.onclick = () => {
+    if (mesActualCard) {
+      const header = document.querySelector('header');
+      const subHeaderEl = document.getElementById('subHeader');
+      const headerHeight = header ? header.offsetHeight : 48;
+      const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+      const offset = headerHeight + subHeaderHeight + 16;
+      
+      const elementPosition = mesActualCard.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + container.scrollTop - offset;
+      
+      container.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   // Scroll al mes actual
   if (mesActualCard) {
     setTimeout(() => {
@@ -437,6 +437,17 @@ function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, re
   // Estado de la semana actual (guardar en sessionStorage)
   let semanaOffset = parseInt(sessionStorage.getItem('calendarioSemanaOffset')) || 0;
   
+  // Contenedor FIJO para navegación (no scrolleable)
+  const encabezadoFijo = document.createElement('div');
+  encabezadoFijo.id = 'encabezadoSemanaFijo';
+  encabezadoFijo.style.position = 'fixed';
+  encabezadoFijo.style.left = '0';
+  encabezadoFijo.style.right = '0';
+  encabezadoFijo.style.top = '126px'; // Posición fija de 120px
+  encabezadoFijo.style.zIndex = '89'; // Justo debajo del subheader (z-index: 90)
+  encabezadoFijo.style.background = 'var(--bg-main)';
+  encabezadoFijo.style.padding = '0 16px 12px 16px';
+  
   // Contenedor de navegación de semana
   const navSemana = document.createElement('div');
   navSemana.style.display = 'flex';
@@ -445,7 +456,6 @@ function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, re
   navSemana.style.padding = '12px';
   navSemana.style.background = 'var(--bg-card)';
   navSemana.style.borderRadius = '12px';
-  navSemana.style.marginBottom = '16px';
   navSemana.style.boxShadow = 'var(--shadow-sm)';
 
   const btnAnterior = document.createElement('button');
@@ -485,13 +495,26 @@ function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, re
   navSemana.appendChild(btnAnterior);
   navSemana.appendChild(tituloSemana);
   navSemana.appendChild(btnSiguiente);
-  container.appendChild(navSemana);
+  encabezadoFijo.appendChild(navSemana);
+  container.appendChild(encabezadoFijo);
 
-  // Contenedor de días de la semana
+  // Contenedor de días de la semana (SCROLLEABLE)
   const diasContainer = document.createElement('div');
+  diasContainer.id = 'diasSemanaContainer';
   diasContainer.style.display = 'flex';
   diasContainer.style.flexDirection = 'column';
   diasContainer.style.gap = '12px';
+  diasContainer.style.padding = '16px';
+  
+  // Calcular padding-top para que los días no queden tapados por el encabezado fijo
+  const calcularPaddingDias = () => {
+    const encabezadoHeight = encabezadoFijo ? encabezadoFijo.offsetHeight : 0;
+    diasContainer.style.paddingTop = '0px';//`${encabezadoHeight + 12}px`;
+  };
+  
+  // Calcular después de que el encabezado esté renderizado
+  setTimeout(calcularPaddingDias, 20);
+  
   container.appendChild(diasContainer);
 
   const renderizarSemana = () => {
@@ -526,6 +549,12 @@ function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, re
       fechaDia.setDate(inicioSemana.getDate() + i);
       
       const diaCard = crearDiaSemanaSemanal(fechaDia, diasSemana[i], sesionesPorFecha, hoy, rutaActual, renderizar);
+      
+      // Marcar el día actual con un ID para hacer scroll a él
+      if (fechaDia.toDateString() === hoy.toDateString()) {
+        diaCard.id = 'dia-actual-semana';
+      }
+      
       diasContainer.appendChild(diaCard);
     }
 
@@ -561,6 +590,40 @@ function renderizarVistaSemanal(container, sesionesPorFecha, hoy, rutaActual, re
     btnSiguiente.style.background = 'var(--bg-main)';
     btnSiguiente.style.color = 'var(--text-primary)';
   });
+
+  // Botón "Hoy" vuelve a la semana actual y hace scroll al día de hoy
+  btnHoy.onclick = () => {
+    semanaOffset = 0;
+    sessionStorage.setItem('calendarioSemanaOffset', '0');
+    renderizarSemana();
+    
+    // Hacer scroll al día actual después de renderizar
+    setTimeout(() => {
+      const diaActual = document.getElementById('dia-actual-semana');
+      const encabezado = document.getElementById('encabezadoSemanaFijo');
+      
+      if (diaActual && encabezado) {
+        const containerEl = document.getElementById('calendarioContainer');
+        
+        // Obtener la altura del encabezado fijo
+        const encabezadoHeight = encabezado.offsetHeight;
+        
+        // Posición del día actual relativa al container
+        const diaActualTop = diaActual.offsetTop;
+        
+        // Calcular la posición de scroll
+        // Como diasContainer tiene padding-top = encabezadoHeight + 12,
+        // el primer día ya está correctamente posicionado
+        const scrollPosition = diaActualTop - encabezadoHeight - 12;
+        
+        containerEl.scrollTo({
+          top: scrollPosition,
+          behavior: 'smooth'
+        });
+      }
+    }, 150); // Aumentamos el timeout para dar tiempo a que se calculen los paddings
+  };
+
   renderizarSemana();
 }
 
