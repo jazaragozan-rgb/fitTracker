@@ -8,6 +8,7 @@ import { iniciarEntrenamiento } from './live.js';
 import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
 import { iniciarTimer, restaurarTimer } from "./timer.js";
 import exercises from "./exercises.js";
+import { renderizarNutricion } from "./nutricion.js";
 
 // ==================== HELPERS DOM / UTIL ====================
 const $ = id => document.getElementById(id);
@@ -24,6 +25,7 @@ const DATOS_POR_DEFECTO = [
   { nombre: 'Entrenamiento', hijos: [] },
   { nombre: 'Seguimiento', hijos: [] },
   { nombre: 'Calendario', hijos: [] }
+  { nombre: 'Nutrición', hijos: [] }
 ];
 let datos = structuredClone(DATOS_POR_DEFECTO);
 console.log('[Datos iniciales] Usando datos por defecto, se cargarán de Firestore al autenticar');
@@ -735,6 +737,10 @@ function renderizar() {
   if (rutaActual.length === 0) {
     renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
     return;
+  }
+  if (rutaActual.length === 1 && rutaActual[0] === 3) {
+  renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
+  return;
   }
 
   // NIVEL 4 UNIFICADO (ejercicios con series desplegables)
@@ -1679,4 +1685,5 @@ function initGlobalListeners() {
   document.addEventListener("mouseup", dragEndEjercicio);
   document.addEventListener("touchend", dragEndEjercicio);
   document.addEventListener("touchcancel", dragEndEjercicio);
+
 }
