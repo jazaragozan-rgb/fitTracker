@@ -24,8 +24,8 @@ function isAppPage() {
 const DATOS_POR_DEFECTO = [
   { nombre: 'Entrenamiento', hijos: [] },
   { nombre: 'Seguimiento', hijos: [] },
-  { nombre: 'Calendario', hijos: [] }
-  { nombre: 'Nutrición', hijos: [] }
+  { nombre: 'Calendario', hijos: [] },
+  { nombre: 'Nutrición', hijos: [] },
 ];
 let datos = structuredClone(DATOS_POR_DEFECTO);
 console.log('[Datos iniciales] Usando datos por defecto, se cargarán de Firestore al autenticar');
@@ -1688,4 +1688,5 @@ function initGlobalListeners() {
   document.addEventListener("touchcancel", dragEndEjercicio);
 
 }
+
 
