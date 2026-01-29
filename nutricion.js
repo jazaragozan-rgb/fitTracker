@@ -1,312 +1,522 @@
-// nutricion.js - VERSIÓN MINIMALISTA GARANTIZADA
-console.log('✅ nutricion.js cargado');
+// nutricion.js
+// Sistema de seguimiento nutricional rediseñado - Inspirado en Yazio
+// Diseño compacto, elegante y minimalista
 
 // ==================== CONFIGURACIÓN ====================
-const METAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
-const TIPOS = [
+const METAS_DIARIAS = {
+  calorias: 2000,
+  proteinas: 150,
+  carbohidratos: 250,
+  grasas: 65
+};
+
+const TIPOS_COMIDA = [
   { id: 'desayuno', nombre: 'Desayuno', icono: '🌅', color: '#FFB74D' },
   { id: 'almuerzo', nombre: 'Almuerzo', icono: '☀️', color: '#4FC3F7' },
   { id: 'cena', nombre: 'Cena', icono: '🌙', color: '#9575CD' },
   { id: 'snacks', nombre: 'Snacks', icono: '🍎', color: '#81C784' }
 ];
 
-let fecha = new Date().toISOString().split('T')[0];
-
-// ==================== FUNCIÓN PRINCIPAL ====================
+// ==================== RENDERIZADO PRINCIPAL ====================
 export function renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual) {
-  console.log('🍽️ renderizarNutricion llamada', { nivel, fecha });
-  
-  // CRÍTICO: Asegurar que existe hijos
-  if (!nivel.hijos) {
-    nivel.hijos = [];
-    console.log('⚠️ nivel.hijos no existía, creado como array vacío');
-  }
-  
-  // Limpiar todo
+  // Limpiar
   subHeader.innerHTML = '';
   contenido.innerHTML = '';
   
-  // SUBHEADER
-  subHeader.innerHTML = `
-    <h2 id="tituloNivel" style="display: block;">Nutrición</h2>
-    <div id="subHeaderButtons" style="display: flex; justify-content: center; gap: 8px;">
-      <button class="header-btn" style="width: 40px;" onclick="alert('Metas - Próximamente')">🎯</button>
-    </div>
-  `;
+  // Configurar subheader
+  const h2Nivel = document.createElement('h2');
+  h2Nivel.id = 'tituloNivel';
+  h2Nivel.textContent = 'Nutrición';
+  h2Nivel.style.display = '';
+  subHeader.appendChild(h2Nivel);
   
-  // CONTENIDO - Estilos
-  contenido.style.padding = '16px';
+  const botonesContainer = document.createElement('div');
+  botonesContainer.id = 'subHeaderButtons';
+  botonesContainer.style.display = 'flex';
+  botonesContainer.style.justifyContent = 'center';
+  botonesContainer.style.gap = '8px';
+  
+  // Botón configurar metas
+  const btnMetas = document.createElement('button');
+  btnMetas.className = 'header-btn';
+  btnMetas.innerHTML = '🎯';
+  btnMetas.title = 'Configurar metas';
+  btnMetas.style.width = '40px';
+  btnMetas.style.padding = '8px';
+  btnMetas.onclick = () => mostrarModalMetas();
+  botonesContainer.appendChild(btnMetas);
+  
+  subHeader.appendChild(botonesContainer);
+
+  // Configurar contenido
+  contenido.style.padding = '0';
+  contenido.style.paddingTop = '12px';
   contenido.style.paddingBottom = '80px';
+  contenido.style.paddingLeft = '16px';
+  contenido.style.paddingRight = '16px';
   contenido.style.overflowY = 'auto';
   contenido.style.background = 'var(--bg-main)';
   
-  // Filtrar registros de hoy
-  const registros = nivel.hijos.filter(r => r.fecha === fecha);
-  console.log('📊 Registros de hoy:', registros.length);
+  // Obtener fecha actual
+  const fechaActual = obtenerFechaSeleccionada();
+  const registrosHoy = (nivel.hijos || []).filter(r => r.fecha === fechaActual);
   
-  // Calcular totales
-  const totales = registros.reduce((acc, r) => ({
-    calorias: acc.calorias + (r.calorias || 0),
-    proteinas: acc.proteinas + (r.proteinas || 0),
-    carbohidratos: acc.carbohidratos + (r.carbohidratos || 0),
-    grasas: acc.grasas + (r.grasas || 0)
-  }), { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 });
+  // ==================== SELECTOR DE FECHA COMPACTO ====================
+  const selectorFecha = crearSelectorFechaCompacto(fechaActual, nivel, contenido);
+  contenido.appendChild(selectorFecha);
   
-  console.log('📈 Totales:', totales);
+  // ==================== RESUMEN CIRCULAR DE CALORÍAS ====================
+  const resumenCalorias = crearResumenCaloriasCircular(registrosHoy);
+  contenido.appendChild(resumenCalorias);
   
-  // ==================== 1. SELECTOR DE FECHA ====================
-  const divFecha = document.createElement('div');
-  divFecha.style.cssText = 'display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; padding: 12px 16px; background: var(--bg-card); border-radius: 12px; box-shadow: var(--shadow-sm);';
+  // ==================== MACROS CON BARRAS DE PROGRESO ====================
+  const macrosCard = crearMacrosConBarras(registrosHoy);
+  contenido.appendChild(macrosCard);
   
-  const fechaObj = new Date(fecha + 'T00:00:00');
+  // ==================== COMIDAS POR TIPO ====================
+  const comidasSection = crearSeccionComidas(registrosHoy, nivel, contenido, fechaActual);
+  contenido.appendChild(comidasSection);
+  
+  // ==================== RESUMEN SEMANAL COMPACTO ====================
+  const resumenSemanal = crearResumenSemanalCompacto(nivel.hijos || []);
+  contenido.appendChild(resumenSemanal);
+  
+  // ==================== ALIMENTOS FRECUENTES ====================
+  const frecuentes = crearAlimentosFrecuentes(nivel);
+  contenido.appendChild(frecuentes);
+}
+
+// ==================== SELECTOR DE FECHA COMPACTO ====================
+let fechaSeleccionada = new Date().toISOString().split('T')[0];
+
+function obtenerFechaSeleccionada() {
+  return fechaSeleccionada;
+}
+
+function crearSelectorFechaCompacto(fechaActual, nivel, contenido) {
+  const container = document.createElement('div');
+  container.style.display = 'flex';
+  container.style.alignItems = 'center';
+  container.style.justifyContent = 'space-between';
+  container.style.marginBottom = '16px';
+  container.style.padding = '12px 16px';
+  container.style.background = 'var(--bg-card)';
+  container.style.borderRadius = '12px';
+  container.style.boxShadow = 'var(--shadow-sm)';
+  
+  // Botón anterior
+  const btnAnterior = document.createElement('button');
+  btnAnterior.innerHTML = '←';
+  btnAnterior.style.background = 'transparent';
+  btnAnterior.style.border = 'none';
+  btnAnterior.style.fontSize = '1.3rem';
+  btnAnterior.style.cursor = 'pointer';
+  btnAnterior.style.color = 'var(--text-primary)';
+  btnAnterior.style.padding = '8px';
+  btnAnterior.style.borderRadius = '6px';
+  btnAnterior.style.transition = 'all 0.2s ease';
+  btnAnterior.onclick = () => cambiarFecha(-1, nivel, contenido);
+  
+  btnAnterior.addEventListener('mouseenter', () => {
+    btnAnterior.style.background = 'var(--bg-main)';
+  });
+  btnAnterior.addEventListener('mouseleave', () => {
+    btnAnterior.style.background = 'transparent';
+  });
+  
+  // Fecha actual
+  const fecha = new Date(fechaActual + 'T00:00:00');
   const hoy = new Date().toISOString().split('T')[0];
-  const esHoy = fecha === hoy;
+  const esHoy = fechaActual === hoy;
   
-  divFecha.innerHTML = `
-    <button id="btnAnterior" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; padding: 8px;">←</button>
-    <div style="flex: 1; text-align: center;">
-      <div style="font-size: 1rem; font-weight: 700; color: ${esHoy ? 'var(--primary-mint)' : 'var(--text-primary)'};">
-        ${esHoy ? 'Hoy' : fechaObj.toLocaleDateString('es-ES', { weekday: 'long' })}
-      </div>
-      <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px;">
-        ${fechaObj.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}
-      </div>
-    </div>
-    <button id="btnSiguiente" style="background: transparent; border: none; font-size: 1.3rem; cursor: pointer; padding: 8px;">→</button>
-  `;
-  contenido.appendChild(divFecha);
+  const fechaDiv = document.createElement('div');
+  fechaDiv.style.flex = '1';
+  fechaDiv.style.textAlign = 'center';
+  fechaDiv.style.cursor = 'pointer';
+  fechaDiv.onclick = () => mostrarCalendarioModal(nivel, contenido);
   
-  // Listeners de fecha
-  setTimeout(() => {
-    document.getElementById('btnAnterior').onclick = () => {
-      const f = new Date(fecha + 'T00:00:00');
-      f.setDate(f.getDate() - 1);
-      fecha = f.toISOString().split('T')[0];
-      renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
-    };
-    document.getElementById('btnSiguiente').onclick = () => {
-      const f = new Date(fecha + 'T00:00:00');
-      f.setDate(f.getDate() + 1);
-      fecha = f.toISOString().split('T')[0];
-      renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
-    };
-  }, 100);
+  const diaNombre = document.createElement('div');
+  diaNombre.textContent = esHoy ? 'Hoy' : fecha.toLocaleDateString('es-ES', { weekday: 'long' });
+  diaNombre.style.fontSize = '1rem';
+  diaNombre.style.fontWeight = '700';
+  diaNombre.style.color = esHoy ? 'var(--primary-mint)' : 'var(--text-primary)';
+  diaNombre.style.textTransform = 'capitalize';
   
-  // ==================== 2. CÍRCULO DE CALORÍAS ====================
-  const divCirculo = document.createElement('div');
-  divCirculo.style.cssText = 'background: var(--bg-card); border-radius: 16px; padding: 24px; margin-bottom: 12px; box-shadow: var(--shadow-sm); text-align: center;';
+  const diaNumero = document.createElement('div');
+  diaNumero.textContent = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  diaNumero.style.fontSize = '0.8rem';
+  diaNumero.style.color = 'var(--text-secondary)';
+  diaNumero.style.marginTop = '2px';
   
+  fechaDiv.appendChild(diaNombre);
+  fechaDiv.appendChild(diaNumero);
+  
+  // Botón siguiente
+  const btnSiguiente = document.createElement('button');
+  btnSiguiente.innerHTML = '→';
+  btnSiguiente.style.background = 'transparent';
+  btnSiguiente.style.border = 'none';
+  btnSiguiente.style.fontSize = '1.3rem';
+  btnSiguiente.style.cursor = 'pointer';
+  btnSiguiente.style.color = 'var(--text-primary)';
+  btnSiguiente.style.padding = '8px';
+  btnSiguiente.style.borderRadius = '6px';
+  btnSiguiente.style.transition = 'all 0.2s ease';
+  btnSiguiente.onclick = () => cambiarFecha(1, nivel, contenido);
+  
+  btnSiguiente.addEventListener('mouseenter', () => {
+    btnSiguiente.style.background = 'var(--bg-main)';
+  });
+  btnSiguiente.addEventListener('mouseleave', () => {
+    btnSiguiente.style.background = 'transparent';
+  });
+  
+  container.appendChild(btnAnterior);
+  container.appendChild(fechaDiv);
+  container.appendChild(btnSiguiente);
+  
+  return container;
+}
+
+function cambiarFecha(dias, nivel, contenido) {
+  const fecha = new Date(fechaSeleccionada + 'T00:00:00');
+  fecha.setDate(fecha.getDate() + dias);
+  fechaSeleccionada = fecha.toISOString().split('T')[0];
+  renderizarNutricion(nivel, contenido, document.getElementById('subHeader'), null);
+}
+
+// ==================== RESUMEN CIRCULAR DE CALORÍAS ====================
+function crearResumenCaloriasCircular(registros) {
+  const container = document.createElement('div');
+  container.style.background = 'var(--bg-card)';
+  container.style.borderRadius = '16px';
+  container.style.padding = '24px';
+  container.style.marginBottom = '12px';
+  container.style.boxShadow = 'var(--shadow-sm)';
+  container.style.display = 'flex';
+  container.style.flexDirection = 'column';
+  container.style.alignItems = 'center';
+  
+  const totales = calcularTotales(registros);
   const consumidas = totales.calorias;
-  const meta = METAS.calorias;
+  const meta = METAS_DIARIAS.calorias;
   const restantes = Math.max(0, meta - consumidas);
   const porcentaje = Math.min(100, (consumidas / meta) * 100);
   
-  const svg = `
-    <svg width="180" height="180" style="transform: rotate(-90deg); margin: 0 auto 20px; display: block;">
-      <circle cx="90" cy="90" r="75" fill="none" stroke="#E8E8E8" stroke-width="12"/>
-      <circle cx="90" cy="90" r="75" fill="none" stroke="#3DD598" stroke-width="12" stroke-linecap="round"
-        stroke-dasharray="${2 * Math.PI * 75}" 
-        stroke-dashoffset="${2 * Math.PI * 75 - (2 * Math.PI * 75 * porcentaje / 100)}"/>
-    </svg>
+  // Círculo de progreso
+  const circleContainer = document.createElement('div');
+  circleContainer.style.position = 'relative';
+  circleContainer.style.width = '180px';
+  circleContainer.style.height = '180px';
+  circleContainer.style.marginBottom = '20px';
+  
+  // SVG del círculo
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('width', '180');
+  svg.setAttribute('height', '180');
+  svg.style.transform = 'rotate(-90deg)';
+  
+  const circleBackground = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circleBackground.setAttribute('cx', '90');
+  circleBackground.setAttribute('cy', '90');
+  circleBackground.setAttribute('r', '75');
+  circleBackground.setAttribute('fill', 'none');
+  circleBackground.setAttribute('stroke', '#E8E8E8');
+  circleBackground.setAttribute('stroke-width', '12');
+  
+  const circleProgress = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circleProgress.setAttribute('cx', '90');
+  circleProgress.setAttribute('cy', '90');
+  circleProgress.setAttribute('r', '75');
+  circleProgress.setAttribute('fill', 'none');
+  circleProgress.setAttribute('stroke', 'url(#gradient)');
+  circleProgress.setAttribute('stroke-width', '12');
+  circleProgress.setAttribute('stroke-linecap', 'round');
+  const circumference = 2 * Math.PI * 75;
+  circleProgress.setAttribute('stroke-dasharray', circumference);
+  circleProgress.setAttribute('stroke-dashoffset', circumference - (circumference * porcentaje / 100));
+  circleProgress.style.transition = 'stroke-dashoffset 1s ease';
+  
+  // Gradiente
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
+  gradient.setAttribute('id', 'gradient');
+  gradient.setAttribute('x1', '0%');
+  gradient.setAttribute('y1', '0%');
+  gradient.setAttribute('x2', '100%');
+  gradient.setAttribute('y2', '100%');
+  
+  const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  stop1.setAttribute('offset', '0%');
+  stop1.setAttribute('style', 'stop-color:#3DD598;stop-opacity:1');
+  
+  const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
+  stop2.setAttribute('offset', '100%');
+  stop2.setAttribute('style', 'stop-color:#00D4D4;stop-opacity:1');
+  
+  gradient.appendChild(stop1);
+  gradient.appendChild(stop2);
+  defs.appendChild(gradient);
+  svg.appendChild(defs);
+  svg.appendChild(circleBackground);
+  svg.appendChild(circleProgress);
+  
+  // Texto central
+  const centerText = document.createElement('div');
+  centerText.style.position = 'absolute';
+  centerText.style.top = '50%';
+  centerText.style.left = '50%';
+  centerText.style.transform = 'translate(-50%, -50%)';
+  centerText.style.textAlign = 'center';
+  
+  const caloriasNum = document.createElement('div');
+  caloriasNum.textContent = Math.round(restantes);
+  caloriasNum.style.fontSize = '2.5rem';
+  caloriasNum.style.fontWeight = '900';
+  caloriasNum.style.color = 'var(--text-primary)';
+  caloriasNum.style.lineHeight = '1';
+  
+  const caloriasLabel = document.createElement('div');
+  caloriasLabel.textContent = 'kcal restantes';
+  caloriasLabel.style.fontSize = '0.75rem';
+  caloriasLabel.style.color = 'var(--text-secondary)';
+  caloriasLabel.style.marginTop = '6px';
+  caloriasLabel.style.fontWeight = '600';
+  
+  centerText.appendChild(caloriasNum);
+  centerText.appendChild(caloriasLabel);
+  
+  circleContainer.appendChild(svg);
+  circleContainer.appendChild(centerText);
+  
+  // Resumen compacto debajo
+  const resumen = document.createElement('div');
+  resumen.style.display = 'flex';
+  resumen.style.gap = '24px';
+  resumen.style.fontSize = '0.85rem';
+  
+  const consumido = document.createElement('div');
+  consumido.style.textAlign = 'center';
+  consumido.innerHTML = `
+    <div style="color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Consumido</div>
+    <div style="color: var(--primary-mint); font-weight: 700; font-size: 1.1rem;">${Math.round(consumidas)}</div>
   `;
   
-  divCirculo.innerHTML = `
-    ${svg}
-    <div style="margin-top: -120px; margin-bottom: 100px;">
-      <div style="font-size: 2.5rem; font-weight: 900; color: var(--text-primary);">${Math.round(restantes)}</div>
-      <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600; margin-top: 4px;">kcal restantes</div>
-    </div>
-    <div style="display: flex; gap: 24px; justify-content: center; font-size: 0.85rem;">
-      <div style="text-align: center;">
-        <div style="color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Consumido</div>
-        <div style="color: var(--primary-mint); font-weight: 700; font-size: 1.1rem;">${Math.round(consumidas)}</div>
-      </div>
-      <div style="text-align: center;">
-        <div style="color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Objetivo</div>
-        <div style="color: var(--text-primary); font-weight: 700; font-size: 1.1rem;">${meta}</div>
-      </div>
-    </div>
+  const objetivo = document.createElement('div');
+  objetivo.style.textAlign = 'center';
+  objetivo.innerHTML = `
+    <div style="color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Objetivo</div>
+    <div style="color: var(--text-primary); font-weight: 700; font-size: 1.1rem;">${meta}</div>
   `;
-  contenido.appendChild(divCirculo);
   
-  // ==================== 3. MACROS ====================
-  const divMacros = document.createElement('div');
-  divMacros.style.cssText = 'background: var(--bg-card); border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: var(--shadow-sm);';
+  resumen.appendChild(consumido);
+  resumen.appendChild(objetivo);
+  
+  container.appendChild(circleContainer);
+  container.appendChild(resumen);
+  
+  return container;
+}
+
+// ==================== MACROS CON BARRAS DE PROGRESO ====================
+function crearMacrosConBarras(registros) {
+  const container = document.createElement('div');
+  container.style.background = 'var(--bg-card)';
+  container.style.borderRadius = '12px';
+  container.style.padding = '16px';
+  container.style.marginBottom = '12px';
+  container.style.boxShadow = 'var(--shadow-sm)';
+  
+  const totales = calcularTotales(registros);
   
   const macros = [
-    { nombre: 'Proteínas', valor: totales.proteinas, meta: METAS.proteinas, color: '#FF6B6B', icono: '💪' },
-    { nombre: 'Carbohidratos', valor: totales.carbohidratos, meta: METAS.carbohidratos, color: '#4FC3F7', icono: '🍞' },
-    { nombre: 'Grasas', valor: totales.grasas, meta: METAS.grasas, color: '#FFB74D', icono: '🥑' }
+    { nombre: 'Proteínas', valor: totales.proteinas, meta: METAS_DIARIAS.proteinas, unidad: 'g', color: '#FF6B6B', icono: '💪' },
+    { nombre: 'Carbohidratos', valor: totales.carbohidratos, meta: METAS_DIARIAS.carbohidratos, unidad: 'g', color: '#4FC3F7', icono: '🍞' },
+    { nombre: 'Grasas', valor: totales.grasas, meta: METAS_DIARIAS.grasas, unidad: 'g', color: '#FFB74D', icono: '🥑' }
   ];
   
-  macros.forEach((m, i) => {
-    const p = Math.min(100, (m.valor / m.meta) * 100);
-    const html = `
-      <div style="margin-bottom: ${i < 2 ? '16px' : '0'};">
-        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-          <div><span style="margin-right: 6px;">${m.icono}</span><span style="font-weight: 600; font-size: 0.9rem;">${m.nombre}</span></div>
-          <div style="font-size: 0.85rem; font-weight: 700;">
-            <span style="color: ${m.color};">${Math.round(m.valor)}</span>
-            <span style="color: var(--text-light);"> / ${m.meta}g</span>
-          </div>
-        </div>
-        <div style="width: 100%; height: 8px; background: #E8E8E8; border-radius: 4px; overflow: hidden;">
-          <div style="width: ${p}%; height: 100%; background: ${m.color}; border-radius: 4px; transition: width 0.5s ease;"></div>
-        </div>
-      </div>
-    `;
-    divMacros.innerHTML += html;
-  });
-  contenido.appendChild(divMacros);
-  
-  // ==================== 4. COMIDAS ====================
-  TIPOS.forEach(tipo => {
-    const regsTipo = registros.filter(r => r.tipoComida === tipo.id);
-    const totTipo = regsTipo.reduce((sum, r) => sum + (r.calorias || 0), 0);
-    
-    const divTipo = document.createElement('div');
-    divTipo.style.cssText = 'background: var(--bg-card); border-radius: 12px; margin-bottom: 8px; box-shadow: var(--shadow-sm); overflow: hidden;';
+  macros.forEach((macro, index) => {
+    const macroDiv = document.createElement('div');
+    macroDiv.style.marginBottom = index < macros.length - 1 ? '16px' : '0';
     
     const header = document.createElement('div');
-    header.style.cssText = `padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; background: linear-gradient(90deg, ${tipo.color}15 0%, transparent 100%); border-left: 4px solid ${tipo.color};`;
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.marginBottom = '8px';
     
-    header.innerHTML = `
-      <div style="display: flex; align-items: center; gap: 10px;">
-        <span style="font-size: 1.3rem;">${tipo.icono}</span>
-        <span style="font-weight: 700; font-size: 0.95rem;">${tipo.nombre}</span>
-      </div>
-      <div style="display: flex; align-items: center; gap: 12px;">
-        <span style="font-weight: 700; color: ${tipo.color}; font-size: 0.9rem;">${Math.round(totTipo)} kcal</span>
-      </div>
-    `;
+    const nombre = document.createElement('div');
+    nombre.innerHTML = `<span style="margin-right: 6px;">${macro.icono}</span><span style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">${macro.nombre}</span>`;
+    
+    const valores = document.createElement('div');
+    valores.style.fontSize = '0.85rem';
+    valores.style.fontWeight = '700';
+    valores.innerHTML = `<span style="color: ${macro.color};">${Math.round(macro.valor)}</span><span style="color: var(--text-light);"> / ${macro.meta}${macro.unidad}</span>`;
+    
+    header.appendChild(nombre);
+    header.appendChild(valores);
+    
+    // Barra de progreso
+    const barraContainer = document.createElement('div');
+    barraContainer.style.width = '100%';
+    barraContainer.style.height = '8px';
+    barraContainer.style.background = '#E8E8E8';
+    barraContainer.style.borderRadius = '4px';
+    barraContainer.style.overflow = 'hidden';
+    
+    const barraProgreso = document.createElement('div');
+    const porcentaje = Math.min(100, (macro.valor / macro.meta) * 100);
+    barraProgreso.style.width = `${porcentaje}%`;
+    barraProgreso.style.height = '100%';
+    barraProgreso.style.background = macro.color;
+    barraProgreso.style.borderRadius = '4px';
+    barraProgreso.style.transition = 'width 0.5s ease';
+    
+    barraContainer.appendChild(barraProgreso);
+    
+    macroDiv.appendChild(header);
+    macroDiv.appendChild(barraContainer);
+    container.appendChild(macroDiv);
+  });
+  
+  return container;
+}
+
+// ==================== SECCIÓN DE COMIDAS POR TIPO ====================
+function crearSeccionComidas(registros, nivel, contenido, fechaActual) {
+  const section = document.createElement('div');
+  section.style.marginBottom = '12px';
+  
+  TIPOS_COMIDA.forEach(tipo => {
+    const registrosTipo = registros.filter(r => r.tipoComida === tipo.id);
+    const totalesTipo = calcularTotales(registrosTipo);
+    
+    const tipoCard = document.createElement('div');
+    tipoCard.style.background = 'var(--bg-card)';
+    tipoCard.style.borderRadius = '12px';
+    tipoCard.style.marginBottom = '8px';
+    tipoCard.style.overflow = 'hidden';
+    tipoCard.style.boxShadow = 'var(--shadow-sm)';
+    
+    // Header de la comida
+    const header = document.createElement('div');
+    header.style.padding = '14px 16px';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.cursor = 'pointer';
+    header.style.background = `linear-gradient(90deg, ${tipo.color}15 0%, transparent 100%)`;
+    header.style.borderLeft = `4px solid ${tipo.color}`;
+    
+    const headerLeft = document.createElement('div');
+    headerLeft.style.display = 'flex';
+    headerLeft.style.alignItems = 'center';
+    headerLeft.style.gap = '10px';
+    
+    const icono = document.createElement('span');
+    icono.textContent = tipo.icono;
+    icono.style.fontSize = '1.3rem';
+    
+    const nombreTipo = document.createElement('div');
+    nombreTipo.textContent = tipo.nombre;
+    nombreTipo.style.fontWeight = '700';
+    nombreTipo.style.color = 'var(--text-primary)';
+    nombreTipo.style.fontSize = '0.95rem';
+    
+    headerLeft.appendChild(icono);
+    headerLeft.appendChild(nombreTipo);
+    
+    const headerRight = document.createElement('div');
+    headerRight.style.display = 'flex';
+    headerRight.style.alignItems = 'center';
+    headerRight.style.gap = '12px';
+    
+    const calorias = document.createElement('div');
+    calorias.textContent = `${Math.round(totalesTipo.calorias)} kcal`;
+    calorias.style.fontWeight = '700';
+    calorias.style.color = tipo.color;
+    calorias.style.fontSize = '0.9rem';
     
     const btnAdd = document.createElement('button');
     btnAdd.innerHTML = '+';
-    btnAdd.style.cssText = `width: 28px; height: 28px; border-radius: 50%; border: none; background: ${tipo.color}; color: white; font-size: 1.2rem; font-weight: 700; cursor: pointer;`;
-    btnAdd.onclick = () => abrirModal(nivel, contenido, subHeader, addButton, rutaActual, tipo.id);
-    header.querySelector('div:last-child').appendChild(btnAdd);
+    btnAdd.style.width = '28px';
+    btnAdd.style.height = '28px';
+    btnAdd.style.borderRadius = '50%';
+    btnAdd.style.border = 'none';
+    btnAdd.style.background = tipo.color;
+    btnAdd.style.color = 'white';
+    btnAdd.style.fontSize = '1.2rem';
+    btnAdd.style.fontWeight = '700';
+    btnAdd.style.cursor = 'pointer';
+    btnAdd.style.display = 'flex';
+    btnAdd.style.alignItems = 'center';
+    btnAdd.style.justifyContent = 'center';
+    btnAdd.style.transition = 'all 0.2s ease';
+    btnAdd.onclick = (e) => {
+      e.stopPropagation();
+      mostrarBuscadorAlimentos(nivel, contenido, tipo.id);
+    };
     
-    divTipo.appendChild(header);
+    btnAdd.addEventListener('mouseenter', () => {
+      btnAdd.style.transform = 'scale(1.1)';
+    });
+    btnAdd.addEventListener('mouseleave', () => {
+      btnAdd.style.transform = 'scale(1)';
+    });
     
-    // Alimentos
-    if (regsTipo.length > 0) {
-      const lista = document.createElement('div');
-      lista.style.padding = '0 16px 12px 16px';
+    headerRight.appendChild(calorias);
+    headerRight.appendChild(btnAdd);
+    
+    header.appendChild(headerLeft);
+    header.appendChild(headerRight);
+    
+    // Contenido expandible
+    const contenidoComida = document.createElement('div');
+    contenidoComida.style.maxHeight = '0';
+    contenidoComida.style.overflow = 'hidden';
+    contenidoComida.style.transition = 'max-height 0.3s ease';
+    
+    let expandido = false;
+    
+    header.onclick = (e) => {
+      if (e.target === btnAdd || btnAdd.contains(e.target)) return;
       
-      regsTipo.forEach((reg, idx) => {
-        const item = document.createElement('div');
-        item.style.cssText = 'display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid var(--bg-main);';
-        item.innerHTML = `
-          <div>
-            <div style="font-weight: 600; font-size: 0.9rem; margin-bottom: 4px;">${reg.nombre}</div>
-            <div style="font-size: 0.75rem; color: var(--text-secondary);">${reg.cantidad}g • ${Math.round(reg.calorias)} kcal</div>
-          </div>
-          <button style="background: transparent; border: none; font-size: 1.1rem; cursor: pointer; color: var(--text-secondary);">×</button>
-        `;
-        
-        item.querySelector('button').onclick = () => {
-          if (confirm('¿Eliminar?')) {
-            const index = nivel.hijos.indexOf(reg);
-            nivel.hijos.splice(index, 1);
-            if (window.guardarDatos) window.guardarDatos();
-            renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
-          }
-        };
-        
-        lista.appendChild(item);
+      expandido = !expandido;
+      if (expandido) {
+        contenidoComida.style.maxHeight = '1000px';
+        contenidoComida.style.padding = '0 16px 16px 16px';
+      } else {
+        contenidoComida.style.maxHeight = '0';
+        contenidoComida.style.padding = '0 16px';
+      }
+    };
+    
+    // Alimentos de este tipo de comida
+    if (registrosTipo.length > 0) {
+      registrosTipo.forEach((registro, index) => {
+        const itemAlimento = crearItemAlimentoCompacto(registro, registros, nivel, contenido);
+        contenidoComida.appendChild(itemAlimento);
       });
-      
-      divTipo.appendChild(lista);
+    } else {
+      const sinAlimentos = document.createElement('div');
+      sinAlimentos.style.textAlign = 'center';
+      sinAlimentos.style.padding = '20px';
+      sinAlimentos.style.color = 'var(--text-light)';
+      sinAlimentos.style.fontSize = '0.85rem';
+      sinAlimentos.textContent = 'Sin alimentos registrados';
+      contenidoComida.appendChild(sinAlimentos);
     }
     
-    contenido.appendChild(divTipo);
+    tipoCard.appendChild(header);
+    tipoCard.appendChild(contenidoComida);
+    section.appendChild(tipoCard);
   });
   
-  // ==================== 5. MENSAJE INICIAL ====================
-  if (nivel.hijos.length === 0) {
-    const ayuda = document.createElement('div');
-    ayuda.style.cssText = 'background: rgba(61, 213, 152, 0.1); padding: 20px; border-radius: 12px; margin-top: 20px; border: 2px dashed var(--primary-mint); text-align: center;';
-    ayuda.innerHTML = `
-      <div style="font-size: 2rem; margin-bottom: 12px;">🍽️</div>
-      <div style="font-weight: 700; margin-bottom: 8px; font-size: 1.1rem;">¡Comienza a registrar!</div>
-      <div style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 16px;">
-        Click en <strong>+</strong> para añadir alimentos
-      </div>
-      <button id="btnEjemplo" style="background: var(--primary-mint); color: white; border: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; cursor: pointer;">
-        📊 Añadir ejemplos
-      </button>
-    `;
-    contenido.appendChild(ayuda);
-    
-    setTimeout(() => {
-      const btn = document.getElementById('btnEjemplo');
-      if (btn) {
-        btn.onclick = () => {
-          // Añadir 4 alimentos de ejemplo
-          const ejemplos = [
-            { nombre: 'Pollo', cantidad: 150, calorias: 248, proteinas: 47, carbohidratos: 0, grasas: 5, tipoComida: 'almuerzo', fecha },
-            { nombre: 'Arroz', cantidad: 100, calorias: 130, proteinas: 3, carbohidratos: 28, grasas: 0, tipoComida: 'almuerzo', fecha },
-            { nombre: 'Plátano', cantidad: 120, calorias: 105, proteinas: 1, carbohidratos: 27, grasas: 0, tipoComida: 'snacks', fecha },
-            { nombre: 'Avena', cantidad: 50, calorias: 190, proteinas: 7, carbohidratos: 33, grasas: 3, tipoComida: 'desayuno', fecha }
-          ];
-          nivel.hijos.push(...ejemplos);
-          if (window.guardarDatos) window.guardarDatos();
-          renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
-        };
-      }
-    }, 100);
-  }
-  
-  console.log('✅ Renderizado completo');
+  return section;
 }
 
-// ==================== MODAL AÑADIR ====================
-function abrirModal(nivel, contenido, subHeader, addButton, rutaActual, tipoComida) {
-  console.log('🔍 Abriendo modal para:', tipoComida);
-  
-  const modal = document.createElement('div');
-  modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 10000;';
-  
-  const box = document.createElement('div');
-  box.style.cssText = 'background: white; border-radius: 16px; padding: 24px; max-width: 400px; width: 90%;';
-  
-  box.innerHTML = `
-    <h3 style="margin: 0 0 20px 0; color: var(--primary-mint);">Añadir Alimento</h3>
-    <input type="text" id="inp_nombre" placeholder="Nombre (ej: Pollo)" style="width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
-    <input type="number" id="inp_cantidad" placeholder="Gramos" style="width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
-    <input type="number" id="inp_calorias" placeholder="Calorías" style="width: 100%; padding: 12px; margin-bottom: 12px; border: 1px solid #ddd; border-radius: 8px; font-size: 1rem;">
-    <div style="display: flex; gap: 8px;">
-      <button id="btn_cancelar" style="flex: 1; padding: 12px; background: #f0f0f0; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Cancelar</button>
-      <button id="btn_guardar" style="flex: 1; padding: 12px; background: var(--primary-mint); color: white; border: none; border-radius: 8px; font-weight: 700; cursor: pointer;">Añadir</button>
-    </div>
-  `;
-  
-  modal.appendChild(box);
-  document.body.appendChild(modal);
-  
-  document.getElementById('btn_cancelar').onclick = () => modal.remove();
-  document.getElementById('btn_guardar').onclick = () => {
-    const nombre = document.getElementById('inp_nombre').value;
-    const cantidad = parseInt(document.getElementById('inp_cantidad').value);
-    const calorias = parseInt(document.getElementById('inp_calorias').value);
-    
-    if (nombre && cantidad && calorias) {
-      nivel.hijos.push({
-        fecha,
-        nombre,
-        cantidad,
-        calorias,
-        proteinas: Math.round(calorias * 0.3 / 4),
-        carbohidratos: Math.round(calorias * 0.4 / 4),
-        grasas: Math.round(calorias * 0.3 / 9),
-        tipoComida
-      });
-      
-      if (window.guardarDatos) window.guardarDatos();
-      modal.remove();
-      renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
-    } else {
-      alert('Completa todos los campos');
-    }
-  };
-}
+// ==================== ITEM ALIMENTO COMPACTO ====================
+function crearItemAlimentoCompacto(registro, registros, nivel, contenido) {
+  const item = document.createElement('div');
+  item.style.display = 'flex';
+  item.style.just
