@@ -235,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (seccion === "entrenamiento") { rutaActual = [0]; ultimoMenuSeleccionado = 'Entrenamiento'; }
       if (seccion === "seguimiento") { rutaActual = [1]; ultimoMenuSeleccionado = 'Seguimiento'; }
       if (seccion === "calendario") { rutaActual = [2]; ultimoMenuSeleccionado = 'Calendario'; }
+      if (seccion === "nutricion") { rutaActual = [3]; ultimoMenuSeleccionado = 'Nutrición'; }
       if (seccion === "dashboard") { rutaActual = []; ultimoMenuSeleccionado = 'Dashboard'; }
       ejercicioExpandido = null;
       renderizar();
@@ -1687,3 +1688,4 @@ function initGlobalListeners() {
   document.addEventListener("touchcancel", dragEndEjercicio);
 
 }
+
