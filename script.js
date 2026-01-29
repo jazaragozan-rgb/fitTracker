@@ -25,7 +25,7 @@ const DATOS_POR_DEFECTO = [
   { nombre: 'Entrenamiento', hijos: [] },
   { nombre: 'Seguimiento', hijos: [] },
   { nombre: 'Calendario', hijos: [] },
-  { nombre: 'Nutrición', hijos: [] },
+  { nombre: 'Nutrición', hijos: [] }
 ];
 let datos = structuredClone(DATOS_POR_DEFECTO);
 console.log('[Datos iniciales] Usando datos por defecto, se cargarán de Firestore al autenticar');
@@ -599,20 +599,6 @@ function renderizar() {
   contenido.innerHTML = '';
   let nivel = nivelActual();
 
-
-  // ==================== NUTRICIÓN ====================
-  if (rutaActual[0] === 3) {
-    renderizarNutricion(
-      nivel,        // nivel actual (datos de nutrición)
-      contenido,    // contenedor principal
-      subHeader,    // subheader
-      addButton,    // botón añadir
-      rutaActual
-    );
-    return;
-  }
-
-
   // Asignar ids de sesión (mantenimiento)
   (function asignarSesionIds(datosArray, ruta = []) {
     datosArray.forEach((meso, i) => {
@@ -753,10 +739,11 @@ function renderizar() {
     renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
     return;
   }
-  if (rutaActual.length === 1 && rutaActual[0] === 3) {
-  renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual);
+  // Pantalla nutrición
+if (rutaActual.length === 1 && rutaActual[0] === 3) {
+  renderizarNutricion(nivel, contenido, subHeader, addButton);
   return;
-  }
+}
 
   // NIVEL 4 UNIFICADO (ejercicios con series desplegables)
   if (rutaActual.length === 4) {
@@ -1700,8 +1687,4 @@ function initGlobalListeners() {
   document.addEventListener("mouseup", dragEndEjercicio);
   document.addEventListener("touchend", dragEndEjercicio);
   document.addEventListener("touchcancel", dragEndEjercicio);
-
 }
-
-
-
