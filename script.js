@@ -599,6 +599,20 @@ function renderizar() {
   contenido.innerHTML = '';
   let nivel = nivelActual();
 
+
+  // ==================== NUTRICIÓN ====================
+  if (rutaActual[0] === 3) {
+    renderizarNutricion(
+      nivel,        // nivel actual (datos de nutrición)
+      contenido,    // contenedor principal
+      subHeader,    // subheader
+      addButton,    // botón añadir
+      rutaActual
+    );
+    return;
+  }
+
+
   // Asignar ids de sesión (mantenimiento)
   (function asignarSesionIds(datosArray, ruta = []) {
     datosArray.forEach((meso, i) => {
