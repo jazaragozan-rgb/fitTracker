@@ -91,6 +91,8 @@ async function guardarRegistrosFirestore(nivel, fecha) {
 export async function renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual) {
   // Limpiar
   subHeader.innerHTML = '';
+  
+  // ✅ Limpiar completamente el contenido (incluido selector de fecha anterior)
   contenido.innerHTML = '';
 
   if (!nivel) {
@@ -100,12 +102,11 @@ export async function renderizarNutricion(nivel, contenido, subHeader, addButton
     nivel.hijos = [];
   }
 
-// Cargar registros del día seleccionado
-const fechaActual = obtenerFechaSeleccionada();
-await cargarRegistrosFirestore(nivel, fechaActual);
+  // Cargar registros del día seleccionado
+  const fechaActual = obtenerFechaSeleccionada();
+  await cargarRegistrosFirestore(nivel, fechaActual);
 
-
-  // Configurar subheader
+  // ==================== CONFIGURAR SUBHEADER ====================
   const h2Nivel = document.createElement('h2');
   h2Nivel.id = 'tituloNivel';
   h2Nivel.textContent = 'Nutrición';
@@ -130,83 +131,142 @@ await cargarRegistrosFirestore(nivel, fechaActual);
   
   subHeader.appendChild(botonesContainer);
 
-  // Configurar contenido
-  contenido.style.padding = '0';
-  contenido.style.paddingTop = '12px';
-  contenido.style.paddingBottom = '80px';
-  contenido.style.paddingLeft = '16px';
-  contenido.style.paddingRight = '16px';
-  contenido.style.overflowY = 'auto';
-  contenido.style.background = 'var(--bg-main)';
+  // ==================== CONTENEDOR PRINCIPAL CON DISEÑO FIJO ====================
+  // Wrapper principal que contendrá selector fijo + contenido scrolleable
+  const mainWrapper = document.createElement('div');
+  mainWrapper.style.position = 'fixed';
+  mainWrapper.style.top = '0';
+  mainWrapper.style.left = '0';
+  mainWrapper.style.width = '100%';
+  mainWrapper.style.height = '100%';
+  mainWrapper.style.display = 'flex';
+  mainWrapper.style.flexDirection = 'column';
+  mainWrapper.style.zIndex = '1';
   
-  // Obtener fecha actual
+  // Calcular espacio superior (header + subheader)
+  const calcularEspacioSuperior = () => {
+    const header = document.querySelector('header');
+    const subHeaderEl = document.getElementById('subHeader');
+    const headerHeight = header ? header.offsetHeight : 48;
+    const subHeaderHeight = subHeaderEl ? subHeaderEl.offsetHeight : 76;
+    return headerHeight + subHeaderHeight;
+  };
+
+  const espacioSuperior = calcularEspacioSuperior();
+  mainWrapper.style.paddingTop = `${espacioSuperior}px`;
+
+  // ==================== SELECTOR DE FECHA FIJO (NO SCROLLEABLE) ====================
+  const selectorFechaFijo = crearSelectorFechaFijo(obtenerFechaSeleccionada(), nivel);
+  mainWrapper.appendChild(selectorFechaFijo);
+
+  // ==================== CONTENIDO SCROLLEABLE ====================
+  const contenidoScrolleable = document.createElement('div');
+  contenidoScrolleable.id = 'nutricion-contenido-scrolleable';
+  contenidoScrolleable.style.flex = '1';
+  contenidoScrolleable.style.overflowY = 'auto';
+  contenidoScrolleable.style.overflowX = 'hidden';
+  contenidoScrolleable.style.background = 'var(--bg-main)';
+  contenidoScrolleable.style.padding = '16px';
+  contenidoScrolleable.style.paddingBottom = '80px'; // Espacio para footer
   
+  // Obtener registros del día
   const registrosHoy = (nivel.hijos || []).filter(r => r.fecha === fechaActual);
-  
-  // ==================== SELECTOR DE FECHA COMPACTO ====================
-  const selectorFecha = crearSelectorFechaCompacto(fechaActual, nivel, contenido);
-  contenido.appendChild(selectorFecha);
   
   // ==================== RESUMEN CIRCULAR DE CALORÍAS ====================
   const resumenCalorias = crearResumenCaloriasCircular(registrosHoy);
-  contenido.appendChild(resumenCalorias);
+  contenidoScrolleable.appendChild(resumenCalorias);
   
   // ==================== MACROS CON BARRAS DE PROGRESO ====================
   const macrosCard = crearMacrosConBarras(registrosHoy);
-  contenido.appendChild(macrosCard);
+  contenidoScrolleable.appendChild(macrosCard);
   
   // ==================== COMIDAS POR TIPO ====================
-  const comidasSection = crearSeccionComidas(registrosHoy, nivel, contenido, fechaActual);
-  contenido.appendChild(comidasSection);
+  const comidasSection = crearSeccionComidas(registrosHoy, nivel, contenidoScrolleable, fechaActual);
+  contenidoScrolleable.appendChild(comidasSection);
   
   // ==================== RESUMEN SEMANAL COMPACTO ====================
   const resumenSemanal = crearResumenSemanalCompacto(nivel.hijos || []);
-  contenido.appendChild(resumenSemanal);
+  contenidoScrolleable.appendChild(resumenSemanal);
   
   // ==================== ALIMENTOS FRECUENTES ====================
   const frecuentes = crearAlimentosFrecuentes(nivel);
-  contenido.appendChild(frecuentes);
+  contenidoScrolleable.appendChild(frecuentes);
+  
+  mainWrapper.appendChild(contenidoScrolleable);
+  
+  // Limpiar contenido principal y añadir wrapper
+  contenido.innerHTML = '';
+  contenido.style.padding = '0';
+  contenido.style.margin = '0';
+  contenido.style.overflow = 'hidden';
+  contenido.appendChild(mainWrapper);
+  
+  // Ajustar altura al cambiar tamaño de ventana
+  let resizeTimeout;
+  const handleResize = () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+      const nuevoEspacio = calcularEspacioSuperior();
+      mainWrapper.style.paddingTop = `${nuevoEspacio}px`;
+    }, 100);
+  };
+  
+  window.addEventListener('resize', handleResize);
+  
+  // Limpiar listener al destruir
+  mainWrapper.addEventListener('DOMNodeRemoved', () => {
+    window.removeEventListener('resize', handleResize);
+  });
 }
 
-// ==================== SELECTOR DE FECHA COMPACTO ====================
-let fechaSeleccionada = new Date().toISOString().split('T')[0];
-
-function obtenerFechaSeleccionada() {
-  return fechaSeleccionada;
-}
-
-function crearSelectorFechaCompacto(fechaActual, nivel, contenido) {
+// ==================== SELECTOR DE FECHA FIJO (NUEVA FUNCIÓN) ====================
+function crearSelectorFechaFijo(fechaActual, nivel) {
   const container = document.createElement('div');
+  container.id = 'selector-fecha-fijo';
   container.style.display = 'flex';
   container.style.alignItems = 'center';
   container.style.justifyContent = 'space-between';
-  container.style.marginBottom = '16px';
   container.style.padding = '12px 16px';
   container.style.background = 'var(--bg-card)';
-  container.style.borderRadius = '12px';
-  container.style.boxShadow = 'var(--shadow-sm)';
+  container.style.borderBottom = '1px solid var(--border-color)';
+  container.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)';
+  container.style.zIndex = '10';
+  container.style.flexShrink = '0'; // No se encoge
   
   // Botón anterior
   const btnAnterior = document.createElement('button');
   btnAnterior.innerHTML = '←';
   btnAnterior.style.background = 'transparent';
   btnAnterior.style.border = 'none';
-  btnAnterior.style.fontSize = '1.3rem';
+  btnAnterior.style.fontSize = '1.5rem';
   btnAnterior.style.cursor = 'pointer';
   btnAnterior.style.color = 'var(--text-primary)';
-  btnAnterior.style.padding = '8px';
-  btnAnterior.style.borderRadius = '6px';
+  btnAnterior.style.padding = '8px 12px';
+  btnAnterior.style.borderRadius = '8px';
   btnAnterior.style.transition = 'all 0.2s ease';
-  btnAnterior.onclick = () => cambiarFecha(-1, nivel, contenido);
+  btnAnterior.style.fontWeight = '700';
+  btnAnterior.style.width = '44px';
+  btnAnterior.style.height = '44px';
+  btnAnterior.style.display = 'flex';
+  btnAnterior.style.alignItems = 'center';
+  btnAnterior.style.justifyContent = 'center';
+  
+  btnAnterior.onclick = (e) => {
+    e.preventDefault();      // ← Previene comportamiento default
+    e.stopPropagation();     // ← Detiene propagación del evento
+    cambiarFecha(-1, nivel);
+  };
   
   btnAnterior.addEventListener('mouseenter', () => {
     btnAnterior.style.background = 'var(--bg-main)';
+    btnAnterior.style.color = 'var(--primary-mint)';
   });
   btnAnterior.addEventListener('mouseleave', () => {
     btnAnterior.style.background = 'transparent';
+    btnAnterior.style.color = 'var(--text-primary)';
   });
   
-  // Fecha actual
+  // Fecha actual (clicable para abrir calendario)
   const fecha = new Date(fechaActual + 'T00:00:00');
   const hoy = new Date().toISOString().split('T')[0];
   const esHoy = fechaActual === hoy;
@@ -215,20 +275,49 @@ function crearSelectorFechaCompacto(fechaActual, nivel, contenido) {
   fechaDiv.style.flex = '1';
   fechaDiv.style.textAlign = 'center';
   fechaDiv.style.cursor = 'pointer';
-  fechaDiv.onclick = () => mostrarCalendarioModal(nivel, contenido);
+  fechaDiv.style.padding = '8px';
+  fechaDiv.style.borderRadius = '8px';
+  fechaDiv.style.transition = 'all 0.2s ease';
+  fechaDiv.onclick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    mostrarCalendarioModal(nivel);
+  };
   
+  fechaDiv.addEventListener('mouseenter', () => {
+    fechaDiv.style.background = 'var(--bg-main)';
+  });
+  fechaDiv.addEventListener('mouseleave', () => {
+    fechaDiv.style.background = 'transparent';
+  });
+  
+  // Día nombre (ej: "Hoy" o "Lunes")
   const diaNombre = document.createElement('div');
-  diaNombre.textContent = esHoy ? 'Hoy' : fecha.toLocaleDateString('es-ES', { weekday: 'long' });
-  diaNombre.style.fontSize = '1rem';
+  if (esHoy) {
+    diaNombre.textContent = '📅 Hoy';
+  } else {
+    const ayer = new Date(hoy + 'T00:00:00');
+    ayer.setDate(ayer.getDate() - 1);
+    const esAyer = fechaActual === ayer.toISOString().split('T')[0];
+    
+    if (esAyer) {
+      diaNombre.textContent = 'Ayer';
+    } else {
+      diaNombre.textContent = fecha.toLocaleDateString('es-ES', { weekday: 'long' });
+    }
+  }
+  diaNombre.style.fontSize = '1.1rem';
   diaNombre.style.fontWeight = '700';
   diaNombre.style.color = esHoy ? 'var(--primary-mint)' : 'var(--text-primary)';
   diaNombre.style.textTransform = 'capitalize';
+  diaNombre.style.marginBottom = '2px';
   
+  // Día número y mes (ej: "30 ene")
   const diaNumero = document.createElement('div');
-  diaNumero.textContent = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  diaNumero.textContent = fecha.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
   diaNumero.style.fontSize = '0.8rem';
   diaNumero.style.color = 'var(--text-secondary)';
-  diaNumero.style.marginTop = '2px';
+  diaNumero.style.fontWeight = '600';
   
   fechaDiv.appendChild(diaNombre);
   fechaDiv.appendChild(diaNumero);
@@ -238,19 +327,32 @@ function crearSelectorFechaCompacto(fechaActual, nivel, contenido) {
   btnSiguiente.innerHTML = '→';
   btnSiguiente.style.background = 'transparent';
   btnSiguiente.style.border = 'none';
-  btnSiguiente.style.fontSize = '1.3rem';
+  btnSiguiente.style.fontSize = '1.5rem';
   btnSiguiente.style.cursor = 'pointer';
   btnSiguiente.style.color = 'var(--text-primary)';
-  btnSiguiente.style.padding = '8px';
-  btnSiguiente.style.borderRadius = '6px';
+  btnSiguiente.style.padding = '8px 12px';
+  btnSiguiente.style.borderRadius = '8px';
   btnSiguiente.style.transition = 'all 0.2s ease';
-  btnSiguiente.onclick = () => cambiarFecha(1, nivel, contenido);
+  btnSiguiente.style.fontWeight = '700';
+  btnSiguiente.style.width = '44px';
+  btnSiguiente.style.height = '44px';
+  btnSiguiente.style.display = 'flex';
+  btnSiguiente.style.alignItems = 'center';
+  btnSiguiente.style.justifyContent = 'center';
+  
+  btnSiguiente.onclick = (e) => {
+    e.preventDefault();      
+    e.stopPropagation();     
+    cambiarFecha(1, nivel);
+  };
   
   btnSiguiente.addEventListener('mouseenter', () => {
     btnSiguiente.style.background = 'var(--bg-main)';
+    btnSiguiente.style.color = 'var(--primary-mint)';
   });
   btnSiguiente.addEventListener('mouseleave', () => {
     btnSiguiente.style.background = 'transparent';
+    btnSiguiente.style.color = 'var(--text-primary)';
   });
   
   container.appendChild(btnAnterior);
@@ -260,12 +362,33 @@ function crearSelectorFechaCompacto(fechaActual, nivel, contenido) {
   return container;
 }
 
-function cambiarFecha(dias, nivel, contenido) {
+// ==================== SELECTOR DE FECHA COMPACTO ====================
+let fechaSeleccionada = new Date().toISOString().split('T')[0];
+
+function obtenerFechaSeleccionada() {
+  return fechaSeleccionada;
+}
+
+let cambiandoFecha = false;
+
+function cambiarFecha(dias, nivel) {
+  if (cambiandoFecha) return;
+  cambiandoFecha = true;
+
   const fecha = new Date(fechaSeleccionada + 'T00:00:00');
   fecha.setDate(fecha.getDate() + dias);
   fechaSeleccionada = fecha.toISOString().split('T')[0];
-  renderizarNutricion(nivel, contenido, document.getElementById('subHeader'), null);
+
+  renderizarNutricion(
+    nivel,
+    document.getElementById('contenido'),
+    document.getElementById('subHeader'),
+    null
+  ).finally(() => {
+    cambiandoFecha = false;
+  });
 }
+
 
 // ==================== RESUMEN CIRCULAR DE CALORÍAS ====================
 function crearResumenCaloriasCircular(registros) {
@@ -1568,7 +1691,7 @@ function mostrarModalAñadirRapido(alimentoBase, nivel) {
 }
 
 // ==================== MODAL CALENDARIO ====================
-function mostrarCalendarioModal(nivel, contenido) {
+function mostrarCalendarioModal(nivel) {
   const modal = document.createElement('div');
   modal.style.position = 'fixed';
   modal.style.top = '0';
@@ -1580,6 +1703,7 @@ function mostrarCalendarioModal(nivel, contenido) {
   modal.style.alignItems = 'center';
   modal.style.justifyContent = 'center';
   modal.style.zIndex = '10000';
+  modal.style.backdropFilter = 'blur(4px)';
   
   modal.onclick = (e) => {
     if (e.target === modal) modal.remove();
@@ -1588,32 +1712,109 @@ function mostrarCalendarioModal(nivel, contenido) {
   const caja = document.createElement('div');
   caja.style.background = 'white';
   caja.style.borderRadius = '16px';
-  caja.style.padding = '20px';
+  caja.style.padding = '24px';
   caja.style.maxWidth = '90%';
-  caja.style.width = '320px';
+  caja.style.width = '340px';
   caja.style.boxShadow = 'var(--shadow-lg)';
   
   const titulo = document.createElement('h3');
-  titulo.textContent = 'Seleccionar fecha';
-  titulo.style.marginBottom = '16px';
-  titulo.style.fontSize = '1.1rem';
+  titulo.textContent = '📅 Seleccionar fecha';
+  titulo.style.marginBottom = '20px';
+  titulo.style.fontSize = '1.2rem';
   titulo.style.fontWeight = '700';
+  titulo.style.color = 'var(--text-primary)';
+  titulo.style.textAlign = 'center';
   caja.appendChild(titulo);
   
   const inputFecha = document.createElement('input');
   inputFecha.type = 'date';
   inputFecha.value = fechaSeleccionada;
   inputFecha.style.width = '100%';
-  inputFecha.style.padding = '12px';
+  inputFecha.style.padding = '14px';
   inputFecha.style.border = '1px solid var(--border-color)';
   inputFecha.style.borderRadius = '8px';
   inputFecha.style.fontSize = '1rem';
-  inputFecha.style.marginBottom = '16px';
+  inputFecha.style.marginBottom = '20px';
+  inputFecha.style.background = 'var(--bg-main)';
+  inputFecha.style.fontWeight = '600';
+  inputFecha.style.color = 'var(--primary-mint)';
   caja.appendChild(inputFecha);
+  
+  // Botones rápidos
+  const botonesRapidos = document.createElement('div');
+  botonesRapidos.style.display = 'grid';
+  botonesRapidos.style.gridTemplateColumns = 'repeat(3, 1fr)';
+  botonesRapidos.style.gap = '8px';
+  botonesRapidos.style.marginBottom = '20px';
+  
+  const accesosRapidos = [
+    { label: 'Hoy', dias: 0 },
+    { label: 'Ayer', dias: -1 },
+    { label: 'Ant-ayer', dias: -2 }
+  ];
+  
+  accesosRapidos.forEach(acceso => {
+    const btn = document.createElement('button');
+    btn.textContent = acceso.label;
+    btn.style.padding = '8px';
+    btn.style.background = 'var(--bg-main)';
+    btn.style.border = '1px solid var(--border-color)';
+    btn.style.borderRadius = '6px';
+    btn.style.fontSize = '0.85rem';
+    btn.style.fontWeight = '600';
+    btn.style.cursor = 'pointer';
+    btn.style.transition = 'all 0.2s ease';
+    
+    btn.onclick = () => {
+      const fecha = new Date();
+      fecha.setDate(fecha.getDate() + acceso.dias);
+      inputFecha.value = fecha.toISOString().split('T')[0];
+    };
+    
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = 'var(--primary-mint)';
+      btn.style.color = 'white';
+      btn.style.borderColor = 'var(--primary-mint)';
+    });
+    
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = 'var(--bg-main)';
+      btn.style.color = 'var(--text-primary)';
+      btn.style.borderColor = 'var(--border-color)';
+    });
+    
+    botonesRapidos.appendChild(btn);
+  });
+  
+  caja.appendChild(botonesRapidos);
+  
+  // Botones principales
+  const botones = document.createElement('div');
+  botones.style.display = 'flex';
+  botones.style.gap = '12px';
+  
+  const btnCancelar = document.createElement('button');
+  btnCancelar.textContent = 'Cancelar';
+  btnCancelar.style.flex = '1';
+  btnCancelar.style.padding = '12px';
+  btnCancelar.style.background = 'var(--bg-main)';
+  btnCancelar.style.border = 'none';
+  btnCancelar.style.borderRadius = '8px';
+  btnCancelar.style.fontWeight = '600';
+  btnCancelar.style.cursor = 'pointer';
+  btnCancelar.style.transition = 'all 0.2s ease';
+  btnCancelar.onclick = () => modal.remove();
+  
+  btnCancelar.addEventListener('mouseenter', () => {
+    btnCancelar.style.background = 'var(--border-color)';
+  });
+  btnCancelar.addEventListener('mouseleave', () => {
+    btnCancelar.style.background = 'var(--bg-main)';
+  });
   
   const btnAceptar = document.createElement('button');
   btnAceptar.textContent = 'Aceptar';
-  btnAceptar.style.width = '100%';
+  btnAceptar.style.flex = '1';
   btnAceptar.style.padding = '12px';
   btnAceptar.style.background = 'var(--primary-mint)';
   btnAceptar.style.color = 'white';
@@ -1621,15 +1822,33 @@ function mostrarCalendarioModal(nivel, contenido) {
   btnAceptar.style.borderRadius = '8px';
   btnAceptar.style.fontWeight = '700';
   btnAceptar.style.cursor = 'pointer';
+  btnAceptar.style.transition = 'all 0.2s ease';
   btnAceptar.onclick = () => {
     fechaSeleccionada = inputFecha.value;
     modal.remove();
-    renderizarNutricion(nivel, contenido, document.getElementById('subHeader'), null);
+    renderizarNutricion(
+      nivel,
+      document.getElementById('contenido'),
+      document.getElementById('subHeader'),
+      null
+    );
   };
-  caja.appendChild(btnAceptar);
+  
+  btnAceptar.addEventListener('mouseenter', () => {
+    btnAceptar.style.background = 'var(--mint-light)';
+  });
+  btnAceptar.addEventListener('mouseleave', () => {
+    btnAceptar.style.background = 'var(--primary-mint)';
+  });
+  
+  botones.appendChild(btnCancelar);
+  botones.appendChild(btnAceptar);
+  caja.appendChild(botones);
   
   modal.appendChild(caja);
   document.body.appendChild(modal);
+  
+  setTimeout(() => inputFecha.focus(), 100);
 }
 
 // ==================== MODAL CONFIGURAR METAS ====================
