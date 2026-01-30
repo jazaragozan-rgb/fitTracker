@@ -741,7 +741,10 @@ function renderizar() {
   }
   // Pantalla nutrición
 if (rutaActual.length === 1 && rutaActual[0] === 3) {
-  renderizarNutricion(nivel, contenido, subHeader, addButton);
+  if (!datos[3]) {
+    datos[3] = { nombre: 'Nutrición', hijos: [] };
+  }
+  renderizarNutricion(datos[3], contenido, subHeader, addButton, rutaActual);
   return;
 }
 
