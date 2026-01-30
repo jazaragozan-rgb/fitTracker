@@ -13,9 +13,6 @@ const METAS_DIARIAS = {
   grasas: 65
 };
 
-let renderCounter = 0;
-
-
 const TIPOS_COMIDA = [
   { id: 'desayuno', nombre: 'Desayuno', icono: '🌅', color: '#FFB74D' },
   { id: 'almuerzo', nombre: 'Almuerzo', icono: '☀️', color: '#4FC3F7' },
@@ -125,9 +122,9 @@ export async function renderizarNutricion(nivel, contenido, subHeader, addButton
   // Botón configurar metas
   const btnMetas = document.createElement('button');
   btnMetas.className = 'header-btn';
-  btnMetas.innerHTML = '🎯';
+  btnMetas.innerHTML = '🎯 Objetivo calorias';
   btnMetas.title = 'Configurar metas';
-  btnMetas.style.width = '40px';
+  btnMetas.style.width = '240px';
   btnMetas.style.padding = '8px';
   btnMetas.onclick = () => mostrarModalMetas();
   botonesContainer.appendChild(btnMetas);
@@ -1240,20 +1237,23 @@ async function buscarAlimentos(query, list, nivel, contenido, overlay, tipoComid
     `;
     return;
   }
-  
+
+  // Mensaje de búsqueda
   list.innerHTML = `
     <div style="text-align: center; padding: 60px 20px; color: var(--text-light);">
       <div style="font-size: 2.5rem; margin-bottom: 16px;">⏳</div>
       <div style="font-size: 0.9rem;">Buscando...</div>
     </div>
   `;
-  
+
   try {
-    const response = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&fields=product_name,image_small_url,nutriments,brands`);
+    const response = await fetch(
+      `https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(query)}&search_simple=1&action=process&json=1&page_size=30&fields=product_name,image_small_url,nutriments,brands`
+    );
     const data = await response.json();
-    
+
     list.innerHTML = '';
-    
+
     if (!data.products || data.products.length === 0) {
       list.innerHTML = `
         <div style="text-align: center; padding: 60px 20px; color: var(--text-light);">
@@ -1264,7 +1264,7 @@ async function buscarAlimentos(query, list, nivel, contenido, overlay, tipoComid
       `;
       return;
     }
-    
+
     // Contador
     const contador = document.createElement('div');
     contador.textContent = `${data.products.length} resultado${data.products.length !== 1 ? 's' : ''}`;
@@ -1273,15 +1273,31 @@ async function buscarAlimentos(query, list, nivel, contenido, overlay, tipoComid
     contador.style.color = 'var(--text-secondary)';
     contador.style.fontWeight = '600';
     list.appendChild(contador);
-    
+
     // Filtrar productos con datos nutricionales
-    const productosValidos = data.products.filter(p => p.nutriments && p.nutriments['energy-kcal_100g']);
-    
+    const productosValidos = data.products.filter(
+      p => p.nutriments && p.nutriments['energy-kcal_100g']
+    );
+
     productosValidos.forEach(producto => {
       const item = crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComida);
       list.appendChild(item);
+
+      // Cargar imagen de forma asíncrona
+      if (producto.image_small_url) {
+        const img = new Image();
+        img.src = producto.image_small_url;
+        img.onload = () => {
+          const divImagen = item.querySelector('.imagen-alimento');
+          divImagen.innerHTML = ''; // Limpiar placeholder
+          divImagen.appendChild(img);
+          img.style.width = '100%';
+          img.style.height = '100%';
+          img.style.objectFit = 'cover';
+        };
+      }
     });
-    
+
     if (productosValidos.length === 0) {
       list.innerHTML = `
         <div style="text-align: center; padding: 40px 20px; color: var(--text-light);">
@@ -1289,7 +1305,7 @@ async function buscarAlimentos(query, list, nivel, contenido, overlay, tipoComid
         </div>
       `;
     }
-    
+
   } catch (error) {
     console.error('Error buscando alimentos:', error);
     list.innerHTML = `
@@ -1301,6 +1317,7 @@ async function buscarAlimentos(query, list, nivel, contenido, overlay, tipoComid
     `;
   }
 }
+
 
 // ==================== ITEM ALIMENTO BUSCADO ====================
 function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComida) {
@@ -1315,9 +1332,10 @@ function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComid
   item.style.borderRadius = '12px';
   item.style.cursor = 'pointer';
   item.style.transition = 'all 0.2s ease';
-  
-  // Imagen
+
+  // Imagen con placeholder
   const imagen = document.createElement('div');
+  imagen.className = 'imagen-alimento';
   imagen.style.width = '50px';
   imagen.style.height = '50px';
   imagen.style.borderRadius = '8px';
@@ -1327,24 +1345,14 @@ function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComid
   imagen.style.display = 'flex';
   imagen.style.alignItems = 'center';
   imagen.style.justifyContent = 'center';
-  
-  if (producto.image_small_url) {
-    const img = document.createElement('img');
-    img.src = producto.image_small_url;
-    img.style.width = '100%';
-    img.style.height = '100%';
-    img.style.objectFit = 'cover';
-    imagen.appendChild(img);
-  } else {
-    imagen.textContent = '🍽️';
-    imagen.style.fontSize = '1.5rem';
-  }
-  
+  imagen.textContent = '🍽️'; // placeholder
+  imagen.style.fontSize = '1.5rem';
+
   // Info
   const info = document.createElement('div');
   info.style.flex = '1';
   info.style.minWidth = '0';
-  
+
   const nombre = document.createElement('div');
   nombre.textContent = producto.product_name || 'Sin nombre';
   nombre.style.fontSize = '0.9rem';
@@ -1354,7 +1362,7 @@ function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComid
   nombre.style.overflow = 'hidden';
   nombre.style.textOverflow = 'ellipsis';
   nombre.style.whiteSpace = 'nowrap';
-  
+
   const nutri = producto.nutriments || {};
   const detalles = document.createElement('div');
   detalles.style.fontSize = '0.75rem';
@@ -1366,7 +1374,7 @@ function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComid
     <span style="margin: 0 6px;">•</span>
     <span>C: ${Math.round(nutri.carbohydrates_100g || 0)}g</span>
   `;
-  
+
   if (producto.brands) {
     const marca = document.createElement('div');
     marca.textContent = producto.brands;
@@ -1383,7 +1391,7 @@ function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComid
     info.appendChild(nombre);
     info.appendChild(detalles);
   }
-  
+
   // Botón añadir
   const btnAdd = document.createElement('button');
   btnAdd.textContent = '+';
@@ -1401,36 +1409,37 @@ function crearItemAlimentoBuscado(producto, nivel, contenido, overlay, tipoComid
   btnAdd.style.display = 'flex';
   btnAdd.style.alignItems = 'center';
   btnAdd.style.justifyContent = 'center';
-  
+
   btnAdd.onclick = (e) => {
     e.stopPropagation();
     mostrarModalCantidad(producto, nivel, contenido, overlay, tipoComida);
   };
-  
+
   item.onclick = () => {
     mostrarModalCantidad(producto, nivel, contenido, overlay, tipoComida);
   };
-  
+
   item.addEventListener('mouseenter', () => {
     item.style.background = 'white';
     item.style.borderColor = 'var(--primary-mint)';
     item.style.boxShadow = 'var(--shadow-sm)';
     btnAdd.style.transform = 'scale(1.1)';
   });
-  
+
   item.addEventListener('mouseleave', () => {
     item.style.background = 'var(--bg-main)';
     item.style.borderColor = 'var(--border-color)';
     item.style.boxShadow = 'none';
     btnAdd.style.transform = 'scale(1)';
   });
-  
+
   item.appendChild(imagen);
   item.appendChild(info);
   item.appendChild(btnAdd);
-  
+
   return item;
 }
+
 
 // ==================== MODAL CANTIDAD ====================
 function mostrarModalCantidad(producto, nivel, contenido, overlay, tipoComida) {
