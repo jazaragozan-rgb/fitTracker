@@ -401,26 +401,30 @@ function crearResumenCaloriasCircular(registros) {
   container.style.display = 'flex';
   container.style.flexDirection = 'column';
   container.style.alignItems = 'center';
-  
+
   const totales = calcularTotales(registros);
   const consumidas = totales.calorias;
   const meta = METAS_DIARIAS.calorias;
   const restantes = Math.max(0, meta - consumidas);
   const porcentaje = Math.min(100, (consumidas / meta) * 100);
-  
-  // Círculo de progreso
+
+  // 🔥 Placeholder para calorías quemadas
+  const caloriasQuemadas = 0; // ← aquí luego conectas tu lógica
+
+  // ================= CONTENEDOR CÍRCULO =================
   const circleContainer = document.createElement('div');
   circleContainer.style.position = 'relative';
   circleContainer.style.width = '180px';
   circleContainer.style.height = '180px';
-  circleContainer.style.marginBottom = '20px';
-  
-  // SVG del círculo
+  circleContainer.style.flex = '0 0 180px';
+
+
+  // ================= SVG CÍRCULO =================
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('width', '180');
   svg.setAttribute('height', '180');
   svg.style.transform = 'rotate(-90deg)';
-  
+
   const circleBackground = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   circleBackground.setAttribute('cx', '90');
   circleBackground.setAttribute('cy', '90');
@@ -428,7 +432,7 @@ function crearResumenCaloriasCircular(registros) {
   circleBackground.setAttribute('fill', 'none');
   circleBackground.setAttribute('stroke', '#E8E8E8');
   circleBackground.setAttribute('stroke-width', '12');
-  
+
   const circleProgress = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   circleProgress.setAttribute('cx', '90');
   circleProgress.setAttribute('cy', '90');
@@ -437,12 +441,16 @@ function crearResumenCaloriasCircular(registros) {
   circleProgress.setAttribute('stroke', 'url(#gradient)');
   circleProgress.setAttribute('stroke-width', '12');
   circleProgress.setAttribute('stroke-linecap', 'round');
+
   const circumference = 2 * Math.PI * 75;
   circleProgress.setAttribute('stroke-dasharray', circumference);
-  circleProgress.setAttribute('stroke-dashoffset', circumference - (circumference * porcentaje / 100));
+  circleProgress.setAttribute(
+    'stroke-dashoffset',
+    circumference - (circumference * porcentaje / 100)
+  );
   circleProgress.style.transition = 'stroke-dashoffset 1s ease';
-  
-  // Gradiente
+
+  // ================= GRADIENTE =================
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   const gradient = document.createElementNS('http://www.w3.org/2000/svg', 'linearGradient');
   gradient.setAttribute('id', 'gradient');
@@ -450,78 +458,106 @@ function crearResumenCaloriasCircular(registros) {
   gradient.setAttribute('y1', '0%');
   gradient.setAttribute('x2', '100%');
   gradient.setAttribute('y2', '100%');
-  
+
   const stop1 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
   stop1.setAttribute('offset', '0%');
   stop1.setAttribute('style', 'stop-color:#3DD598;stop-opacity:1');
-  
+
   const stop2 = document.createElementNS('http://www.w3.org/2000/svg', 'stop');
   stop2.setAttribute('offset', '100%');
   stop2.setAttribute('style', 'stop-color:#00D4D4;stop-opacity:1');
-  
+
   gradient.appendChild(stop1);
   gradient.appendChild(stop2);
   defs.appendChild(gradient);
+
   svg.appendChild(defs);
   svg.appendChild(circleBackground);
   svg.appendChild(circleProgress);
-  
-  // Texto central
+
+  // ================= TEXTO CENTRAL =================
   const centerText = document.createElement('div');
   centerText.style.position = 'absolute';
   centerText.style.top = '50%';
   centerText.style.left = '50%';
   centerText.style.transform = 'translate(-50%, -50%)';
   centerText.style.textAlign = 'center';
-  
+
   const caloriasNum = document.createElement('div');
   caloriasNum.textContent = Math.round(restantes);
   caloriasNum.style.fontSize = '2.5rem';
   caloriasNum.style.fontWeight = '900';
   caloriasNum.style.color = 'var(--text-primary)';
   caloriasNum.style.lineHeight = '1';
-  
+
   const caloriasLabel = document.createElement('div');
   caloriasLabel.textContent = 'kcal restantes';
   caloriasLabel.style.fontSize = '0.75rem';
   caloriasLabel.style.color = 'var(--text-secondary)';
   caloriasLabel.style.marginTop = '6px';
   caloriasLabel.style.fontWeight = '600';
-  
+
   centerText.appendChild(caloriasNum);
   centerText.appendChild(caloriasLabel);
-  
+
   circleContainer.appendChild(svg);
   circleContainer.appendChild(centerText);
-  
-  // Resumen compacto debajo
-  const resumen = document.createElement('div');
-  resumen.style.display = 'flex';
-  resumen.style.gap = '24px';
-  resumen.style.fontSize = '0.85rem';
-  
-  const consumido = document.createElement('div');
-  consumido.style.textAlign = 'center';
-  consumido.innerHTML = `
-    <div style="color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Consumido</div>
-    <div style="color: var(--primary-mint); font-weight: 700; font-size: 1.1rem;">${Math.round(consumidas)}</div>
+
+  // ================= FILA PRINCIPAL (RESPONSIVE) =================
+  const fila = document.createElement('div');
+  fila.style.display = 'flex';
+  fila.style.alignItems = 'center';
+  fila.style.justifyContent = 'center';
+  fila.style.gap = '24px';
+  fila.style.flexWrap = 'nowrap';
+  fila.style.width = '100%';
+
+  // Consumidas (izquierda)
+  const bloqueConsumidas = document.createElement('div');
+  bloqueConsumidas.style.textAlign = 'center';
+  bloqueConsumidas.style.flex = '1';
+  bloqueConsumidas.style.minWidth = '0';
+  bloqueConsumidas.innerHTML = `
+    <div style="color: var(--text-secondary); font-size: 0.75rem; font-weight: 600;">Consumidas</div>
+    <div style="color: var(--primary-mint); font-size: 1.4rem; font-weight: 800;">
+      ${Math.round(consumidas)}
+    </div>
   `;
-  
+
+  // Quemadas (derecha)
+  const bloqueQuemadas = document.createElement('div');
+  bloqueQuemadas.style.textAlign = 'center';
+  bloqueQuemadas.style.flex = '1';
+  bloqueQuemadas.style.minWidth = '0';
+  bloqueQuemadas.innerHTML = `
+    <div style="color: var(--text-secondary); font-size: 0.75rem; font-weight: 600;">Quemadas</div>
+    <div style="color: #FF8A65; font-size: 1.4rem; font-weight: 800;">
+      ${Math.round(caloriasQuemadas)}
+    </div>
+  `;
+
+  fila.appendChild(bloqueConsumidas);
+  fila.appendChild(circleContainer);
+  fila.appendChild(bloqueQuemadas);
+
+  // ================= OBJETIVO ABAJO =================
   const objetivo = document.createElement('div');
   objetivo.style.textAlign = 'center';
+  objetivo.style.marginTop = '12px';
+  objetivo.style.width = '100%';
   objetivo.innerHTML = `
-    <div style="color: var(--text-secondary); font-weight: 600; margin-bottom: 4px;">Objetivo</div>
-    <div style="color: var(--text-primary); font-weight: 700; font-size: 1.1rem;">${meta}</div>
+    <div style="color: var(--text-secondary); font-size: 0.75rem; font-weight: 600;">Objetivo</div>
+    <div style="color: var(--text-primary); font-size: 1.1rem; font-weight: 800;">
+      ${meta} kcal
+    </div>
   `;
-  
-  resumen.appendChild(consumido);
-  resumen.appendChild(objetivo);
-  
-  container.appendChild(circleContainer);
-  container.appendChild(resumen);
-  
+
+  container.appendChild(fila);
+  container.appendChild(objetivo);
+
   return container;
 }
+
 
 // ==================== MACROS CON BARRAS DE PROGRESO ====================
 function crearMacrosConBarras(registros) {
