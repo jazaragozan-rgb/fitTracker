@@ -96,7 +96,7 @@ export async function renderizarNutricion(nivel, contenido, subHeader, addButton
   subHeader.innerHTML = '';
   
   // ✅ Limpiar completamente el contenido (incluido selector de fecha anterior)
-  contenido.innerHTML = '';
+  //contenido.innerHTML = '';
 
   if (!nivel) {
     nivel = { nombre: 'Nutrición', hijos: [] };
@@ -171,7 +171,12 @@ export async function renderizarNutricion(nivel, contenido, subHeader, addButton
   contenidoScrolleable.style.background = 'var(--bg-main)';
   contenidoScrolleable.style.padding = '16px';
   contenidoScrolleable.style.paddingBottom = '80px'; // Espacio para footer
-  
+  contenidoScrolleable.style.opacity = 0;
+  contenidoScrolleable.innerHTML = '';
+  // renderizas nuevo contenido
+  contenidoScrolleable.style.opacity = 1;
+
+
   // Obtener registros del día
   const registrosHoy = (nivel.hijos || []).filter(r => r.fecha === fechaActual);
   
