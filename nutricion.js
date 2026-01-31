@@ -1918,8 +1918,9 @@ function mostrarCalendarioModal(nivel) {
 }
 
 // ==================== MODAL CONFIGURAR METAS ====================
-
 function mostrarModalMetas() {
+
+  /* ───────── ESTADO ───────── */
   let MEDIDAS = {
     peso: 85,
     altura: 179,
@@ -1928,13 +1929,20 @@ function mostrarModalMetas() {
     actividad: 'moderado'
   };
 
-  const FACTOR_ACTIVIDAD = {
+  const ACTIVIDAD = {
     sedentario: 1.2,
     ligero: 1.375,
     moderado: 1.55,
     alto: 1.725
   };
 
+  const PRESETS = {
+    mantener: { p: 30, c: 45, g: 25 },
+    ganar: { p: 25, c: 50, g: 25 },
+    perder: { p: 35, c: 40, g: 25 }
+  };
+
+  /* ───────── CÁLCULOS ───────── */
   function calcularCalorias(objetivo) {
     const sexoFactor = MEDIDAS.sexo === 'hombre' ? 5 : -161;
     const tmb =
@@ -1943,57 +1951,62 @@ function mostrarModalMetas() {
       5 * MEDIDAS.edad +
       sexoFactor;
 
-    let tdee = tmb * FACTOR_ACTIVIDAD[MEDIDAS.actividad];
-
+    let tdee = tmb * ACTIVIDAD[MEDIDAS.actividad];
     if (objetivo === 'ganar') tdee += 300;
     if (objetivo === 'perder') tdee -= 400;
 
     return Math.round(tdee);
   }
 
-  /* ───────── MODAL BASE ───────── */
+  /* ───────── UI BASE ───────── */
   const modal = document.createElement('div');
-  modal.style = `
-    position:fixed; inset:0; background:rgba(0,0,0,.5);
-    display:flex; align-items:center; justify-content:center; z-index:10000;
-  `;
+  modal.style = `position:fixed; inset:0; background:rgba(0,0,0,.5);
+                 display:flex; justify-content:center; align-items:center; z-index:9999`;
 
   const caja = document.createElement('div');
-  caja.style = `
-    background:white; padding:24px; border-radius:16px;
-    width:420px; max-width:90%;
-  `;
+  caja.style = `background:white; padding:24px; border-radius:16px;
+                width:420px; max-width:90%`;
 
-  caja.innerHTML = `<h3>🎯 Configurar Metas</h3>`;
+  const titulo = document.createElement('h3');
+  titulo.textContent = '🎯 Metas nutricionales';
+  caja.appendChild(titulo);
 
   /* ───────── OBJETIVO ───────── */
   const objetivo = document.createElement('select');
   objetivo.innerHTML = `
-    <option value="mantener">Mantener peso</option>
+    <option value="mantener">Mantener</option>
     <option value="ganar">Ganar músculo</option>
-    <option value="perder">Perder grasa</option>
-  `;
+    <option value="perder">Perder grasa</option>`;
   caja.appendChild(objetivo);
+
+  /* ───────── ACTIVIDAD ───────── */
+  const actividad = document.createElement('select');
+  actividad.innerHTML = `
+    <option value="sedentario">Sedentario</option>
+    <option value="ligero">Actividad ligera</option>
+    <option value="moderado">Actividad moderada</option>
+    <option value="alto">Actividad alta</option>`;
+  actividad.value = MEDIDAS.actividad;
+  caja.appendChild(actividad);
+
+  actividad.onchange = () => {
+    MEDIDAS.actividad = actividad.value;
+    recalcularTodo();
+  };
 
   /* ───────── MEDIDAS ───────── */
   const btnMedidas = document.createElement('button');
   btnMedidas.textContent = '📐 Seleccionar medidas';
   btnMedidas.onclick = () => {
-    // 🔧 AQUÍ METES TU MODAL REAL
-    console.log('Medidas actuales:', MEDIDAS);
+    // AQUÍ TU MODAL REAL
+    recalcularTodo();
   };
   caja.appendChild(btnMedidas);
 
   /* ───────── CALORÍAS ───────── */
   const calorias = document.createElement('input');
-  calorias.type = 'number';
   calorias.readOnly = true;
   caja.appendChild(calorias);
-
-  objetivo.onchange = () => {
-    calorias.value = calcularCalorias(objetivo.value);
-    recalcularMacros();
-  };
 
   /* ───────── MACROS ───────── */
   const macros = {
@@ -2002,55 +2015,92 @@ function mostrarModalMetas() {
     grasas: { kcal: 9 }
   };
 
+  const contMacros = document.createElement('div');
+  caja.appendChild(contMacros);
+
   Object.keys(macros).forEach(k => {
-    macros[k].g = document.createElement('input');
-    macros[k].p = document.createElement('input');
-    macros[k].p.placeholder = '%';
-    macros[k].p.oninput = recalcularMacros;
-    caja.append(macros[k].g, macros[k].p);
+    const fila = document.createElement('div');
+    fila.style.marginBottom = '8px';
+
+    macros[k].slider = document.createElement('input');
+    macros[k].slider.type = 'range';
+    macros[k].slider.min = 0;
+    macros[k].slider.max = 100;
+
+    macros[k].pct = document.createElement('input');
+    macros[k].pct.type = 'number';
+    macros[k].pct.style.width = '60px';
+
+    macros[k].g = document.createElement('span');
+
+    fila.append(k, macros[k].slider, macros[k].pct, macros[k].g);
+    contMacros.appendChild(fila);
+
+    macros[k].slider.oninput = () => {
+      macros[k].pct.value = macros[k].slider.value;
+      recalcularMacros();
+    };
+    macros[k].pct.oninput = () => {
+      macros[k].slider.value = macros[k].pct.value;
+      recalcularMacros();
+    };
   });
 
+  /* ───────── VALIDACIÓN ───────── */
   function recalcularMacros() {
-    const totalPct = Object.values(macros)
-      .reduce((s, m) => s + (+m.p.value || 0), 0);
+    const total = Object.values(macros)
+      .reduce((s, m) => s + (+m.pct.value || 0), 0);
 
-    if (totalPct !== 100) {
-      caja.querySelector('h3').textContent = `❌ Macros: ${totalPct}%`;
-      return;
-    }
+    titulo.style.color = total === 100 ? 'green' : 'red';
 
-    caja.querySelector('h3').textContent = '🎯 Configurar Metas';
+    if (total !== 100) return;
 
     Object.values(macros).forEach(m => {
-      m.g.value = Math.round(
-        (calorias.value * (m.p.value / 100)) / m.kcal
-      );
+      m.g.textContent =
+        Math.round((calorias.value * (m.pct.value / 100)) / m.kcal) + ' g';
     });
+  }
+
+  /* ───────── PRESETS ───────── */
+  function aplicarPreset() {
+    const p = PRESETS[objetivo.value];
+    macros.proteinas.slider.value = macros.proteinas.pct.value = p.p;
+    macros.carbohidratos.slider.value = macros.carbohidratos.pct.value = p.c;
+    macros.grasas.slider.value = macros.grasas.pct.value = p.g;
+    recalcularMacros();
+  }
+
+  objetivo.onchange = () => {
+    recalcularTodo();
+    aplicarPreset();
+  };
+
+  function recalcularTodo() {
+    calorias.value = calcularCalorias(objetivo.value);
+    recalcularMacros();
   }
 
   /* ───────── GUARDAR ───────── */
   const guardar = document.createElement('button');
   guardar.textContent = 'Guardar';
   guardar.onclick = async () => {
-    const totalPct = Object.values(macros)
-      .reduce((s, m) => s + (+m.p.value || 0), 0);
+    const uid = auth.currentUser.uid;
 
-    if (totalPct !== 100) {
-      alert('Los macros deben sumar 100%');
-      return;
-    }
-
-    await setDoc(doc(db, 'usuarios', 'UID_USUARIO'), {
+    const data = {
       objetivo: objetivo.value,
+      actividad: MEDIDAS.actividad,
       calorias: +calorias.value,
       medidas: MEDIDAS,
       macros: {
-        proteinas: { g: +macros.proteinas.g.value, pct: +macros.proteinas.p.value },
-        carbohidratos: { g: +macros.carbohidratos.g.value, pct: +macros.carbohidratos.p.value },
-        grasas: { g: +macros.grasas.g.value, pct: +macros.grasas.p.value }
+        proteinas: +macros.proteinas.pct.value,
+        carbohidratos: +macros.carbohidratos.pct.value,
+        grasas: +macros.grasas.pct.value
       },
-      updatedAt: new Date()
-    });
+      updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(db, 'usuarios', uid, 'nutricion', 'actual'), data);
+    await addDoc(collection(db, 'usuarios', uid, 'nutricion', 'historial'), data);
 
     modal.remove();
   };
@@ -2059,6 +2109,8 @@ function mostrarModalMetas() {
   modal.appendChild(caja);
   document.body.appendChild(modal);
 
-  // Inicial
-  calorias.value = calcularCalorias(objetivo.value);
-}
+  // Init
+  recalcularTodo();
+  aplicarPreset();
+    }
+    
