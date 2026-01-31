@@ -1918,116 +1918,147 @@ function mostrarCalendarioModal(nivel) {
 }
 
 // ==================== MODAL CONFIGURAR METAS ====================
-function mostrarModalMetas() {
-  const modal = document.createElement('div');
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100%';
-  modal.style.height = '100%';
-  modal.style.background = 'rgba(0,0,0,0.5)';
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
-  modal.style.zIndex = '10000';
-  
-  const caja = document.createElement('div');
-  caja.style.background = 'white';
-  caja.style.borderRadius = '16px';
-  caja.style.padding = '24px';
-  caja.style.maxWidth = '90%';
-  caja.style.width = '400px';
-  caja.style.boxShadow = 'var(--shadow-lg)';
-  
-  const titulo = document.createElement('h3');
-  titulo.textContent = '🎯 Configurar Metas Diarias';
-  titulo.style.marginBottom = '20px';
-  titulo.style.fontSize = '1.1rem';
-  titulo.style.fontWeight = '700';
-  caja.appendChild(titulo);
-  
-  const inputs = [];
-  
-  const metas = [
-    { key: 'calorias', label: 'Calorías', unidad: 'kcal' },
-    { key: 'proteinas', label: 'Proteínas', unidad: 'g' },
-    { key: 'carbohidratos', label: 'Carbohidratos', unidad: 'g' },
-    { key: 'grasas', label: 'Grasas', unidad: 'g' }
-  ];
-  
-  metas.forEach(meta => {
-    const label = document.createElement('label');
-    label.textContent = `${meta.label} (${meta.unidad}):`;
-    label.style.display = 'block';
-    label.style.marginBottom = '8px';
-    label.style.fontWeight = '600';
-    label.style.fontSize = '0.9rem';
-    caja.appendChild(label);
-    
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.value = METAS_DIARIAS[meta.key];
-    input.min = '0';
-    input.style.width = '100%';
-    input.style.padding = '12px';
-    input.style.border = '1px solid var(--border-color)';
-    input.style.borderRadius = '8px';
-    input.style.marginBottom = '16px';
-    input.style.fontSize = '1rem';
-    caja.appendChild(input);
-    
-    inputs.push({ key: meta.key, input });
-  });
-  
-  const botones = document.createElement('div');
-  botones.style.display = 'flex';
-  botones.style.gap = '12px';
-  botones.style.marginTop = '8px';
-  
-  const btnCancelar = document.createElement('button');
-  btnCancelar.textContent = 'Cancelar';
-  btnCancelar.style.flex = '1';
-  btnCancelar.style.padding = '12px';
-  btnCancelar.style.background = 'var(--bg-main)';
-  btnCancelar.style.border = 'none';
-  btnCancelar.style.borderRadius = '8px';
-  btnCancelar.style.cursor = 'pointer';
-  btnCancelar.onclick = () => modal.remove();
-  
-  const btnGuardar = document.createElement('button');
-  btnGuardar.textContent = 'Guardar';
-  btnGuardar.style.flex = '1';
-  btnGuardar.style.padding = '12px';
-  btnGuardar.style.background = 'var(--primary-mint)';
-  btnGuardar.style.color = 'white';
-  btnGuardar.style.border = 'none';
-  btnGuardar.style.borderRadius = '8px';
-  btnGuardar.style.fontWeight = '700';
-  btnGuardar.style.cursor = 'pointer';
-  btnGuardar.onclick = () => {
-    inputs.forEach(({ key, input }) => {
-      METAS_DIARIAS[key] = parseInt(input.value) || 0;
-    });
-    // Aquí podrías guardar en localStorage o Firebase
-    modal.remove();
 
-        // ✅ CORRECCIÓN: Asegurar que datos[3] existe antes de renderizar
-    if (!window.datos[3]) {
-      window.datos[3] = { nombre: 'Nutrición', hijos: [] };
-    }
-    
-    renderizarNutricion(
-      window.datos[3],
-      document.getElementById('contenido'),
-      document.getElementById('subHeader'),
-      null
-    );
+function mostrarModalMetas() {
+  let MEDIDAS = {
+    peso: 85,
+    altura: 179,
+    edad: 38,
+    sexo: 'hombre',
+    actividad: 'moderado'
   };
-  
-  botones.appendChild(btnCancelar);
-  botones.appendChild(btnGuardar);
-  caja.appendChild(botones);
-  
+
+  const FACTOR_ACTIVIDAD = {
+    sedentario: 1.2,
+    ligero: 1.375,
+    moderado: 1.55,
+    alto: 1.725
+  };
+
+  function calcularCalorias(objetivo) {
+    const sexoFactor = MEDIDAS.sexo === 'hombre' ? 5 : -161;
+    const tmb =
+      10 * MEDIDAS.peso +
+      6.25 * MEDIDAS.altura -
+      5 * MEDIDAS.edad +
+      sexoFactor;
+
+    let tdee = tmb * FACTOR_ACTIVIDAD[MEDIDAS.actividad];
+
+    if (objetivo === 'ganar') tdee += 300;
+    if (objetivo === 'perder') tdee -= 400;
+
+    return Math.round(tdee);
+  }
+
+  /* ───────── MODAL BASE ───────── */
+  const modal = document.createElement('div');
+  modal.style = `
+    position:fixed; inset:0; background:rgba(0,0,0,.5);
+    display:flex; align-items:center; justify-content:center; z-index:10000;
+  `;
+
+  const caja = document.createElement('div');
+  caja.style = `
+    background:white; padding:24px; border-radius:16px;
+    width:420px; max-width:90%;
+  `;
+
+  caja.innerHTML = `<h3>🎯 Configurar Metas</h3>`;
+
+  /* ───────── OBJETIVO ───────── */
+  const objetivo = document.createElement('select');
+  objetivo.innerHTML = `
+    <option value="mantener">Mantener peso</option>
+    <option value="ganar">Ganar músculo</option>
+    <option value="perder">Perder grasa</option>
+  `;
+  caja.appendChild(objetivo);
+
+  /* ───────── MEDIDAS ───────── */
+  const btnMedidas = document.createElement('button');
+  btnMedidas.textContent = '📐 Seleccionar medidas';
+  btnMedidas.onclick = () => {
+    // 🔧 AQUÍ METES TU MODAL REAL
+    console.log('Medidas actuales:', MEDIDAS);
+  };
+  caja.appendChild(btnMedidas);
+
+  /* ───────── CALORÍAS ───────── */
+  const calorias = document.createElement('input');
+  calorias.type = 'number';
+  calorias.readOnly = true;
+  caja.appendChild(calorias);
+
+  objetivo.onchange = () => {
+    calorias.value = calcularCalorias(objetivo.value);
+    recalcularMacros();
+  };
+
+  /* ───────── MACROS ───────── */
+  const macros = {
+    proteinas: { kcal: 4 },
+    carbohidratos: { kcal: 4 },
+    grasas: { kcal: 9 }
+  };
+
+  Object.keys(macros).forEach(k => {
+    macros[k].g = document.createElement('input');
+    macros[k].p = document.createElement('input');
+    macros[k].p.placeholder = '%';
+    macros[k].p.oninput = recalcularMacros;
+    caja.append(macros[k].g, macros[k].p);
+  });
+
+  function recalcularMacros() {
+    const totalPct = Object.values(macros)
+      .reduce((s, m) => s + (+m.p.value || 0), 0);
+
+    if (totalPct !== 100) {
+      caja.querySelector('h3').textContent = `❌ Macros: ${totalPct}%`;
+      return;
+    }
+
+    caja.querySelector('h3').textContent = '🎯 Configurar Metas';
+
+    Object.values(macros).forEach(m => {
+      m.g.value = Math.round(
+        (calorias.value * (m.p.value / 100)) / m.kcal
+      );
+    });
+  }
+
+  /* ───────── GUARDAR ───────── */
+  const guardar = document.createElement('button');
+  guardar.textContent = 'Guardar';
+  guardar.onclick = async () => {
+    const totalPct = Object.values(macros)
+      .reduce((s, m) => s + (+m.p.value || 0), 0);
+
+    if (totalPct !== 100) {
+      alert('Los macros deben sumar 100%');
+      return;
+    }
+
+    await setDoc(doc(db, 'usuarios', 'UID_USUARIO'), {
+      objetivo: objetivo.value,
+      calorias: +calorias.value,
+      medidas: MEDIDAS,
+      macros: {
+        proteinas: { g: +macros.proteinas.g.value, pct: +macros.proteinas.p.value },
+        carbohidratos: { g: +macros.carbohidratos.g.value, pct: +macros.carbohidratos.p.value },
+        grasas: { g: +macros.grasas.g.value, pct: +macros.grasas.p.value }
+      },
+      updatedAt: new Date()
+    });
+
+    modal.remove();
+  };
+
+  caja.appendChild(guardar);
   modal.appendChild(caja);
   document.body.appendChild(modal);
+
+  // Inicial
+  calorias.value = calcularCalorias(objetivo.value);
 }
