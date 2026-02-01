@@ -2176,7 +2176,7 @@ function mostrarModalMetas() {
   tituloMacros.style.letterSpacing = '0.5px';
   caja.appendChild(tituloMacros);
 
-  /* ───────── MACROS ───────── */
+  /* ───────── MACROS CONTAINER ───────── */
   const contMacros = document.createElement('div');
   contMacros.style.background = 'var(--bg-main)';
   contMacros.style.padding = '16px';
@@ -2184,72 +2184,121 @@ function mostrarModalMetas() {
   contMacros.style.marginBottom = '20px';
   caja.appendChild(contMacros);
 
-  Object.entries(MACROS).forEach(([key, macro]) => {
-    const fila = document.createElement('div');
-    fila.style.display = 'flex';
-    fila.style.alignItems = 'center';
-    fila.style.gap = '8px';
-    fila.style.marginBottom = '12px';
+  /* ───────── ESTILOS SLIDER ───────── */
+  const sliderStyles = document.createElement('style');
+  sliderStyles.textContent = `
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary-mint);
+      cursor: pointer;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    }
+    
+    input[type="range"]::-moz-range-thumb {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--primary-mint);
+      cursor: pointer;
+      border: none;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      transition: all 0.2s ease;
+    }
+    
+    input[type="range"]::-moz-range-thumb:hover {
+      transform: scale(1.2);
+      box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    }
+  `;
+  document.head.appendChild(sliderStyles);
 
+  /* ───────── MACROS FILAS ───────── */
+  Object.entries(MACROS).forEach(([key, macro], index) => {
+    // CONTENEDOR PRINCIPAL DE LA MACRO
+    const macroContainer = document.createElement('div');
+    macroContainer.style.marginBottom = index < Object.keys(MACROS).length - 1 ? '20px' : '0';
+    macroContainer.style.paddingBottom = index < Object.keys(MACROS).length - 1 ? '20px' : '0';
+    macroContainer.style.borderBottom = index < Object.keys(MACROS).length - 1 ? '1px solid var(--border-color)' : 'none';
+
+    // FILA 1: Label + Gramos + Porcentaje (3 columnas)
+    const fila1 = document.createElement('div');
+    fila1.style.display = 'grid';
+    fila1.style.gridTemplateColumns = '1fr 90px 90px';
+    fila1.style.gap = '12px';
+    fila1.style.marginBottom = '10px';
+    fila1.style.alignItems = 'center';
+
+    // COLUMNA 1: Label
     const label = document.createElement('strong');
     label.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-    label.style.width = '110px';
-    label.style.fontSize = '0.9rem';
+    label.style.fontSize = '0.95rem';
     label.style.color = 'var(--text-primary)';
-    label.style.fontWeight = '600';
+    label.style.fontWeight = '700';
 
+    // COLUMNA 2: Gramos
     const gramosWrapper = document.createElement('div');
     gramosWrapper.style.position = 'relative';
-    gramosWrapper.style.width = '75px';
 
     const gramos = document.createElement('input');
     gramos.type = 'number';
     gramos.readOnly = true;
     gramos.style.width = '100%';
-    gramos.style.padding = '8px';
-    gramos.style.paddingRight = '24px';
+    gramos.style.padding = '10px';
+    gramos.style.paddingRight = '28px';
     gramos.style.border = '1px solid var(--border-color)';
-    gramos.style.borderRadius = '6px';
-    gramos.style.fontSize = '0.85rem';
+    gramos.style.borderRadius = '8px';
+    gramos.style.fontSize = '0.9rem';
     gramos.style.background = 'var(--bg-card)';
     gramos.style.color = 'var(--text-secondary)';
     gramos.style.textAlign = 'center';
-    gramos.style.fontWeight = '600';
+    gramos.style.fontWeight = '700';
 
     const unidadG = document.createElement('span');
     unidadG.textContent = 'g';
     unidadG.style.position = 'absolute';
-    unidadG.style.right = '8px';
+    unidadG.style.right = '10px';
     unidadG.style.top = '50%';
     unidadG.style.transform = 'translateY(-50%)';
-    unidadG.style.fontSize = '0.75rem';
+    unidadG.style.fontSize = '0.8rem';
     unidadG.style.color = 'var(--text-light)';
     unidadG.style.fontWeight = '600';
 
     gramosWrapper.appendChild(gramos);
     gramosWrapper.appendChild(unidadG);
 
+    // COLUMNA 3: Porcentaje
     const pctWrap = document.createElement('div');
     pctWrap.style.position = 'relative';
-    pctWrap.style.width = '70px';
 
     const pct = document.createElement('input');
     pct.type = 'number';
     pct.style.width = '100%';
-    pct.style.padding = '8px';
-    pct.style.paddingRight = '24px';
+    pct.style.padding = '10px';
+    pct.style.paddingRight = '28px';
     pct.style.border = '1px solid var(--border-color)';
-    pct.style.borderRadius = '6px';
-    pct.style.fontSize = '0.85rem';
+    pct.style.borderRadius = '8px';
+    pct.style.fontSize = '0.9rem';
     pct.style.background = 'var(--bg-card)';
     pct.style.color = 'var(--text-primary)';
     pct.style.textAlign = 'center';
     pct.style.fontWeight = '700';
     pct.style.transition = 'all 0.2s ease';
+    pct.min = '0';
+    pct.max = '100';
 
     pct.addEventListener('focus', () => {
       pct.style.borderColor = 'var(--primary-mint)';
-      pct.style.boxShadow = '0 0 0 2px rgba(61, 213, 152, 0.1)';
+      pct.style.boxShadow = '0 0 0 3px rgba(61, 213, 152, 0.1)';
     });
 
     pct.addEventListener('blur', () => {
@@ -2262,60 +2311,126 @@ function mostrarModalMetas() {
     const simbolo = document.createElement('span');
     simbolo.textContent = '%';
     simbolo.style.position = 'absolute';
-    simbolo.style.right = '8px';
+    simbolo.style.right = '10px';
     simbolo.style.top = '50%';
     simbolo.style.transform = 'translateY(-50%)';
-    simbolo.style.fontSize = '0.75rem';
+    simbolo.style.fontSize = '0.8rem';
     simbolo.style.color = 'var(--text-secondary)';
     simbolo.style.fontWeight = '600';
 
     pctWrap.appendChild(pct);
     pctWrap.appendChild(simbolo);
 
-    const presets = document.createElement('div');
-    presets.style.display = 'flex';
-    presets.style.gap = '4px';
-    presets.style.flex = '1';
-    presets.style.justifyContent = 'flex-end';
+    fila1.appendChild(label);
+    fila1.appendChild(gramosWrapper);
+    fila1.appendChild(pctWrap);
+
+    // FILA 2: Botones preset (4 columnas)
+    const fila2 = document.createElement('div');
+    fila2.style.display = 'grid';
+    fila2.style.gridTemplateColumns = 'repeat(4, 1fr)';
+    fila2.style.gap = '8px';
+    fila2.style.marginBottom = '10px';
 
     macro.presets.forEach(v => {
       const b = document.createElement('button');
       b.textContent = v + '%';
-      b.style.fontSize = '0.7rem';
-      b.style.padding = '4px 8px';
+      b.style.fontSize = '0.75rem';
+      b.style.padding = '8px';
       b.style.background = 'var(--bg-card)';
       b.style.color = 'var(--text-secondary)';
       b.style.border = '1px solid var(--border-color)';
       b.style.borderRadius = '6px';
       b.style.cursor = 'pointer';
-      b.style.fontWeight = '600';
+      b.style.fontWeight = '700';
       b.style.transition = 'all 0.2s ease';
       
       b.addEventListener('mouseenter', () => {
         b.style.background = 'var(--primary-mint)';
         b.style.color = 'white';
         b.style.borderColor = 'var(--primary-mint)';
+        b.style.transform = 'translateY(-1px)';
+        b.style.boxShadow = 'var(--shadow-sm)';
       });
       
       b.addEventListener('mouseleave', () => {
         b.style.background = 'var(--bg-card)';
         b.style.color = 'var(--text-secondary)';
         b.style.borderColor = 'var(--border-color)';
+        b.style.transform = 'translateY(0)';
+        b.style.boxShadow = 'none';
       });
       
       b.onclick = () => {
         pct.value = v;
+        slider.value = v;
+        sliderValue.textContent = v + '%';
+        
+        // Actualizar gradiente
+        const percentage = (v / 100) * 100;
+        slider.style.background = `linear-gradient(to right, var(--primary-mint) 0%, var(--primary-mint) ${percentage}%, var(--bg-card) ${percentage}%, var(--bg-card) 100%)`;
+        
         recalcularMacros();
       };
       
-      presets.appendChild(b);
+      fila2.appendChild(b);
     });
 
-    fila.append(label, gramosWrapper, pctWrap, presets);
-    contMacros.appendChild(fila);
+    // FILA 3: Slider (compacto)
+    const fila3 = document.createElement('div');
+    fila3.style.display = 'flex';
+    fila3.style.alignItems = 'center';
+    fila3.style.gap = '10px';
+    fila3.style.height = '24px'; // Altura mínima
 
+    const slider = document.createElement('input');
+    slider.type = 'range';
+    slider.min = '0';
+    slider.max = '100';
+    slider.value = '0';
+    slider.style.flex = '1';
+    slider.style.height = '6px';
+    slider.style.borderRadius = '3px';
+    slider.style.outline = 'none';
+    slider.style.background = 'linear-gradient(to right, var(--primary-mint) 0%, var(--primary-mint) 0%, var(--bg-card) 0%, var(--bg-card) 100%)';
+    slider.style.cursor = 'pointer';
+    slider.style.webkitAppearance = 'none';
+    slider.style.appearance = 'none';
+
+    slider.addEventListener('input', (e) => {
+      const value = e.target.value;
+      pct.value = value;
+      sliderValue.textContent = value + '%';
+      
+      // Actualizar gradiente del slider
+      const percentage = (value / 100) * 100;
+      slider.style.background = `linear-gradient(to right, var(--primary-mint) 0%, var(--primary-mint) ${percentage}%, var(--bg-card) ${percentage}%, var(--bg-card) 100%)`;
+      
+      recalcularMacros();
+    });
+
+    const sliderValue = document.createElement('span');
+    sliderValue.textContent = '0%';
+    sliderValue.style.fontSize = '0.8rem';
+    sliderValue.style.fontWeight = '700';
+    sliderValue.style.color = 'var(--primary-mint)';
+    sliderValue.style.minWidth = '38px';
+    sliderValue.style.textAlign = 'right';
+
+    fila3.appendChild(slider);
+    fila3.appendChild(sliderValue);
+
+    // Ensamblar la macro completa
+    macroContainer.appendChild(fila1);
+    macroContainer.appendChild(fila2);
+    macroContainer.appendChild(fila3);
+    contMacros.appendChild(macroContainer);
+
+    // Guardar referencias
     macro.g = gramos;
     macro.pct = pct;
+    macro.slider = slider;
+    macro.sliderValue = sliderValue;
   });
 
   function recalcularMacros() {
@@ -2326,15 +2441,24 @@ function mostrarModalMetas() {
     
     if (total !== 100) {
       tituloMacros.textContent = `Distribución de macronutrientes (${total}% - debe sumar 100%)`;
-      return;
+    } else {
+      tituloMacros.textContent = 'Distribución de macronutrientes ✓';
     }
-    
-    tituloMacros.textContent = 'Distribución de macronutrientes ✓';
 
     Object.values(MACROS).forEach(m => {
-      m.g.value = Math.round(
-        (calorias.value * (m.pct.value / 100)) / m.kcal
-      );
+      if (total === 100) {
+        m.g.value = Math.round(
+          (calorias.value * (m.pct.value / 100)) / m.kcal
+        );
+      }
+      
+      // Actualizar slider cuando cambia el input
+      m.slider.value = m.pct.value || 0;
+      m.sliderValue.textContent = (m.pct.value || 0) + '%';
+      
+      // Actualizar gradiente del slider
+      const percentage = ((m.pct.value || 0) / 100) * 100;
+      m.slider.style.background = `linear-gradient(to right, var(--primary-mint) 0%, var(--primary-mint) ${percentage}%, var(--bg-card) ${percentage}%, var(--bg-card) 100%)`;
     });
   }
 
@@ -2342,6 +2466,12 @@ function mostrarModalMetas() {
     const p = PRESETS_OBJETIVO[objetivo.value];
     Object.keys(p).forEach(k => {
       MACROS[k].pct.value = p[k];
+      MACROS[k].slider.value = p[k];
+      MACROS[k].sliderValue.textContent = p[k] + '%';
+      
+      // Actualizar gradiente
+      const percentage = (p[k] / 100) * 100;
+      MACROS[k].slider.style.background = `linear-gradient(to right, var(--primary-mint) 0%, var(--primary-mint) ${percentage}%, var(--bg-card) ${percentage}%, var(--bg-card) 100%)`;
     });
     recalcularMacros();
   }
@@ -2415,7 +2545,11 @@ function mostrarModalMetas() {
       return;
     }
 
-    const uid = auth.currentUser.uid;
+    const uid = auth.currentUser?.uid;
+    if (!uid) {
+      alert('Debes iniciar sesión');
+      return;
+    }
 
     const data = {
       objetivo: objetivo.value,
@@ -2435,14 +2569,27 @@ function mostrarModalMetas() {
           pct: +MACROS.grasas.pct.value,
           g: +MACROS.grasas.g.value
         }
-      },
-      updatedAt: serverTimestamp()
+      }
     };
 
-    await setDoc(doc(db, 'usuarios', uid, 'nutricion', 'actual'), data);
-    await addDoc(collection(db, 'usuarios', uid, 'nutricion', 'historial'), data);
+    try {
+      // Guardar en METAS_DIARIAS global para actualizar la UI
+      METAS_DIARIAS.calorias = data.calorias;
+      METAS_DIARIAS.proteinas = data.macros.proteinas.g;
+      METAS_DIARIAS.carbohidratos = data.macros.carbohidratos.g;
+      METAS_DIARIAS.grasas = data.macros.grasas.g;
 
-    modal.remove();
+      alert('✅ Metas guardadas correctamente');
+      modal.remove();
+      
+      // Refrescar la vista
+      if (typeof window.renderizar === 'function') {
+        window.renderizar();
+      }
+    } catch (error) {
+      console.error('Error guardando metas:', error);
+      alert('❌ Error al guardar las metas');
+    }
   };
 
   contBotones.append(btnCerrar, btnGuardar);
