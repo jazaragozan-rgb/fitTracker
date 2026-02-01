@@ -1919,265 +1919,107 @@ function mostrarCalendarioModal(nivel) {
 
 // ==================== MODAL CONFIGURAR METAS ====================
 
-function mostrarModalMetas() {
+// Crear fila de macro
+fila.style.display = 'flex';
+fila.style.alignItems = 'center';
+fila.style.gap = '8px';
+fila.style.marginBottom = '10px';
 
-  /* ───────── ESTADO ───────── */
-  let MEDIDAS = {
-    peso: 85,
-    altura: 179,
-    edad: 38,
-    sexo: 'hombre',
-    actividad: 'moderado'
-  };
+const label = document.createElement('strong');
+label.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+label.style.width = '90px';
+label.style.fontSize = '0.9rem';
+label.style.color = 'var(--text-primary)';
+label.style.fontWeight = '600';
 
-  const FACTOR_ACTIVIDAD = {
-    sedentario: 1.2,
-    ligero: 1.375,
-    moderado: 1.55,
-    alto: 1.725
-  };
+const gramos = document.createElement('input');
+gramos.type = 'number';
+gramos.readOnly = true;
+gramos.style.width = '65px';
+gramos.style.padding = '8px';
+gramos.style.border = '1px solid var(--border-color)';
+gramos.style.borderRadius = '6px';
+gramos.style.fontSize = '0.85rem';
+gramos.style.background = 'var(--bg-main)';
+gramos.style.color = 'var(--text-secondary)';
+gramos.style.textAlign = 'center';
+gramos.style.fontWeight = '600';
 
-  const MACROS = {
-    proteinas: { kcal: 4, presets: [20, 25, 30, 35] },
-    carbohidratos: { kcal: 4, presets: [35, 40, 45, 50] },
-    grasas: { kcal: 9, presets: [20, 25, 30] }
-  };
+const pctWrap = document.createElement('div');
+pctWrap.style.display = 'flex';
+pctWrap.style.alignItems = 'center';
+pctWrap.style.gap = '4px';
 
-  const PRESETS_OBJETIVO = {
-    mantener: { proteinas: 30, carbohidratos: 45, grasas: 25 },
-    ganar: { proteinas: 25, carbohidratos: 50, grasas: 25 },
-    perder: { proteinas: 35, carbohidratos: 40, grasas: 25 }
-  };
+const pct = document.createElement('input');
+pct.type = 'number';
+pct.style.width = '55px';
+pct.style.padding = '8px';
+pct.style.border = '1px solid var(--border-color)';
+pct.style.borderRadius = '6px';
+pct.style.fontSize = '0.85rem';
+pct.style.background = 'var(--bg-card)';
+pct.style.color = 'var(--text-primary)';
+pct.style.textAlign = 'center';
+pct.style.fontWeight = '700';
+pct.style.transition = 'all 0.2s ease';
 
-  function calcularCalorias(objetivo) {
-    const sexoFactor = MEDIDAS.sexo === 'hombre' ? 5 : -161;
-    const tmb =
-      10 * MEDIDAS.peso +
-      6.25 * MEDIDAS.altura -
-      5 * MEDIDAS.edad +
-      sexoFactor;
+pct.addEventListener('focus', () => {
+  pct.style.borderColor = 'var(--primary-mint)';
+  pct.style.boxShadow = '0 0 0 2px rgba(61, 213, 152, 0.1)';
+});
 
-    let tdee = tmb * FACTOR_ACTIVIDAD[MEDIDAS.actividad];
-    if (objetivo === 'ganar') tdee += 300;
-    if (objetivo === 'perder') tdee -= 400;
+pct.addEventListener('blur', () => {
+  pct.style.borderColor = 'var(--border-color)';
+  pct.style.boxShadow = 'none';
+});
 
-    return Math.round(tdee);
-  }
+const simbolo = document.createElement('span');
+simbolo.textContent = '%';
+simbolo.style.marginLeft = '4px';
+simbolo.style.fontSize = '0.85rem';
+simbolo.style.color = 'var(--text-secondary)';
+simbolo.style.fontWeight = '600';
 
-  /* ───────── MODAL BASE ───────── */
-  const modal = document.createElement('div');
-  modal.style = `
-    position:fixed; inset:0;
-    background:rgba(0,0,0,.5);
-    display:flex; align-items:center; justify-content:center;
-    z-index:10000;
-  `;
+pctWrap.append(pct, simbolo);
 
-  const caja = document.createElement('div');
-  caja.style = `
-    background:white;
-    padding:24px;
-    border-radius:16px;
-    width:440px;
-    max-width:95%;
-  `;
+const presets = document.createElement('div');
+presets.style.display = 'flex';
+presets.style.gap = '4px';
 
-  const titulo = document.createElement('h3');
-  titulo.textContent = '🎯 Metas nutricionales';
-  caja.appendChild(titulo);
-
-  /* ───────── OBJETIVO ───────── */
-  const objetivo = document.createElement('select');
-  objetivo.innerHTML = `
-    <option value="mantener">Mantener peso</option>
-    <option value="ganar">Ganar músculo</option>
-    <option value="perder">Perder grasa</option>
-  `;
-  caja.appendChild(objetivo);
-
-  /* ───────── ACTIVIDAD ───────── */
-  const actividad = document.createElement('select');
-  actividad.innerHTML = `
-    <option value="sedentario">Sedentario</option>
-    <option value="ligero">Actividad ligera</option>
-    <option value="moderado">Actividad moderada</option>
-    <option value="alto">Actividad alta</option>
-  `;
-  actividad.value = MEDIDAS.actividad;
-  caja.appendChild(actividad);
-
-  actividad.onchange = () => {
-    MEDIDAS.actividad = actividad.value;
-    recalcularTodo();
-  };
-
-  /* ───────── MEDIDAS ───────── */
-  const btnMedidas = document.createElement('button');
-  btnMedidas.textContent = '📐 Seleccionar medidas';
-  btnMedidas.style.margin = '8px 0';
-  btnMedidas.onclick = () => {
-    // 🔧 AQUÍ VA TU MODAL REAL DE MEDIDAS
-    recalcularTodo();
-  };
-  caja.appendChild(btnMedidas);
-
-  /* ───────── CALORÍAS ───────── */
-  const calorias = document.createElement('input');
-  calorias.type = 'number';
-  calorias.readOnly = true;
-  calorias.style.marginBottom = '12px';
-  caja.appendChild(calorias);
-
-  /* ───────── MACROS ───────── */
-  const contMacros = document.createElement('div');
-  caja.appendChild(contMacros);
-
-  Object.entries(MACROS).forEach(([key, macro]) => {
-    const fila = document.createElement('div');
-    fila.style.display = 'flex';
-    fila.style.alignItems = 'center';
-    fila.style.gap = '8px';
-    fila.style.marginBottom = '10px';
-
-    const label = document.createElement('strong');
-    label.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-    label.style.width = '90px';
-
-    const gramos = document.createElement('input');
-    gramos.type = 'number';
-    gramos.readOnly = true;
-    gramos.style.width = '65px';
-
-    const pctWrap = document.createElement('div');
-    pctWrap.style.display = 'flex';
-    pctWrap.style.alignItems = 'center';
-
-    const pct = document.createElement('input');
-    pct.type = 'number';
-    pct.style.width = '55px';
-
-    const simbolo = document.createElement('span');
-    simbolo.textContent = '%';
-    simbolo.style.marginLeft = '4px';
-
-    pctWrap.append(pct, simbolo);
-
-    const presets = document.createElement('div');
-    presets.style.display = 'flex';
-    presets.style.gap = '4px';
-
-    macro.presets.forEach(v => {
-      const b = document.createElement('button');
-      b.textContent = v + '%';
-      b.style.fontSize = '0.75rem';
-      b.onclick = () => {
-        pct.value = v;
-        recalcularMacros();
-      };
-      presets.appendChild(b);
-    });
-
-    fila.append(label, gramos, pctWrap, presets);
-    contMacros.appendChild(fila);
-
-    macro.g = gramos;
-    macro.pct = pct;
+macro.presets.forEach(v => {
+  const b = document.createElement('button');
+  b.textContent = v + '%';
+  b.style.fontSize = '0.75rem';
+  b.style.padding = '4px 8px';
+  b.style.background = 'var(--bg-main)';
+  b.style.color = 'var(--text-secondary)';
+  b.style.border = '1px solid var(--border-color)';
+  b.style.borderRadius = '6px';
+  b.style.cursor = 'pointer';
+  b.style.fontWeight = '600';
+  b.style.transition = 'all 0.2s ease';
+  
+  b.addEventListener('mouseenter', () => {
+    b.style.background = 'var(--primary-mint)';
+    b.style.color = 'white';
+    b.style.borderColor = 'var(--primary-mint)';
   });
-
-  function recalcularMacros() {
-    const total = Object.values(MACROS)
-      .reduce((s, m) => s + (+m.pct.value || 0), 0);
-
-    titulo.style.color = total === 100 ? 'green' : 'red';
-    if (total !== 100) return;
-
-    Object.values(MACROS).forEach(m => {
-      m.g.value = Math.round(
-        (calorias.value * (m.pct.value / 100)) / m.kcal
-      );
-    });
-  }
-
-  function aplicarPresetObjetivo() {
-    const p = PRESETS_OBJETIVO[objetivo.value];
-    Object.keys(p).forEach(k => {
-      MACROS[k].pct.value = p[k];
-    });
+  
+  b.addEventListener('mouseleave', () => {
+    b.style.background = 'var(--bg-main)';
+    b.style.color = 'var(--text-secondary)';
+    b.style.borderColor = 'var(--border-color)';
+  });
+  
+  b.onclick = () => {
+    pct.value = v;
     recalcularMacros();
-  }
-
-  objetivo.onchange = () => {
-    recalcularTodo();
-    aplicarPresetObjetivo();
   };
+  
+  presets.appendChild(b);
+});
 
-  function recalcularTodo() {
-    calorias.value = calcularCalorias(objetivo.value);
-    recalcularMacros();
-  }
-
-  /* ───────── BOTONES ───────── */
-  const contBotones = document.createElement('div');
-  contBotones.style.display = 'flex';
-  contBotones.style.gap = '12px';
-  contBotones.style.marginTop = '20px';
-
-  const btnCerrar = document.createElement('button');
-  btnCerrar.textContent = 'Cerrar';
-  btnCerrar.style.flex = '1';
-  btnCerrar.onclick = () => modal.remove();
-
-  const btnGuardar = document.createElement('button');
-  btnGuardar.textContent = 'Guardar';
-  btnGuardar.style.flex = '1';
-  btnGuardar.style.fontWeight = '700';
-
-  btnGuardar.onclick = async () => {
-    const total = Object.values(MACROS)
-      .reduce((s, m) => s + (+m.pct.value || 0), 0);
-
-    if (total !== 100) {
-      alert('Los macros deben sumar 100%');
-      return;
-    }
-
-    const uid = auth.currentUser.uid;
-
-    const data = {
-      objetivo: objetivo.value,
-      actividad: MEDIDAS.actividad,
-      calorias: +calorias.value,
-      medidas: MEDIDAS,
-      macros: {
-        proteinas: {
-          pct: +MACROS.proteinas.pct.value,
-          g: +MACROS.proteinas.g.value
-        },
-        carbohidratos: {
-          pct: +MACROS.carbohidratos.pct.value,
-          g: +MACROS.carbohidratos.g.value
-        },
-        grasas: {
-          pct: +MACROS.grasas.pct.value,
-          g: +MACROS.grasas.g.value
-        }
-      },
-      updatedAt: serverTimestamp()
-    };
-
-    await setDoc(doc(db, 'usuarios', uid, 'nutricion', 'actual'), data);
-    await addDoc(collection(db, 'usuarios', uid, 'nutricion', 'historial'), data);
-
-    modal.remove();
-  };
-
-  contBotones.append(btnCerrar, btnGuardar);
-  caja.appendChild(contBotones);
-
-  modal.appendChild(caja);
-  document.body.appendChild(modal);
-
-  /* ───────── INIT ───────── */
-  recalcularTodo();
-  aplicarPresetObjetivo();
-}
+fila.append(label, gramos, pctWrap, presets);
+contMacros.appendChild(fila);
+macro.g = gramos;
+macro.pct = pct;
