@@ -1918,108 +1918,540 @@ function mostrarCalendarioModal(nivel) {
 }
 
 // ==================== MODAL CONFIGURAR METAS ====================
+// ==================== MODAL CONFIGURAR METAS ====================
 
-// Crear fila de macro
-fila.style.display = 'flex';
-fila.style.alignItems = 'center';
-fila.style.gap = '8px';
-fila.style.marginBottom = '10px';
+function mostrarModalMetas() {
 
-const label = document.createElement('strong');
-label.textContent = key.charAt(0).toUpperCase() + key.slice(1);
-label.style.width = '90px';
-label.style.fontSize = '0.9rem';
-label.style.color = 'var(--text-primary)';
-label.style.fontWeight = '600';
+  /* ───────── ESTADO ───────── */
+  let MEDIDAS = {
+    peso: 85,
+    altura: 179,
+    edad: 38,
+    sexo: 'hombre',
+    actividad: 'moderado'
+  };
 
-const gramos = document.createElement('input');
-gramos.type = 'number';
-gramos.readOnly = true;
-gramos.style.width = '65px';
-gramos.style.padding = '8px';
-gramos.style.border = '1px solid var(--border-color)';
-gramos.style.borderRadius = '6px';
-gramos.style.fontSize = '0.85rem';
-gramos.style.background = 'var(--bg-main)';
-gramos.style.color = 'var(--text-secondary)';
-gramos.style.textAlign = 'center';
-gramos.style.fontWeight = '600';
+  const FACTOR_ACTIVIDAD = {
+    sedentario: 1.2,
+    ligero: 1.375,
+    moderado: 1.55,
+    alto: 1.725
+  };
 
-const pctWrap = document.createElement('div');
-pctWrap.style.display = 'flex';
-pctWrap.style.alignItems = 'center';
-pctWrap.style.gap = '4px';
+  const MACROS = {
+    proteinas: { kcal: 4, presets: [20, 25, 30, 35] },
+    carbohidratos: { kcal: 4, presets: [35, 40, 45, 50] },
+    grasas: { kcal: 9, presets: [20, 25, 30] }
+  };
 
-const pct = document.createElement('input');
-pct.type = 'number';
-pct.style.width = '55px';
-pct.style.padding = '8px';
-pct.style.border = '1px solid var(--border-color)';
-pct.style.borderRadius = '6px';
-pct.style.fontSize = '0.85rem';
-pct.style.background = 'var(--bg-card)';
-pct.style.color = 'var(--text-primary)';
-pct.style.textAlign = 'center';
-pct.style.fontWeight = '700';
-pct.style.transition = 'all 0.2s ease';
+  const PRESETS_OBJETIVO = {
+    mantener: { proteinas: 30, carbohidratos: 45, grasas: 25 },
+    ganar: { proteinas: 25, carbohidratos: 50, grasas: 25 },
+    perder: { proteinas: 35, carbohidratos: 40, grasas: 25 }
+  };
 
-pct.addEventListener('focus', () => {
-  pct.style.borderColor = 'var(--primary-mint)';
-  pct.style.boxShadow = '0 0 0 2px rgba(61, 213, 152, 0.1)';
-});
+  function calcularCalorias(objetivo) {
+    const sexoFactor = MEDIDAS.sexo === 'hombre' ? 5 : -161;
+    const tmb =
+      10 * MEDIDAS.peso +
+      6.25 * MEDIDAS.altura -
+      5 * MEDIDAS.edad +
+      sexoFactor;
 
-pct.addEventListener('blur', () => {
-  pct.style.borderColor = 'var(--border-color)';
-  pct.style.boxShadow = 'none';
-});
+    let tdee = tmb * FACTOR_ACTIVIDAD[MEDIDAS.actividad];
+    if (objetivo === 'ganar') tdee += 300;
+    if (objetivo === 'perder') tdee -= 400;
 
-const simbolo = document.createElement('span');
-simbolo.textContent = '%';
-simbolo.style.marginLeft = '4px';
-simbolo.style.fontSize = '0.85rem';
-simbolo.style.color = 'var(--text-secondary)';
-simbolo.style.fontWeight = '600';
+    return Math.round(tdee);
+  }
 
-pctWrap.append(pct, simbolo);
-
-const presets = document.createElement('div');
-presets.style.display = 'flex';
-presets.style.gap = '4px';
-
-macro.presets.forEach(v => {
-  const b = document.createElement('button');
-  b.textContent = v + '%';
-  b.style.fontSize = '0.75rem';
-  b.style.padding = '4px 8px';
-  b.style.background = 'var(--bg-main)';
-  b.style.color = 'var(--text-secondary)';
-  b.style.border = '1px solid var(--border-color)';
-  b.style.borderRadius = '6px';
-  b.style.cursor = 'pointer';
-  b.style.fontWeight = '600';
-  b.style.transition = 'all 0.2s ease';
+  /* ───────── MODAL BASE ───────── */
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.position = 'fixed';
+  modal.style.top = '0';
+  modal.style.left = '0';
+  modal.style.width = '100%';
+  modal.style.height = '100%';
+  modal.style.background = 'rgba(0,0,0,0.5)';
+  modal.style.display = 'flex';
+  modal.style.alignItems = 'center';
+  modal.style.justifyContent = 'center';
+  modal.style.zIndex = '10000';
+  modal.style.backdropFilter = 'blur(4px)';
   
-  b.addEventListener('mouseenter', () => {
-    b.style.background = 'var(--primary-mint)';
-    b.style.color = 'white';
-    b.style.borderColor = 'var(--primary-mint)';
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) modal.remove();
+  });
+
+  const caja = document.createElement('div');
+  caja.style.background = 'var(--bg-card)';
+  caja.style.padding = '24px';
+  caja.style.borderRadius = '16px';
+  caja.style.width = '440px';
+  caja.style.maxWidth = '95%';
+  caja.style.boxShadow = 'var(--shadow-lg)';
+  caja.style.maxHeight = '90vh';
+  caja.style.overflowY = 'auto';
+
+  const titulo = document.createElement('h3');
+  titulo.textContent = '🎯 Metas nutricionales';
+  titulo.style.marginBottom = '20px';
+  titulo.style.fontSize = '1.2rem';
+  titulo.style.fontWeight = '700';
+  titulo.style.color = 'var(--text-primary)';
+  titulo.style.textAlign = 'center';
+  caja.appendChild(titulo);
+
+  /* ───────── OBJETIVO ───────── */
+  const labelObjetivo = document.createElement('label');
+  labelObjetivo.textContent = 'Objetivo:';
+  labelObjetivo.style.display = 'block';
+  labelObjetivo.style.marginBottom = '8px';
+  labelObjetivo.style.fontWeight = '600';
+  labelObjetivo.style.fontSize = '0.9rem';
+  labelObjetivo.style.color = 'var(--text-secondary)';
+  caja.appendChild(labelObjetivo);
+
+  const objetivo = document.createElement('select');
+  objetivo.innerHTML = `
+    <option value="mantener">Mantener peso</option>
+    <option value="ganar">Ganar músculo</option>
+    <option value="perder">Perder grasa</option>
+  `;
+  objetivo.style.width = '100%';
+  objetivo.style.padding = '12px';
+  objetivo.style.border = '1px solid var(--border-color)';
+  objetivo.style.borderRadius = '8px';
+  objetivo.style.fontSize = '0.95rem';
+  objetivo.style.marginBottom = '16px';
+  objetivo.style.background = 'var(--bg-main)';
+  objetivo.style.color = 'var(--text-primary)';
+  objetivo.style.fontWeight = '600';
+  objetivo.style.cursor = 'pointer';
+  objetivo.style.transition = 'all 0.2s ease';
+  
+  objetivo.addEventListener('focus', () => {
+    objetivo.style.borderColor = 'var(--primary-mint)';
+    objetivo.style.background = 'var(--bg-card)';
   });
   
-  b.addEventListener('mouseleave', () => {
-    b.style.background = 'var(--bg-main)';
-    b.style.color = 'var(--text-secondary)';
-    b.style.borderColor = 'var(--border-color)';
+  objetivo.addEventListener('blur', () => {
+    objetivo.style.borderColor = 'var(--border-color)';
+    objetivo.style.background = 'var(--bg-main)';
   });
   
-  b.onclick = () => {
-    pct.value = v;
-    recalcularMacros();
+  caja.appendChild(objetivo);
+
+  /* ───────── ACTIVIDAD ───────── */
+  const labelActividad = document.createElement('label');
+  labelActividad.textContent = 'Nivel de actividad:';
+  labelActividad.style.display = 'block';
+  labelActividad.style.marginBottom = '8px';
+  labelActividad.style.fontWeight = '600';
+  labelActividad.style.fontSize = '0.9rem';
+  labelActividad.style.color = 'var(--text-secondary)';
+  caja.appendChild(labelActividad);
+
+  const actividad = document.createElement('select');
+  actividad.innerHTML = `
+    <option value="sedentario">Sedentario (poco o ningún ejercicio)</option>
+    <option value="ligero">Actividad ligera (1-3 días/semana)</option>
+    <option value="moderado">Actividad moderada (3-5 días/semana)</option>
+    <option value="alto">Actividad alta (6-7 días/semana)</option>
+  `;
+  actividad.value = MEDIDAS.actividad;
+  actividad.style.width = '100%';
+  actividad.style.padding = '12px';
+  actividad.style.border = '1px solid var(--border-color)';
+  actividad.style.borderRadius = '8px';
+  actividad.style.fontSize = '0.95rem';
+  actividad.style.marginBottom = '16px';
+  actividad.style.background = 'var(--bg-main)';
+  actividad.style.color = 'var(--text-primary)';
+  actividad.style.fontWeight = '600';
+  actividad.style.cursor = 'pointer';
+  actividad.style.transition = 'all 0.2s ease';
+  
+  actividad.addEventListener('focus', () => {
+    actividad.style.borderColor = 'var(--primary-mint)';
+    actividad.style.background = 'var(--bg-card)';
+  });
+  
+  actividad.addEventListener('blur', () => {
+    actividad.style.borderColor = 'var(--border-color)';
+    actividad.style.background = 'var(--bg-main)';
+  });
+
+  actividad.onchange = () => {
+    MEDIDAS.actividad = actividad.value;
+    recalcularTodo();
   };
   
-  presets.appendChild(b);
-});
+  caja.appendChild(actividad);
 
-fila.append(label, gramos, pctWrap, presets);
-contMacros.appendChild(fila);
-macro.g = gramos;
-macro.pct = pct;
+  /* ───────── MEDIDAS ───────── */
+  const btnMedidas = document.createElement('button');
+  btnMedidas.textContent = '📐 Seleccionar medidas corporales';
+  btnMedidas.style.width = '100%';
+  btnMedidas.style.padding = '12px';
+  btnMedidas.style.margin = '8px 0 16px 0';
+  btnMedidas.style.background = 'var(--secondary-cyan)';
+  btnMedidas.style.color = 'white';
+  btnMedidas.style.border = 'none';
+  btnMedidas.style.borderRadius = '8px';
+  btnMedidas.style.fontSize = '0.95rem';
+  btnMedidas.style.fontWeight = '700';
+  btnMedidas.style.cursor = 'pointer';
+  btnMedidas.style.transition = 'all 0.2s ease';
+  
+  btnMedidas.addEventListener('mouseenter', () => {
+    btnMedidas.style.background = '#00B8B8';
+    btnMedidas.style.transform = 'translateY(-1px)';
+    btnMedidas.style.boxShadow = 'var(--shadow-sm)';
+  });
+  
+  btnMedidas.addEventListener('mouseleave', () => {
+    btnMedidas.style.background = 'var(--secondary-cyan)';
+    btnMedidas.style.transform = 'translateY(0)';
+    btnMedidas.style.boxShadow = 'none';
+  });
+  
+  btnMedidas.onclick = () => {
+    // 🔧 AQUÍ VA TU MODAL REAL DE MEDIDAS
+    recalcularTodo();
+  };
+  caja.appendChild(btnMedidas);
+
+  /* ───────── CALORÍAS ───────── */
+  const labelCalorias = document.createElement('label');
+  labelCalorias.textContent = 'Calorías objetivo:';
+  labelCalorias.style.display = 'block';
+  labelCalorias.style.marginBottom = '8px';
+  labelCalorias.style.fontWeight = '600';
+  labelCalorias.style.fontSize = '0.9rem';
+  labelCalorias.style.color = 'var(--text-secondary)';
+  caja.appendChild(labelCalorias);
+
+  const caloriasWrapper = document.createElement('div');
+  caloriasWrapper.style.position = 'relative';
+  caloriasWrapper.style.marginBottom = '20px';
+
+  const calorias = document.createElement('input');
+  calorias.type = 'number';
+  calorias.readOnly = true;
+  calorias.style.width = '100%';
+  calorias.style.padding = '12px';
+  calorias.style.paddingRight = '60px';
+  calorias.style.border = '1px solid var(--border-color)';
+  calorias.style.borderRadius = '8px';
+  calorias.style.fontSize = '1.1rem';
+  calorias.style.background = 'var(--bg-main)';
+  calorias.style.color = 'var(--primary-mint)';
+  calorias.style.textAlign = 'center';
+  calorias.style.fontWeight = '700';
+
+  const unidadCal = document.createElement('span');
+  unidadCal.textContent = 'kcal';
+  unidadCal.style.position = 'absolute';
+  unidadCal.style.right = '12px';
+  unidadCal.style.top = '50%';
+  unidadCal.style.transform = 'translateY(-50%)';
+  unidadCal.style.color = 'var(--text-secondary)';
+  unidadCal.style.fontSize = '0.85rem';
+  unidadCal.style.fontWeight = '600';
+
+  caloriasWrapper.appendChild(calorias);
+  caloriasWrapper.appendChild(unidadCal);
+  caja.appendChild(caloriasWrapper);
+
+  /* ───────── MACROS TÍTULO ───────── */
+  const tituloMacros = document.createElement('div');
+  tituloMacros.textContent = 'Distribución de macronutrientes';
+  tituloMacros.style.fontSize = '0.9rem';
+  tituloMacros.style.fontWeight = '700';
+  tituloMacros.style.color = 'var(--text-secondary)';
+  tituloMacros.style.marginBottom = '12px';
+  tituloMacros.style.textTransform = 'uppercase';
+  tituloMacros.style.letterSpacing = '0.5px';
+  caja.appendChild(tituloMacros);
+
+  /* ───────── MACROS ───────── */
+  const contMacros = document.createElement('div');
+  contMacros.style.background = 'var(--bg-main)';
+  contMacros.style.padding = '16px';
+  contMacros.style.borderRadius = '12px';
+  contMacros.style.marginBottom = '20px';
+  caja.appendChild(contMacros);
+
+  Object.entries(MACROS).forEach(([key, macro]) => {
+    const fila = document.createElement('div');
+    fila.style.display = 'flex';
+    fila.style.alignItems = 'center';
+    fila.style.gap = '8px';
+    fila.style.marginBottom = '12px';
+
+    const label = document.createElement('strong');
+    label.textContent = key.charAt(0).toUpperCase() + key.slice(1);
+    label.style.width = '110px';
+    label.style.fontSize = '0.9rem';
+    label.style.color = 'var(--text-primary)';
+    label.style.fontWeight = '600';
+
+    const gramosWrapper = document.createElement('div');
+    gramosWrapper.style.position = 'relative';
+    gramosWrapper.style.width = '75px';
+
+    const gramos = document.createElement('input');
+    gramos.type = 'number';
+    gramos.readOnly = true;
+    gramos.style.width = '100%';
+    gramos.style.padding = '8px';
+    gramos.style.paddingRight = '24px';
+    gramos.style.border = '1px solid var(--border-color)';
+    gramos.style.borderRadius = '6px';
+    gramos.style.fontSize = '0.85rem';
+    gramos.style.background = 'var(--bg-card)';
+    gramos.style.color = 'var(--text-secondary)';
+    gramos.style.textAlign = 'center';
+    gramos.style.fontWeight = '600';
+
+    const unidadG = document.createElement('span');
+    unidadG.textContent = 'g';
+    unidadG.style.position = 'absolute';
+    unidadG.style.right = '8px';
+    unidadG.style.top = '50%';
+    unidadG.style.transform = 'translateY(-50%)';
+    unidadG.style.fontSize = '0.75rem';
+    unidadG.style.color = 'var(--text-light)';
+    unidadG.style.fontWeight = '600';
+
+    gramosWrapper.appendChild(gramos);
+    gramosWrapper.appendChild(unidadG);
+
+    const pctWrap = document.createElement('div');
+    pctWrap.style.position = 'relative';
+    pctWrap.style.width = '70px';
+
+    const pct = document.createElement('input');
+    pct.type = 'number';
+    pct.style.width = '100%';
+    pct.style.padding = '8px';
+    pct.style.paddingRight = '24px';
+    pct.style.border = '1px solid var(--border-color)';
+    pct.style.borderRadius = '6px';
+    pct.style.fontSize = '0.85rem';
+    pct.style.background = 'var(--bg-card)';
+    pct.style.color = 'var(--text-primary)';
+    pct.style.textAlign = 'center';
+    pct.style.fontWeight = '700';
+    pct.style.transition = 'all 0.2s ease';
+
+    pct.addEventListener('focus', () => {
+      pct.style.borderColor = 'var(--primary-mint)';
+      pct.style.boxShadow = '0 0 0 2px rgba(61, 213, 152, 0.1)';
+    });
+
+    pct.addEventListener('blur', () => {
+      pct.style.borderColor = 'var(--border-color)';
+      pct.style.boxShadow = 'none';
+    });
+
+    pct.addEventListener('input', recalcularMacros);
+
+    const simbolo = document.createElement('span');
+    simbolo.textContent = '%';
+    simbolo.style.position = 'absolute';
+    simbolo.style.right = '8px';
+    simbolo.style.top = '50%';
+    simbolo.style.transform = 'translateY(-50%)';
+    simbolo.style.fontSize = '0.75rem';
+    simbolo.style.color = 'var(--text-secondary)';
+    simbolo.style.fontWeight = '600';
+
+    pctWrap.appendChild(pct);
+    pctWrap.appendChild(simbolo);
+
+    const presets = document.createElement('div');
+    presets.style.display = 'flex';
+    presets.style.gap = '4px';
+    presets.style.flex = '1';
+    presets.style.justifyContent = 'flex-end';
+
+    macro.presets.forEach(v => {
+      const b = document.createElement('button');
+      b.textContent = v + '%';
+      b.style.fontSize = '0.7rem';
+      b.style.padding = '4px 8px';
+      b.style.background = 'var(--bg-card)';
+      b.style.color = 'var(--text-secondary)';
+      b.style.border = '1px solid var(--border-color)';
+      b.style.borderRadius = '6px';
+      b.style.cursor = 'pointer';
+      b.style.fontWeight = '600';
+      b.style.transition = 'all 0.2s ease';
+      
+      b.addEventListener('mouseenter', () => {
+        b.style.background = 'var(--primary-mint)';
+        b.style.color = 'white';
+        b.style.borderColor = 'var(--primary-mint)';
+      });
+      
+      b.addEventListener('mouseleave', () => {
+        b.style.background = 'var(--bg-card)';
+        b.style.color = 'var(--text-secondary)';
+        b.style.borderColor = 'var(--border-color)';
+      });
+      
+      b.onclick = () => {
+        pct.value = v;
+        recalcularMacros();
+      };
+      
+      presets.appendChild(b);
+    });
+
+    fila.append(label, gramosWrapper, pctWrap, presets);
+    contMacros.appendChild(fila);
+
+    macro.g = gramos;
+    macro.pct = pct;
+  });
+
+  function recalcularMacros() {
+    const total = Object.values(MACROS)
+      .reduce((s, m) => s + (+m.pct.value || 0), 0);
+
+    tituloMacros.style.color = total === 100 ? 'var(--success)' : 'var(--danger)';
+    
+    if (total !== 100) {
+      tituloMacros.textContent = `Distribución de macronutrientes (${total}% - debe sumar 100%)`;
+      return;
+    }
+    
+    tituloMacros.textContent = 'Distribución de macronutrientes ✓';
+
+    Object.values(MACROS).forEach(m => {
+      m.g.value = Math.round(
+        (calorias.value * (m.pct.value / 100)) / m.kcal
+      );
+    });
+  }
+
+  function aplicarPresetObjetivo() {
+    const p = PRESETS_OBJETIVO[objetivo.value];
+    Object.keys(p).forEach(k => {
+      MACROS[k].pct.value = p[k];
+    });
+    recalcularMacros();
+  }
+
+  objetivo.onchange = () => {
+    recalcularTodo();
+    aplicarPresetObjetivo();
+  };
+
+  function recalcularTodo() {
+    calorias.value = calcularCalorias(objetivo.value);
+    recalcularMacros();
+  }
+
+  /* ───────── BOTONES ───────── */
+  const contBotones = document.createElement('div');
+  contBotones.style.display = 'flex';
+  contBotones.style.gap = '12px';
+  contBotones.style.marginTop = '20px';
+
+  const btnCerrar = document.createElement('button');
+  btnCerrar.textContent = 'Cerrar';
+  btnCerrar.style.flex = '1';
+  btnCerrar.style.padding = '12px';
+  btnCerrar.style.background = 'var(--bg-main)';
+  btnCerrar.style.color = 'var(--text-secondary)';
+  btnCerrar.style.border = 'none';
+  btnCerrar.style.borderRadius = '8px';
+  btnCerrar.style.fontSize = '0.95rem';
+  btnCerrar.style.fontWeight = '700';
+  btnCerrar.style.cursor = 'pointer';
+  btnCerrar.style.transition = 'all 0.2s ease';
+  
+  btnCerrar.addEventListener('mouseenter', () => {
+    btnCerrar.style.background = 'var(--border-color)';
+  });
+  
+  btnCerrar.addEventListener('mouseleave', () => {
+    btnCerrar.style.background = 'var(--bg-main)';
+  });
+  
+  btnCerrar.onclick = () => modal.remove();
+
+  const btnGuardar = document.createElement('button');
+  btnGuardar.textContent = 'Guardar';
+  btnGuardar.style.flex = '1';
+  btnGuardar.style.padding = '12px';
+  btnGuardar.style.background = 'var(--primary-mint)';
+  btnGuardar.style.color = 'white';
+  btnGuardar.style.border = 'none';
+  btnGuardar.style.borderRadius = '8px';
+  btnGuardar.style.fontSize = '0.95rem';
+  btnGuardar.style.fontWeight = '700';
+  btnGuardar.style.cursor = 'pointer';
+  btnGuardar.style.transition = 'all 0.2s ease';
+  
+  btnGuardar.addEventListener('mouseenter', () => {
+    btnGuardar.style.background = 'var(--mint-light)';
+  });
+  
+  btnGuardar.addEventListener('mouseleave', () => {
+    btnGuardar.style.background = 'var(--primary-mint)';
+  });
+
+  btnGuardar.onclick = async () => {
+    const total = Object.values(MACROS)
+      .reduce((s, m) => s + (+m.pct.value || 0), 0);
+
+    if (total !== 100) {
+      alert('Los macros deben sumar 100%');
+      return;
+    }
+
+    const uid = auth.currentUser.uid;
+
+    const data = {
+      objetivo: objetivo.value,
+      actividad: MEDIDAS.actividad,
+      calorias: +calorias.value,
+      medidas: MEDIDAS,
+      macros: {
+        proteinas: {
+          pct: +MACROS.proteinas.pct.value,
+          g: +MACROS.proteinas.g.value
+        },
+        carbohidratos: {
+          pct: +MACROS.carbohidratos.pct.value,
+          g: +MACROS.carbohidratos.g.value
+        },
+        grasas: {
+          pct: +MACROS.grasas.pct.value,
+          g: +MACROS.grasas.g.value
+        }
+      },
+      updatedAt: serverTimestamp()
+    };
+
+    await setDoc(doc(db, 'usuarios', uid, 'nutricion', 'actual'), data);
+    await addDoc(collection(db, 'usuarios', uid, 'nutricion', 'historial'), data);
+
+    modal.remove();
+  };
+
+  contBotones.append(btnCerrar, btnGuardar);
+  caja.appendChild(contBotones);
+
+  modal.appendChild(caja);
+  document.body.appendChild(modal);
+
+  /* ───────── INIT ───────── */
+  recalcularTodo();
+  aplicarPresetObjetivo();
+}
