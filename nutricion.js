@@ -13,6 +13,31 @@ const METAS_DIARIAS = {
   grasas: 65
 };
 
+// ==================== CARGAR METAS DESDE FIRESTORE ====================
+async function cargarMetasFirestore() {
+  const user = auth.currentUser;
+  if (!user) return;
+
+  try {
+    const ref = doc(db, "usuarios", user.uid);
+    const snap = await getDoc(ref);
+
+    if (snap.exists() && snap.data().metasNutricionales) {
+      const metas = snap.data().metasNutricionales;
+      
+      // Actualizar METAS_DIARIAS
+      METAS_DIARIAS.calorias = metas.calorias || 2000;
+      METAS_DIARIAS.proteinas = metas.macros?.proteinas?.g || 150;
+      METAS_DIARIAS.carbohidratos = metas.macros?.carbohidratos?.g || 250;
+      METAS_DIARIAS.grasas = metas.macros?.grasas?.g || 65;
+      
+      console.log('[Nutrición] ✓ Metas cargadas desde Firestore');
+    }
+  } catch (err) {
+    console.error('[Nutrición] Error cargando metas:', err);
+  }
+}
+
 const TIPOS_COMIDA = [
   { id: 'desayuno', nombre: 'Desayuno', icono: '🌅', color: '#FFB74D' },
   { id: 'almuerzo', nombre: 'Almuerzo', icono: '☀️', color: '#4FC3F7' },
@@ -89,6 +114,9 @@ async function guardarRegistrosFirestore(nivel, fecha) {
 
 // ==================== RENDERIZADO PRINCIPAL ====================
 export async function renderizarNutricion(nivel, contenido, subHeader, addButton, rutaActual) {
+  // ✅ CARGAR METAS AL INICIO
+  await cargarMetasFirestore();
+  
   // Limpiar
   subHeader.innerHTML = '';
   
@@ -2573,12 +2601,30 @@ function mostrarModalMetas() {
     };
 
     try {
-      // Guardar en METAS_DIARIAS global para actualizar la UI
+      // ✅ GUARDAR EN FIRESTORE
+      const ref = doc(db, "usuarios", uid);
+      await setDoc(
+        ref,
+        {
+          metasNutricionales: {
+            objetivo: data.objetivo,
+            actividad: data.actividad,
+            calorias: data.calorias,
+            medidas: data.medidas,
+            macros: data.macros,
+            updatedAt: new Date()
+          }
+        },
+        { merge: true }
+      );
+
+      // Actualizar METAS_DIARIAS global para la UI
       METAS_DIARIAS.calorias = data.calorias;
       METAS_DIARIAS.proteinas = data.macros.proteinas.g;
       METAS_DIARIAS.carbohidratos = data.macros.carbohidratos.g;
       METAS_DIARIAS.grasas = data.macros.grasas.g;
 
+      console.log('[Nutrición] ✓ Metas guardadas en Firestore');
       alert('✅ Metas guardadas correctamente');
       modal.remove();
       
@@ -2587,7 +2633,7 @@ function mostrarModalMetas() {
         window.renderizar();
       }
     } catch (error) {
-      console.error('Error guardando metas:', error);
+      console.error('[Nutrición] Error guardando metas:', error);
       alert('❌ Error al guardar las metas');
     }
   };

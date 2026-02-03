@@ -4,6 +4,120 @@
 // Importar funciones del timer
 import { iniciarTimer } from './timer.js';
 
+// ==================== FUNCIONES DE ESTADÍSTICAS ====================
+
+// Función para calcular estadísticas de un ejercicio
+function calcularEstadisticasEjercicio(ejercicio) {
+  const series = ejercicio.series || [];
+  
+  // Peso máximo
+  const pesoMax = Math.max(...series.map(s => parseFloat(s.peso) || 0), 0);
+  
+  // Volumen total (peso × reps sumado)
+  const volumenTotal = series.reduce((total, s) => {
+    const peso = parseFloat(s.peso) || 0;
+    const reps = parseInt(s.reps) || 0;
+    return total + (peso * reps);
+  }, 0);
+  
+  // 1RM estimado usando la fórmula de Epley: 1RM = peso × (1 + reps/30)
+  // Tomamos la serie con mayor 1RM estimado
+  const oneRM = Math.max(...series.map(s => {
+    const peso = parseFloat(s.peso) || 0;
+    const reps = parseInt(s.reps) || 0;
+    if (peso === 0 || reps === 0) return 0;
+    return peso * (1 + reps / 30);
+  }), 0);
+  
+  return {
+    pesoMax: Math.round(pesoMax * 10) / 10,
+    volumenTotal: Math.round(volumenTotal),
+    oneRM: Math.round(oneRM * 10) / 10
+  };
+}
+
+// Función para buscar la sesión anterior del mismo ejercicio
+function buscarSesionAnteriorEjercicio(nombreEjercicio) {
+  const datos = window.datos || [];
+  const todasLasSesiones = [];
+
+  // Recolectar todas las sesiones con sus fechas
+  if (datos && datos[0]) {
+    datos[0].hijos?.forEach((meso, mesoIdx) => {
+      meso.hijos?.forEach((micro, microIdx) => {
+        micro.hijos?.forEach((sesion, sesionIdx) => {
+          let fechaSesion = sesion.fecha;
+          if (!fechaSesion && sesion.hijos && sesion.hijos.length > 0) {
+            for (const subNivel of sesion.hijos) {
+              if (subNivel.fecha) {
+                fechaSesion = subNivel.fecha;
+                break;
+              }
+            }
+          }
+
+          if (fechaSesion) {
+            // Buscar el ejercicio en la sesión
+            const buscarEjercicioEnNivel = (nivel) => {
+              if (nivel.nombre === nombreEjercicio && nivel.series) {
+                return nivel;
+              }
+              if (nivel.hijos) {
+                for (const hijo of nivel.hijos) {
+                  const encontrado = buscarEjercicioEnNivel(hijo);
+                  if (encontrado) return encontrado;
+                }
+              }
+              return null;
+            };
+
+            const ejercicioEncontrado = buscarEjercicioEnNivel(sesion);
+            if (ejercicioEncontrado) {
+              todasLasSesiones.push({
+                fecha: fechaSesion,
+                ejercicio: ejercicioEncontrado,
+                ruta: [0, mesoIdx, microIdx, sesionIdx]
+              });
+            }
+          }
+        });
+      });
+    });
+  }
+
+  // Ordenar por fecha descendente
+  todasLasSesiones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+  // Obtener la fecha (día) de la sesión actual
+  const fechaActual = entrenamientoActual.fecha;
+
+  // Normalizar a día (YYYY-MM-DD) para comparar por día y no por timestamp
+  const toDia = (raw) => {
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d)) return null;
+    return d.toISOString().slice(0, 10);
+  };
+
+  const fechaActualDia = toDia(fechaActual);
+
+  // Buscar la sesión anterior (solo sesiones estrictamente anteriores al día de la sesión actual)
+  for (const sesion of todasLasSesiones) {
+    const sesionDia = toDia(sesion.fecha);
+    if (fechaActualDia) {
+      // Si la sesión es de un día anterior al día actual, devolverla
+      if (sesionDia && sesionDia < fechaActualDia) return sesion;
+      // Si sesionDia >= fechaActualDia, continuar buscando
+      continue;
+    } else {
+      // Si no tenemos fechaActual, devolver la primer sesión encontrada (más reciente)
+      return sesion;
+    }
+  }
+
+  return null;
+}
+
 // Variable global para almacenar el estado del entrenamiento
 let entrenamientoActual = {
   ejercicios: [],
@@ -410,6 +524,7 @@ function renderizarEjerciciosLive() {
     `;
     headerEj.appendChild(seriesCount);
     
+    // Botón eliminar
     const btnEliminar = document.createElement("button");
     btnEliminar.textContent = "🗑️";
     btnEliminar.style.cssText = `
@@ -710,6 +825,161 @@ function renderizarEjerciciosLive() {
         serieDiv.appendChild(botonesContainer);
         contenidoExpandible.appendChild(serieDiv);
       });
+      
+      // ==================== ESTADÍSTICAS DEL EJERCICIO ACTUAL ====================
+      const statsActual = calcularEstadisticasEjercicio(ejercicio);
+      if (statsActual.pesoMax > 0 || statsActual.volumenTotal > 0) {
+        const statsContainer = document.createElement('div');
+        statsContainer.style.marginTop = '16px';
+        statsContainer.style.padding = '12px';
+        statsContainer.style.background = 'linear-gradient(135deg, rgba(61, 213, 152, 0.1) 0%, rgba(0, 212, 212, 0.1) 100%)';
+        statsContainer.style.borderRadius = '10px';
+        statsContainer.style.border = '1px solid var(--border-color)';
+
+        const statsTitulo = document.createElement('div');
+        statsTitulo.textContent = '📊 Estadísticas de esta sesión';
+        statsTitulo.style.fontSize = '0.8rem';
+        statsTitulo.style.fontWeight = '700';
+        statsTitulo.style.color = 'var(--text-secondary)';
+        statsTitulo.style.marginBottom = '10px';
+        statsTitulo.style.textTransform = 'uppercase';
+        statsTitulo.style.letterSpacing = '0.5px';
+        statsContainer.appendChild(statsTitulo);
+
+        const statsGrid = document.createElement('div');
+        statsGrid.style.display = 'grid';
+        statsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        statsGrid.style.gap = '8px';
+
+        // Peso máximo
+        const statPesoMax = document.createElement('div');
+        statPesoMax.style.textAlign = 'center';
+        statPesoMax.style.padding = '8px';
+        statPesoMax.style.background = 'var(--bg-card)';
+        statPesoMax.style.borderRadius = '8px';
+        statPesoMax.innerHTML = `
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary-mint);">${statsActual.pesoMax}<span style="font-size: 0.8rem; font-weight: 500;">kg</span></div>
+          <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">PESO MÁX</div>
+        `;
+        statsGrid.appendChild(statPesoMax);
+
+        // Volumen total
+        const statVolumen = document.createElement('div');
+        statVolumen.style.textAlign = 'center';
+        statVolumen.style.padding = '8px';
+        statVolumen.style.background = 'var(--bg-card)';
+        statVolumen.style.borderRadius = '8px';
+        statVolumen.innerHTML = `
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--secondary-cyan);">${statsActual.volumenTotal}<span style="font-size: 0.8rem; font-weight: 500;">kg</span></div>
+          <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">VOLUMEN</div>
+        `;
+        statsGrid.appendChild(statVolumen);
+
+        // 1RM estimado
+        const stat1RM = document.createElement('div');
+        stat1RM.style.textAlign = 'center';
+        stat1RM.style.padding = '8px';
+        stat1RM.style.background = 'var(--bg-card)';
+        stat1RM.style.borderRadius = '8px';
+        stat1RM.innerHTML = `
+          <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary-coral);">${statsActual.oneRM}<span style="font-size: 0.8rem; font-weight: 500;">kg</span></div>
+          <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">1RM EST.</div>
+        `;
+        statsGrid.appendChild(stat1RM);
+
+        statsContainer.appendChild(statsGrid);
+        contenidoExpandible.appendChild(statsContainer);
+      }
+
+      // ==================== COMPARACIÓN CON SESIÓN ANTERIOR ====================
+      const sesionAnterior = buscarSesionAnteriorEjercicio(ejercicio.nombre);
+      if (sesionAnterior) {
+        const statsAnterior = calcularEstadisticasEjercicio(sesionAnterior.ejercicio);
+        
+        const comparacionContainer = document.createElement('div');
+        comparacionContainer.style.marginTop = '12px';
+        comparacionContainer.style.padding = '12px';
+        comparacionContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%)';
+        comparacionContainer.style.borderRadius = '10px';
+        comparacionContainer.style.border = '1px solid var(--border-color)';
+
+        const comparacionTitulo = document.createElement('div');
+        comparacionTitulo.style.fontSize = '0.8rem';
+        comparacionTitulo.style.fontWeight = '700';
+        comparacionTitulo.style.color = 'var(--text-secondary)';
+        comparacionTitulo.style.marginBottom = '8px';
+        comparacionTitulo.style.textTransform = 'uppercase';
+        comparacionTitulo.style.letterSpacing = '0.5px';
+        comparacionTitulo.style.display = 'flex';
+        comparacionTitulo.style.justifyContent = 'space-between';
+        comparacionTitulo.style.alignItems = 'center';
+        
+        const tituloTexto = document.createElement('span');
+        tituloTexto.textContent = '📈 Última vez';
+        
+        const fechaTexto = document.createElement('span');
+        fechaTexto.textContent = new Date(sesionAnterior.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        fechaTexto.style.fontSize = '0.75rem';
+        fechaTexto.style.fontWeight = '600';
+        fechaTexto.style.color = 'var(--text-light)';
+        
+        comparacionTitulo.appendChild(tituloTexto);
+        comparacionTitulo.appendChild(fechaTexto);
+        comparacionContainer.appendChild(comparacionTitulo);
+
+        const comparacionGrid = document.createElement('div');
+        comparacionGrid.style.display = 'grid';
+        comparacionGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+        comparacionGrid.style.gap = '8px';
+
+        // Calcular progresos
+        const progresoPesoMax = statsActual.pesoMax > 0 && statsAnterior.pesoMax > 0
+          ? ((statsActual.pesoMax - statsAnterior.pesoMax) / statsAnterior.pesoMax * 100)
+          : 0;
+        
+        const progresoVolumen = statsActual.volumenTotal > 0 && statsAnterior.volumenTotal > 0
+          ? ((statsActual.volumenTotal - statsAnterior.volumenTotal) / statsAnterior.volumenTotal * 100)
+          : 0;
+
+        const progreso1RM = statsActual.oneRM > 0 && statsAnterior.oneRM > 0
+          ? ((statsActual.oneRM - statsAnterior.oneRM) / statsAnterior.oneRM * 100)
+          : 0;
+
+        // Función helper para crear stat con progreso
+        const crearStatProgreso = (valor, progresoPercent, label) => {
+          const div = document.createElement('div');
+          div.style.textAlign = 'center';
+          div.style.padding = '8px';
+          div.style.background = 'var(--bg-card)';
+          div.style.borderRadius = '8px';
+          
+          let colorProgreso = 'var(--text-secondary)';
+          let iconoProgreso = '━';
+          if (progresoPercent > 0) {
+            colorProgreso = 'var(--success)';
+            iconoProgreso = '↗';
+          } else if (progresoPercent < 0) {
+            colorProgreso = 'var(--danger)';
+            iconoProgreso = '↘';
+          }
+          
+          div.innerHTML = `
+            <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${valor}<span style="font-size: 0.7rem; font-weight: 500;">kg</span></div>
+            <div style="font-size: 0.7rem; color: ${colorProgreso}; font-weight: 700; margin-top: 2px;">
+              ${iconoProgreso} ${Math.abs(progresoPercent).toFixed(1)}%
+            </div>
+            <div style="font-size: 0.6rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">${label}</div>
+          `;
+          return div;
+        };
+
+        comparacionGrid.appendChild(crearStatProgreso(statsAnterior.pesoMax, progresoPesoMax, 'PESO MÁX'));
+        comparacionGrid.appendChild(crearStatProgreso(statsAnterior.volumenTotal, progresoVolumen, 'VOLUMEN'));
+        comparacionGrid.appendChild(crearStatProgreso(statsAnterior.oneRM, progreso1RM, '1RM EST.'));
+
+        comparacionContainer.appendChild(comparacionGrid);
+        contenidoExpandible.appendChild(comparacionContainer);
+      }
       
       ejercicioDiv.appendChild(contenidoExpandible);
     }
