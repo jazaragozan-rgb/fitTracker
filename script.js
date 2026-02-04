@@ -1027,10 +1027,10 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
       const descanso = createInput('D', serie.descanso, 'descanso');
 
       // Botón check/timer
-      const checkBtn = document.createElement('button');
+      const checkBtn = document.createElement('serie-button');
       if (serie.completada) {
         checkBtn.textContent = '✔️';
-        serieDiv.style.background = 'rgba(232, 245, 233, 0.6)';
+        serieDiv.style.background = 'rgba(61, 213, 152, 0.25)';
       } else {
         checkBtn.textContent = '🕔';
       }
@@ -1045,7 +1045,7 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
       });
 
       // Botón eliminar
-      const deleteBtn = document.createElement('button');
+      const deleteBtn = document.createElement('serie-button');
       deleteBtn.textContent = '❌';
       deleteBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1214,6 +1214,55 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
       comparacionContainer.appendChild(comparacionGrid);
       contenidoExpandible.appendChild(comparacionContainer);
     }
+
+    // ==================== NOTAS DEL EJERCICIO ====================
+    const notasContainer = document.createElement('div');
+    notasContainer.style.marginTop = '12px';
+    notasContainer.style.padding = '8px';
+    notasContainer.style.background = 'var(--bg-card)';
+    notasContainer.style.borderRadius = '8px';
+    notasContainer.style.border = '1px solid var(--border-color)';
+
+    const notasLabel = document.createElement('div');
+    notasLabel.textContent = '📝 Notas';
+    notasLabel.style.fontSize = '0.7rem';
+    notasLabel.style.fontWeight = '700';
+    notasLabel.style.color = 'var(--text-secondary)';
+    notasLabel.style.marginBottom = '4px';
+    notasLabel.style.textTransform = 'uppercase';
+    notasLabel.style.letterSpacing = '0.5px';
+    notasContainer.appendChild(notasLabel);
+
+    const notasTextarea = document.createElement('textarea');
+    notasTextarea.value = ejercicio.notas || '';
+    notasTextarea.placeholder = 'Añade notas sobre el ejercicio...';
+    notasTextarea.style.width = '100%';
+    notasTextarea.style.minHeight = '36px';
+    notasTextarea.style.maxHeight = '54px';
+    notasTextarea.style.padding = '6px 8px';
+    notasTextarea.style.border = '1px solid var(--border-color)';
+    notasTextarea.style.borderRadius = '6px';
+    notasTextarea.style.fontSize = '0.85rem';
+    notasTextarea.style.fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
+    notasTextarea.style.resize = 'vertical';
+    notasTextarea.style.background = 'var(--bg-main)';
+    notasTextarea.style.color = 'var(--text-primary)';
+    notasTextarea.style.transition = 'all 0.2s ease';
+    
+    notasTextarea.addEventListener('focus', () => {
+      notasTextarea.style.borderColor = 'var(--primary-mint)';
+      notasTextarea.style.background = 'white';
+    });
+    
+    notasTextarea.addEventListener('blur', () => {
+      notasTextarea.style.borderColor = 'var(--border-color)';
+      notasTextarea.style.background = 'var(--bg-main)';
+      ejercicio.notas = notasTextarea.value;
+      guardarDatos();
+    });
+    
+    notasContainer.appendChild(notasTextarea);
+    contenidoExpandible.appendChild(notasContainer);
 
     wrapper.appendChild(contenidoExpandible);
   }

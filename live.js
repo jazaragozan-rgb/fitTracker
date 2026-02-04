@@ -658,15 +658,15 @@ function renderizarEjerciciosLive() {
         const serieDiv = document.createElement("div");
         serieDiv.style.cssText = `
           display: grid;
-          grid-template-columns: 40px repeat(4, 1fr) 50px;
+          grid-template-columns: 40px repeat(4, 1fr) 80px;
           gap: 4px;
-          margin-bottom: 4px;
-          padding: 2px 4px;
+          margin: 2px;
+          padding: 1px 4px;
           align-items: center;
           border-radius: 8px;
           transition: all 0.2s;
-          min-height: auto;
-          height: auto;
+          min-height: 45px;
+          height: 45px;
         `;
         
         // Cambiar fondo si está completada
@@ -694,10 +694,22 @@ function renderizarEjerciciosLive() {
         const num = document.createElement("div");
         num.textContent = serieIdx + 1;
         num.style.cssText = `
-          text-align: center;
-          font-weight: 700;
-          color: var(--text-primary);
-          font-size: 0.85rem;
+        width: 26px;
+        height: 26px;
+        padding: 2px 4px;
+        margin: 2px;
+        font-size: 1.2rem;
+        font-weight: 700;
+        border: none !important;
+        border-radius: 6px;
+        background: transparent;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: none !important;
         `;
         serieDiv.appendChild(num);
         
@@ -708,14 +720,21 @@ function renderizarEjerciciosLive() {
           input.value = valor || '';
           input.placeholder = placeholder;
           input.style.cssText = `
-            padding: 6px 4px;
-            border: 1px solid rgba(0, 0, 0, 0.08);
-            border-radius: 6px;
-            text-align: center;
-            font-size: 0.85rem;
-            background: transparent;
-            color: var(--text-primary);
-            height: 32px;
+          display: grid;
+          grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
+          gap: 4px;
+          margin-bottom: 2px;
+          padding-top: 2px;
+          padding: 4px;
+          font-size: 1.2rem;
+          font-weight: 300;
+          background: transparent;
+          border: none;
+          align-items: center;
+          transition: all 0.2s ease;
+          box-shadow: none;
+          min-height: 26px;
+          height: 26px;
           `;
           input.addEventListener('focus', () => {
             input.style.border = '1px solid var(--primary-mint)';
@@ -724,7 +743,7 @@ function renderizarEjerciciosLive() {
             input.style.boxShadow = '0 0 0 2px rgba(61, 213, 152, 0.1)';
           });
           input.addEventListener('blur', () => {
-            input.style.border = '1px solid rgba(0, 0, 0, 0.08)';
+            input.style.border = 'none';
             input.style.background = 'transparent';
             input.style.boxShadow = 'none';
           });
@@ -757,20 +776,20 @@ function renderizarEjerciciosLive() {
         }
         btnCheck.style.cssText = `
           border: none;
-          font-size: 1rem;
+          font-size: 1.1rem;
           cursor: pointer;
           padding: 0;
           border-radius: 6px;
           transition: all 0.2s;
           background: transparent;
-          width: 32px;
-          height: 32px;
+          width: 26px;
+          height: 26px;
           display: flex;
           align-items: center;
           justify-content: center;
         `;
         btnCheck.onmouseover = () => {
-          btnCheck.style.background = serie.completada ? 'rgba(61, 213, 152, 0.3)' : 'var(--bg-main)';
+          btnCheck.style.background = 'rgba(0, 0, 0, 0.05)';
         };
         btnCheck.onmouseout = () => {
           btnCheck.style.background = 'transparent';
@@ -795,20 +814,20 @@ function renderizarEjerciciosLive() {
         btnEliminarSerie.style.cssText = `
           background: transparent;
           border: none;
-          font-size: 1rem;
+          font-size: 1.1rem;
           cursor: pointer;
           padding: 0;
           border-radius: 6px;
           transition: all 0.2s;
           opacity: 0.4;
-          width: 32px;
-          height: 32px;
+          width: 26px;
+          height: 26px;
           display: flex;
           align-items: center;
           justify-content: center;
         `;
         btnEliminarSerie.onmouseover = () => {
-          btnEliminarSerie.style.background = "rgba(255, 107, 107, 0.1)";
+          btnEliminarSerie.style.background = "rgba(0, 0, 0, 0.05)";
           btnEliminarSerie.style.opacity = "1";
         };
         btnEliminarSerie.onmouseout = () => {
@@ -980,7 +999,57 @@ function renderizarEjerciciosLive() {
         comparacionContainer.appendChild(comparacionGrid);
         contenidoExpandible.appendChild(comparacionContainer);
       }
-      
+      // ==================== NOTAS DEL EJERCICIO ====================
+    const notasContainer = document.createElement('div');
+    notasContainer.style.marginTop = '12px';
+    notasContainer.style.padding = '8px';
+    notasContainer.style.background = 'var(--bg-card)';
+    notasContainer.style.borderRadius = '8px';
+    notasContainer.style.border = '1px solid var(--border-color)';
+
+    const notasLabel = document.createElement('div');
+    notasLabel.textContent = '📝 Notas';
+    notasLabel.style.fontSize = '0.7rem';
+    notasLabel.style.fontWeight = '700';
+    notasLabel.style.color = 'var(--text-secondary)';
+    notasLabel.style.marginBottom = '4px';
+    notasLabel.style.textTransform = 'uppercase';
+    notasLabel.style.letterSpacing = '0.5px';
+    notasContainer.appendChild(notasLabel);
+
+    const notasTextarea = document.createElement('textarea');
+    notasTextarea.value = ejercicio.notas || '';
+    notasTextarea.placeholder = 'Añade notas sobre el ejercicio...';
+    notasTextarea.style.width = '100%';
+    notasTextarea.style.minHeight = '36px';
+    notasTextarea.style.maxHeight = '54px';
+    notasTextarea.style.padding = '6px 8px';
+    notasTextarea.style.border = '1px solid var(--border-color)';
+    notasTextarea.style.borderRadius = '6px';
+    notasTextarea.style.fontSize = '0.85rem';
+    notasTextarea.style.fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
+    notasTextarea.style.resize = 'vertical';
+    notasTextarea.style.background = 'var(--bg-main)';
+    notasTextarea.style.color = 'var(--text-primary)';
+    notasTextarea.style.transition = 'all 0.2s ease';
+    
+    notasTextarea.addEventListener('focus', () => {
+      notasTextarea.style.borderColor = 'var(--primary-mint)';
+      notasTextarea.style.background = 'white';
+    });
+    
+    notasTextarea.addEventListener('blur', () => {
+      notasTextarea.style.borderColor = 'var(--border-color)';
+      notasTextarea.style.background = 'var(--bg-main)';
+      ejercicio.notas = notasTextarea.value;
+    });
+    
+    notasTextarea.addEventListener('input', () => {
+      ejercicio.notas = notasTextarea.value;
+    });
+    
+    notasContainer.appendChild(notasTextarea);
+    contenidoExpandible.appendChild(notasContainer);
       ejercicioDiv.appendChild(contenidoExpandible);
     }
     

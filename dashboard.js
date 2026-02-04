@@ -575,14 +575,6 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   }
 
   dashboard.appendChild(cardProgreso);
-
-  // ==================== CONTENIDO EXTRA ====================
-  datos.filter(item => !['Entrenamiento','Seguimiento','Calendario'].includes(item.nombre))
-       .forEach((item, index) => {
-         const div = crearIndice(item, index, { hijos: datos });
-         div.addEventListener('click', () => { rutaActual.push(index); });
-         contenido.appendChild(div);
-       });
 }
 
 // ==================== HELPER: CREAR TARJETA ====================
