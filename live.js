@@ -637,7 +637,7 @@ function renderizarEjerciciosLive() {
       const encabezado = document.createElement("div");
       encabezado.style.cssText = `
         display: grid;
-        grid-template-columns: 40px repeat(4, 1fr) 50px;
+        grid-template-columns: 40px repeat(4, 1fr) 80px;
         gap: 4px;
         margin-bottom: 8px;
         font-size: 0.7rem;
@@ -723,9 +723,8 @@ function renderizarEjerciciosLive() {
           display: grid;
           grid-template-columns: 40px repeat(4, 1fr) 50px 40px;
           gap: 4px;
-          margin-bottom: 2px;
-          padding-top: 2px;
-          padding: 4px;
+          margin: 2px;
+          padding: 2px 4px;
           font-size: 1.2rem;
           font-weight: 300;
           background: transparent;
