@@ -1216,6 +1216,38 @@ export function mostrarBuscadorAlimentos(nivel, contenido, tipoComida = 'desayun
   
   searchContainer.appendChild(input);
   searchContainer.appendChild(btnBuscar);
+
+  // Después del input de búsqueda, añadir botón de cámara
+const btnCamara = document.createElement('button');
+btnCamara.innerHTML = '📷';
+btnCamara.style.width = '48px';
+btnCamara.style.height = '48px';
+btnCamara.style.background = 'var(--secondary-cyan)';
+btnCamara.style.border = 'none';
+btnCamara.style.borderRadius = '8px';
+btnCamara.style.fontSize = '1.2rem';
+btnCamara.style.cursor = 'pointer';
+btnCamara.style.transition = 'all 0.2s ease';
+btnCamara.style.flexShrink = '0';
+btnCamara.style.display = 'flex';
+btnCamara.style.alignItems = 'center';
+btnCamara.style.justifyContent = 'center';
+
+btnCamara.addEventListener('mouseenter', () => {
+  btnCamara.style.background = '#00B8B8';
+  btnCamara.style.transform = 'scale(1.05)';
+});
+
+btnCamara.addEventListener('mouseleave', () => {
+  btnCamara.style.background = 'var(--secondary-cyan)';
+  btnCamara.style.transform = 'scale(1)';
+});
+
+btnCamara.onclick = () => analizarFotoComida(nivel, contenido, overlay);
+
+searchContainer.appendChild(input);
+searchContainer.appendChild(btnBuscar);
+searchContainer.appendChild(btnCamara); // ← Añadir aquí
   
   // Lista de resultados
   const list = document.createElement('div');
@@ -1782,6 +1814,395 @@ function mostrarModalAñadirRapido(alimentoBase, nivel) {
   
   modal.appendChild(caja);
   document.body.appendChild(modal);
+}
+
+// ==================== ANÁLISIS NUTRICIONAL POR FOTO ====================
+async function analizarFotoComida(nivel, contenido, overlayBuscador) {
+  // Input oculto para seleccionar archivo
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file';
+  fileInput.accept = 'image/*';
+  fileInput.capture = 'environment'; // Usar cámara trasera en móviles
+  
+  fileInput.onchange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    // Validar tamaño (máx 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      alert('⚠️ La imagen es demasiado grande. Máximo 5MB.');
+      return;
+    }
+    
+    // Mostrar modal de análisis
+    const modalAnalisis = crearModalAnalisisFoto(file);
+    document.body.appendChild(modalAnalisis);
+    
+    try {
+      // Convertir imagen a base64
+      const base64Image = await convertirImagenABase64(file);
+      
+      // Actualizar estado del modal
+      const statusDiv = modalAnalisis.querySelector('.status-analisis');
+      statusDiv.textContent = '🧠 Analizando con IA...';
+      
+      // Llamar a Claude API
+      const resultado = await analizarImagenConClaude(base64Image, file.type);
+      
+      // Mostrar resultados
+      mostrarResultadosAnalisis(modalAnalisis, resultado, nivel, contenido, overlayBuscador);
+      
+    } catch (error) {
+      console.error('Error al analizar foto:', error);
+      const statusDiv = modalAnalisis.querySelector('.status-analisis');
+      statusDiv.innerHTML = '❌ Error al analizar la foto<br><span style="font-size: 0.8rem; color: var(--text-light);">' + error.message + '</span>';
+      statusDiv.style.color = 'var(--danger)';
+    }
+  };
+  
+  fileInput.click();
+}
+
+// Convertir imagen a base64
+function convertirImagenABase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      // Extraer solo la parte base64 (sin el prefijo data:image/...)
+      const base64 = reader.result.split(',')[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+// Modal de análisis con preview de imagen
+function crearModalAnalisisFoto(file) {
+  const modal = document.createElement('div');
+  modal.className = 'modal-overlay';
+  modal.style.zIndex = '10001'; // Por encima del buscador
+  
+  const caja = document.createElement('div');
+  caja.style.background = 'var(--bg-card)';
+  caja.style.borderRadius = '16px';
+  caja.style.padding = '24px';
+  caja.style.maxWidth = '90%';
+  caja.style.width = '400px';
+  caja.style.boxShadow = 'var(--shadow-lg)';
+  
+  const titulo = document.createElement('h3');
+  titulo.textContent = '📸 Análisis Nutricional';
+  titulo.style.marginBottom = '20px';
+  titulo.style.fontSize = '1.2rem';
+  titulo.style.fontWeight = '700';
+  titulo.style.color = 'var(--text-primary)';
+  titulo.style.textAlign = 'center';
+  caja.appendChild(titulo);
+  
+  // Preview de la imagen
+  const imgPreview = document.createElement('img');
+  imgPreview.src = URL.createObjectURL(file);
+  imgPreview.style.width = '100%';
+  imgPreview.style.height = 'auto';
+  imgPreview.style.maxHeight = '300px';
+  imgPreview.style.objectFit = 'contain';
+  imgPreview.style.borderRadius = '12px';
+  imgPreview.style.marginBottom = '16px';
+  caja.appendChild(imgPreview);
+  
+  // Estado del análisis
+  const statusDiv = document.createElement('div');
+  statusDiv.className = 'status-analisis';
+  statusDiv.textContent = '📤 Subiendo imagen...';
+  statusDiv.style.textAlign = 'center';
+  statusDiv.style.padding = '16px';
+  statusDiv.style.background = 'var(--bg-main)';
+  statusDiv.style.borderRadius = '8px';
+  statusDiv.style.fontSize = '0.95rem';
+  statusDiv.style.color = 'var(--text-secondary)';
+  statusDiv.style.fontWeight = '600';
+  caja.appendChild(statusDiv);
+  
+  modal.appendChild(caja);
+  return modal;
+}
+
+// Llamada a Claude API con imagen
+async function analizarImagenConClaude(base64Image, mimeType) {
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 2000,
+      messages: [{
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mimeType,
+              data: base64Image
+            }
+          },
+          {
+            type: 'text',
+            text: `Analiza esta imagen de comida y proporciona la información nutricional estimada.
+
+INSTRUCCIONES:
+1. Identifica todos los alimentos visibles en la imagen
+2. Estima la cantidad aproximada de cada alimento en gramos
+3. Calcula los valores nutricionales totales
+4. Sé específico pero realista con las estimaciones
+
+Responde ÚNICAMENTE con un objeto JSON en este formato exacto:
+{
+  "alimentos_detectados": [
+    {
+      "nombre": "nombre del alimento",
+      "cantidad_gramos": 150,
+      "calorias": 200,
+      "proteinas": 20,
+      "carbohidratos": 30,
+      "grasas": 5
+    }
+  ],
+  "total": {
+    "calorias": 500,
+    "proteinas": 35,
+    "carbohidratos": 60,
+    "grasas": 15
+  },
+  "confianza": "alta|media|baja",
+  "notas": "Observaciones sobre la estimación"
+}`
+          }
+        ]
+      }]
+    })
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error?.message || 'Error en la API de Claude');
+  }
+  
+  const data = await response.json();
+  const textoRespuesta = data.content[0].text;
+  
+  // Extraer JSON de la respuesta
+  const jsonMatch = textoRespuesta.match(/\{[\s\S]*\}/);
+  if (!jsonMatch) {
+    throw new Error('No se pudo extraer información nutricional de la respuesta');
+  }
+  
+  return JSON.parse(jsonMatch[0]);
+}
+
+// Mostrar resultados del análisis
+function mostrarResultadosAnalisis(modal, resultado, nivel, contenido, overlayBuscador) {
+  const caja = modal.querySelector('div');
+  
+  // Limpiar contenido anterior
+  const statusDiv = caja.querySelector('.status-analisis');
+  statusDiv.remove();
+  
+  // Indicador de confianza
+  const confianzaDiv = document.createElement('div');
+  confianzaDiv.style.display = 'flex';
+  confianzaDiv.style.alignItems = 'center';
+  confianzaDiv.style.gap = '8px';
+  confianzaDiv.style.padding = '12px';
+  confianzaDiv.style.background = 'var(--bg-main)';
+  confianzaDiv.style.borderRadius = '8px';
+  confianzaDiv.style.marginBottom = '16px';
+  
+  const iconoConfianza = resultado.confianza === 'alta' ? '🎯' : resultado.confianza === 'media' ? '⚠️' : '❓';
+  const colorConfianza = resultado.confianza === 'alta' ? 'var(--success)' : resultado.confianza === 'media' ? '#FFA500' : 'var(--danger)';
+  
+  confianzaDiv.innerHTML = `
+    <span style="font-size: 1.5rem;">${iconoConfianza}</span>
+    <div style="flex: 1;">
+      <div style="font-size: 0.75rem; color: var(--text-secondary); font-weight: 600;">CONFIANZA</div>
+      <div style="font-size: 0.9rem; color: ${colorConfianza}; font-weight: 700; text-transform: uppercase;">${resultado.confianza}</div>
+    </div>
+  `;
+  caja.appendChild(confianzaDiv);
+  
+  // Totales nutricionales
+  const totalesDiv = document.createElement('div');
+  totalesDiv.style.background = 'linear-gradient(135deg, rgba(61, 213, 152, 0.1) 0%, rgba(0, 212, 212, 0.1) 100%)';
+  totalesDiv.style.padding = '16px';
+  totalesDiv.style.borderRadius = '12px';
+  totalesDiv.style.marginBottom = '16px';
+  totalesDiv.style.border = '1px solid var(--border-color)';
+  
+  totalesDiv.innerHTML = `
+    <div style="font-size: 0.8rem; color: var(--text-secondary); font-weight: 700; margin-bottom: 12px; text-transform: uppercase;">TOTALES ESTIMADOS</div>
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
+      <div style="text-align: center;">
+        <div style="font-size: 1.8rem; font-weight: 900; color: var(--primary-mint);">${Math.round(resultado.total.calorias)}</div>
+        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">KCAL</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="font-size: 1.8rem; font-weight: 900; color: var(--primary-coral);">${Math.round(resultado.total.proteinas)}g</div>
+        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">PROTEÍNAS</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="font-size: 1.8rem; font-weight: 900; color: var(--secondary-cyan);">${Math.round(resultado.total.carbohidratos)}g</div>
+        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">CARBOHIDRATOS</div>
+      </div>
+      <div style="text-align: center;">
+        <div style="font-size: 1.8rem; font-weight: 900; color: #FFB74D;">${Math.round(resultado.total.grasas)}g</div>
+        <div style="font-size: 0.7rem; color: var(--text-secondary); font-weight: 600;">GRASAS</div>
+      </div>
+    </div>
+  `;
+  caja.appendChild(totalesDiv);
+  
+  // Lista de alimentos detectados
+  if (resultado.alimentos_detectados && resultado.alimentos_detectados.length > 0) {
+    const alimentosTitulo = document.createElement('div');
+    alimentosTitulo.textContent = '🍽️ Alimentos detectados:';
+    alimentosTitulo.style.fontSize = '0.85rem';
+    alimentosTitulo.style.fontWeight = '700';
+    alimentosTitulo.style.color = 'var(--text-secondary)';
+    alimentosTitulo.style.marginBottom = '8px';
+    alimentosTitulo.style.textTransform = 'uppercase';
+    caja.appendChild(alimentosTitulo);
+    
+    resultado.alimentos_detectados.forEach(alimento => {
+      const itemDiv = document.createElement('div');
+      itemDiv.style.background = 'var(--bg-main)';
+      itemDiv.style.padding = '10px';
+      itemDiv.style.borderRadius = '8px';
+      itemDiv.style.marginBottom = '6px';
+      itemDiv.style.fontSize = '0.85rem';
+      
+      itemDiv.innerHTML = `
+        <div style="font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">${alimento.nombre}</div>
+        <div style="color: var(--text-secondary); font-size: 0.8rem;">
+          ${alimento.cantidad_gramos}g • ${Math.round(alimento.calorias)} kcal • P: ${Math.round(alimento.proteinas)}g • C: ${Math.round(alimento.carbohidratos)}g • G: ${Math.round(alimento.grasas)}g
+        </div>
+      `;
+      caja.appendChild(itemDiv);
+    });
+  }
+  
+  // Notas
+  if (resultado.notas) {
+    const notasDiv = document.createElement('div');
+    notasDiv.style.background = 'var(--bg-main)';
+    notasDiv.style.padding = '12px';
+    notasDiv.style.borderRadius = '8px';
+    notasDiv.style.fontSize = '0.8rem';
+    notasDiv.style.color = 'var(--text-secondary)';
+    notasDiv.style.marginTop = '12px';
+    notasDiv.innerHTML = `<strong>💡 Nota:</strong> ${resultado.notas}`;
+    caja.appendChild(notasDiv);
+  }
+  
+  // Selector de tipo de comida
+  const tipoLabel = document.createElement('label');
+  tipoLabel.textContent = 'Tipo de comida:';
+  tipoLabel.style.display = 'block';
+  tipoLabel.style.marginTop = '16px';
+  tipoLabel.style.marginBottom = '8px';
+  tipoLabel.style.fontWeight = '600';
+  tipoLabel.style.fontSize = '0.9rem';
+  tipoLabel.style.color = 'var(--text-secondary)';
+  caja.appendChild(tipoLabel);
+  
+  const selectTipo = document.createElement('select');
+  selectTipo.style.width = '100%';
+  selectTipo.style.padding = '12px';
+  selectTipo.style.border = '1px solid var(--border-color)';
+  selectTipo.style.borderRadius = '8px';
+  selectTipo.style.fontSize = '0.95rem';
+  selectTipo.style.marginBottom = '16px';
+  selectTipo.style.background = 'var(--bg-main)';
+  
+  const TIPOS_COMIDA = [
+    { id: 'desayuno', nombre: 'Desayuno', icono: '🌅' },
+    { id: 'almuerzo', nombre: 'Almuerzo', icono: '☀️' },
+    { id: 'cena', nombre: 'Cena', icono: '🌙' },
+    { id: 'snacks', nombre: 'Snacks', icono: '🍎' }
+  ];
+  
+  TIPOS_COMIDA.forEach(tipo => {
+    const option = document.createElement('option');
+    option.value = tipo.id;
+    option.textContent = `${tipo.icono} ${tipo.nombre}`;
+    selectTipo.appendChild(option);
+  });
+  caja.appendChild(selectTipo);
+  
+  // Botones
+  const botones = document.createElement('div');
+  botones.style.display = 'flex';
+  botones.style.gap = '12px';
+  botones.style.marginTop = '16px';
+  
+  const btnCancelar = document.createElement('button');
+  btnCancelar.textContent = 'Cancelar';
+  btnCancelar.style.flex = '1';
+  btnCancelar.style.padding = '12px';
+  btnCancelar.style.background = 'var(--bg-main)';
+  btnCancelar.style.color = 'var(--text-secondary)';
+  btnCancelar.style.border = 'none';
+  btnCancelar.style.borderRadius = '8px';
+  btnCancelar.style.fontSize = '0.95rem';
+  btnCancelar.style.fontWeight = '700';
+  btnCancelar.style.cursor = 'pointer';
+  btnCancelar.onclick = () => modal.remove();
+  
+  const btnAñadir = document.createElement('button');
+  btnAñadir.textContent = 'Añadir al Diario';
+  btnAñadir.style.flex = '1';
+  btnAñadir.style.padding = '12px';
+  btnAñadir.style.background = 'var(--primary-mint)';
+  btnAñadir.style.color = 'white';
+  btnAñadir.style.border = 'none';
+  btnAñadir.style.borderRadius = '8px';
+  btnAñadir.style.fontSize = '0.95rem';
+  btnAñadir.style.fontWeight = '700';
+  btnAñadir.style.cursor = 'pointer';
+  
+  btnAñadir.onclick = () => {
+    // Crear registro con los datos analizados
+    const registro = {
+      fecha: obtenerFechaSeleccionada(),
+      nombre: resultado.alimentos_detectados.map(a => a.nombre).join(', ') || 'Comida analizada por foto',
+      cantidad: resultado.total.calorias, // Usar calorías como "cantidad" para referencia
+      calorias: resultado.total.calorias,
+      proteinas: resultado.total.proteinas,
+      carbohidratos: resultado.total.carbohidratos,
+      grasas: resultado.total.grasas,
+      tipoComida: selectTipo.value,
+      origen: 'foto_ia',
+      confianza: resultado.confianza
+    };
+    
+    nivel.hijos = nivel.hijos || [];
+    nivel.hijos.push(registro);
+    
+    if (typeof window.guardarDatos === 'function') {
+      window.guardarDatos();
+    }
+    
+    modal.remove();
+    overlayBuscador.remove();
+    renderizarNutricion(nivel, contenido, document.getElementById('subHeader'), null);
+  };
+  
+  botones.appendChild(btnCancelar);
+  botones.appendChild(btnAñadir);
+  caja.appendChild(botones);
 }
 
 // ==================== MODAL CALENDARIO ====================

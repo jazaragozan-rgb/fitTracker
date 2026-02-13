@@ -9,6 +9,7 @@ import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "
 import { iniciarTimer, restaurarTimer } from "./timer.js";
 import exercises from "./exercises.js";
 import { renderizarNutricion } from "./nutricion.js";
+import { fetchAllExercises, searchExercisesByName } from "./exercises.js";
 
 // ==================== HELPERS DOM / UTIL ====================
 const $ = id => document.getElementById(id);
@@ -387,7 +388,7 @@ function nivelActual() {
   return nivel;
 }
 
-// ==================== BUSCADOR DE EJERCICIOS GLOBAL ====================
+// ==================== BUSCADOR DE EJERCICIOS GLOBAL (CON API) ====================
 window.abrirBuscadorEjercicios = function(callback) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
@@ -424,11 +425,23 @@ window.abrirBuscadorEjercicios = function(callback) {
   const list = document.createElement('div');
   list.className = 'exercise-list';
 
-  input.addEventListener('input', () => {
-    const q = input.value.toLowerCase();
-    list.innerHTML = '';
+  // ==================== MENSAJE INICIAL ====================
+  const mensajeInicial = document.createElement('div');
+  mensajeInicial.className = 'exercise-mensaje';
+  mensajeInicial.innerHTML = '<p>🔍 Escribe para buscar ejercicios...</p>';
+  list.appendChild(mensajeInicial);
+
+  // ==================== BÚSQUEDA CON DEBOUNCE ====================
+  let searchTimeout;
+  
+  input.addEventListener('input', async () => {
+    const q = input.value.trim();
     
-    if (q.trim() === '') {
+    // Limpiar timeout anterior
+    clearTimeout(searchTimeout);
+    
+    if (q === '') {
+      list.innerHTML = '';
       const mensaje = document.createElement('div');
       mensaje.className = 'exercise-mensaje';
       mensaje.innerHTML = '<p>🔍 Escribe para buscar ejercicios...</p>';
@@ -436,127 +449,164 @@ window.abrirBuscadorEjercicios = function(callback) {
       return;
     }
     
-    const resultados = exercises.filter(e => e.nombre.toLowerCase().includes(q)).slice(0, 50);
+    // Mostrar loading
+    list.innerHTML = '';
+    const loading = document.createElement('div');
+    loading.className = 'exercise-mensaje';
+    loading.innerHTML = '<p>⏳ Buscando...</p>';
+    list.appendChild(loading);
     
-    if (resultados.length === 0) {
-      const mensaje = document.createElement('div');
-      mensaje.className = 'exercise-mensaje';
-      mensaje.innerHTML = '<p>❌ No se encontraron ejercicios</p>';
-      list.appendChild(mensaje);
-      return;
-    }
-    
-    // Contador de resultados
-    const contador = document.createElement('div');
-    contador.className = 'exercise-counter';
-    contador.textContent = `${resultados.length} resultado${resultados.length !== 1 ? 's' : ''}`;
-    list.appendChild(contador);
-    
-    resultados.forEach(ej => {
-      const item = document.createElement('div');
-      item.className = 'exercise-item-card';
-      
-      // Icono del ejercicio (emoji según grupo muscular)
-      const icono = document.createElement('div');
-      icono.className = 'exercise-icon';
-      const gruposPrincipales = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular];
-      const grupo = gruposPrincipales[0] || 'general';
-      const iconos = {
-        'pecho': '💪',
-        'espalda': '🦾',
-        'hombros': '🤸',
-        'piernas': '🦵',
-        'biceps': '💪',
-        'triceps': '💪',
-        'core': '🔥',
-        'gluteos': '🍑',
-        'cuadriceps': '🦵',
-        'isquiotibiales': '🦵',
-        'gemelos': '🦵',
-        'hombro_lateral': '🤸',
-        'hombro_posterior': '🤸'
-      };
-      icono.textContent = iconos[grupo] || '🏋️';
-      item.appendChild(icono);
-      
-      // Información del ejercicio
-      const info = document.createElement('div');
-      info.className = 'exercise-info';
-      
-      const nombre = document.createElement('div');
-      nombre.className = 'exercise-name';
-      nombre.textContent = ej.nombre;
-      info.appendChild(nombre);
-      
-      // Tags con grupo muscular y equipamiento
-      const detalles = document.createElement('div');
-      detalles.className = 'exercise-details';
-      
-      // Tag grupo muscular
-      if (gruposPrincipales.length > 0) {
-        const tagGrupo = document.createElement('span');
-        tagGrupo.className = 'exercise-tag';
-        const grupoTexto = gruposPrincipales.join(', ').replace(/_/g, ' ');
-        tagGrupo.innerHTML = `<span class="tag-icon">💪</span>${grupoTexto}`;
-        detalles.appendChild(tagGrupo);
-      }
-      
-      // Tag equipamiento
-      if (ej.equipamiento) {
-        const tagEquip = document.createElement('span');
-        tagEquip.className = 'exercise-tag';
-        const equipTexto = ej.equipamiento.replace(/_/g, ' ');
-        const equipIconos = {
-          'barra': '🏋️',
-          'mancuernas': '🔩',
-          'polea': '🎣',
-          'maquina': '⚙️',
-          'peso_corporal': '🧘',
-          'smith': '🏗️',
-          'lastre': '⚖️'
-        };
-        tagEquip.innerHTML = `<span class="tag-icon">${equipIconos[ej.equipamiento] || '🏋️'}</span>${equipTexto}`;
-        detalles.appendChild(tagEquip);
-      }
-      
-      info.appendChild(detalles);
-      item.appendChild(info);
-      
-      // Botón añadir
-      const btnAdd = document.createElement('button');
-      btnAdd.className = 'exercise-add-btn';
-      btnAdd.textContent = '+';
-      btnAdd.onclick = (e) => {
-        e.stopPropagation();
-        if (callback) {
-          callback(ej.nombre);
-        } else {
-          añadirEjercicioDesdeBiblioteca(ej.nombre);
-        }
-        overlay.remove();
-      };
-      item.appendChild(btnAdd);
-      
-      // Click en toda la tarjeta también añade
-      item.onclick = (e) => {
-        if (e.target !== btnAdd) {
-          if (callback) {
-            callback(ej.nombre);
-          } else {
-            añadirEjercicioDesdeBiblioteca(ej.nombre);
-          }
-          overlay.remove();
-        }
-      };
-      
-      list.appendChild(item);
-    });
-  });
+    // Debounce de 500ms
+    searchTimeout = setTimeout(async () => {
+      try {
+        // ✅ IMPORTAR LA FUNCIÓN DESDE exercises.js
+        const { searchExercisesByName } = await import(`./exercises.js?v=${Date.now()}`);
 
-  const mensajeInicial = document.createElement('div');
-  mensajeInicial.className = 'exercise-mensaje';
-  mensajeInicial.innerHTML = '<p>🔍 Escribe para buscar ejercicios...</p>';
-  list.appendChild(mensajeInicial);
+        const resultados = await searchExercisesByName(q);
+
+        console.log('RESULTADOS CRUDOS:', resultados[0]);
+        
+        list.innerHTML = '';
+        
+        if (resultados.length === 0) {
+          const mensaje = document.createElement('div');
+          mensaje.className = 'exercise-mensaje';
+          mensaje.innerHTML = '<p>❌ No se encontraron ejercicios</p>';
+          list.appendChild(mensaje);
+          return;
+        }
+        
+        // Contador de resultados
+        const contador = document.createElement('div');
+        contador.className = 'exercise-counter';
+        contador.textContent = `${resultados.length} resultado${resultados.length !== 1 ? 's' : ''}`;
+        list.appendChild(contador);
+        
+        // ==================== RENDERIZAR RESULTADOS ====================
+        resultados.forEach(ej => {
+          const item = document.createElement('div');
+          item.className = 'exercise-item-card';
+          
+          // ✅✅✅ CORRECCIÓN CRÍTICA: Icono del ejercicio con GIF
+          const icono = document.createElement('div');
+          icono.className = 'exercise-icon';
+          icono.style.background = 'transparent'; // Quitar fondo para ver el GIF
+          
+          // 🔥 SI HAY IMAGEN, mostrarla
+          if (ej.imagen && ej.imagen.trim() !== '') {
+            const img = document.createElement('img');
+            icono.textContent = '⏳';
+            
+            img.onload = () => {
+              icono.textContent = '';
+              icono.appendChild(img);
+            };
+            
+            img.onerror = () => {
+              console.error('Error cargando imagen:', ej.imagen);
+              icono.textContent = '🏋️';
+            };
+
+            // ✅ Cargar directamente (el proxy maneja CORS)
+            img.src = ej.imagen;
+            img.alt = ej.nombre;
+            img.style.width = '100%';
+            img.style.height = '100%';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '12px';
+            
+          } else {
+            icono.textContent = '🏋️';
+          }
+          
+          item.appendChild(icono);
+          
+          // Información del ejercicio
+          const info = document.createElement('div');
+          info.className = 'exercise-info';
+          
+          const nombre = document.createElement('div');
+          nombre.className = 'exercise-name';
+          nombre.textContent = ej.nombre;
+          info.appendChild(nombre);
+          
+          // Tags con grupo muscular y equipamiento
+          const detalles = document.createElement('div');
+          detalles.className = 'exercise-details';
+          
+          // Tag grupo muscular
+          const gruposPrincipales = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular];
+          if (gruposPrincipales.length > 0 && gruposPrincipales[0]) {
+            const tagGrupo = document.createElement('span');
+            tagGrupo.className = 'exercise-tag';
+            const grupoTexto = gruposPrincipales.join(', ').replace(/_/g, ' ');
+            tagGrupo.innerHTML = `<span class="tag-icon">💪</span>${grupoTexto}`;
+            detalles.appendChild(tagGrupo);
+          }
+          
+          // Tag equipamiento
+          if (ej.equipamiento) {
+            const tagEquip = document.createElement('span');
+            tagEquip.className = 'exercise-tag';
+            const equipTexto = ej.equipamiento.replace(/_/g, ' ');
+            const equipIconos = {
+              'barra': '🏋️',
+              'mancuernas': '🔩',
+              'polea': '🎣',
+              'maquina': '⚙️',
+              'peso_corporal': '🧘',
+              'smith': '🏗️',
+              'lastre': '⚖️',
+              'banda': '🎗️',
+              'kettlebell': '⚖️'
+            };
+            tagEquip.innerHTML = `<span class="tag-icon">${equipIconos[ej.equipamiento] || '🏋️'}</span>${equipTexto}`;
+            detalles.appendChild(tagEquip);
+          }
+          
+          info.appendChild(detalles);
+          item.appendChild(info);
+          
+          // Botón añadir
+          const btnAdd = document.createElement('button');
+          btnAdd.className = 'exercise-add-btn';
+          btnAdd.textContent = '+';
+          btnAdd.onclick = (e) => {
+            e.stopPropagation();
+            if (callback) {
+              callback(ej.nombre, ej.imagen); // ✅ Pasar también la imagen
+            } else {
+              añadirEjercicioDesdeBiblioteca(ej.nombre, ej.imagen);
+            }
+            overlay.remove();
+          };
+          item.appendChild(btnAdd);
+          
+          // Click en toda la tarjeta también añade
+          item.onclick = (e) => {
+            if (e.target !== btnAdd) {
+              if (callback) {
+                callback(ej.nombre, ej.imagen);
+              } else {
+                añadirEjercicioDesdeBiblioteca(ej.nombre, ej.imagen);
+              }
+              overlay.remove();
+            }
+          };
+          
+          list.appendChild(item);
+        });
+        
+      } catch (error) {
+        console.error('Error buscando ejercicios:', error);
+        list.innerHTML = '';
+        const errorMsg = document.createElement('div');
+        errorMsg.className = 'exercise-mensaje';
+        errorMsg.innerHTML = '<p>❌ Error al buscar ejercicios</p><p style="font-size: 0.8rem; color: var(--text-light);">Verifica tu API key</p>';
+        list.appendChild(errorMsg);
+      }
+    }, 500); // Debounce de 500ms
+  });
 
   modal.appendChild(header);
   modal.appendChild(input);
@@ -568,22 +618,27 @@ window.abrirBuscadorEjercicios = function(callback) {
 };
 
 // ✅ UNA SOLA función añadirEjercicioDesdeBiblioteca
-function añadirEjercicioDesdeBiblioteca(nombre) {
+  function añadirEjercicioDesdeBiblioteca(nombre, imagenUrl = null) {
   const nivel = nivelActual();
   
   // Buscar el ejercicio en la biblioteca para obtener su imagen
-  const ejercicioBiblioteca = exercises.find(e => e.nombre === nombre);
+  //const ejercicioBiblioteca = exercises.find(e => e.nombre === nombre);
   
   const nuevoEjercicio = {
     nombre,
     hijos: [],
     series: []
   };
+
+    // ✅ Si hay imagen, guardarla
+  if (imagenUrl) {
+    nuevoEjercicio.imagen = imagenUrl;
+  }
   
   // Si el ejercicio tiene imagen en la biblioteca, añadirla
-  if (ejercicioBiblioteca && ejercicioBiblioteca.imagen) {
-    nuevoEjercicio.imagen = ejercicioBiblioteca.imagen;
-  }
+  //if (ejercicioBiblioteca && ejercicioBiblioteca.imagen) {
+  //  nuevoEjercicio.imagen = ejercicioBiblioteca.imagen;
+  //}
   
   nivel.hijos.push(nuevoEjercicio);
   guardarDatos();
