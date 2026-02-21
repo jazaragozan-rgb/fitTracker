@@ -1581,27 +1581,23 @@ function dragEnd() {
   hasMoved = false;
 }
 
+// ============================================================
+//  crearIndice — Rediseño profesional niveles 1-4
+//  Reemplaza la función crearIndice completa en script.js
+// ============================================================
+
 function crearIndice(item, index, nivel) {
   const div = document.createElement('div');
   div.className = 'list-item';
   div.dataset.index = index;
   div.dataset.nivel = rutaActual.length;
-  
+
   div.addEventListener('click', (e) => {
-    if (dragging) {
-      e.preventDefault();
-      e.stopPropagation();
-      return;
-    }
-    
+    if (dragging) { e.preventDefault(); e.stopPropagation(); return; }
     const target = e.target;
-    if (target.tagName === 'BUTTON' || 
-        target.type === 'date' ||
-        target.closest('.btn-opciones')) {
-      e.stopPropagation();
-      return;
+    if (target.tagName === 'BUTTON' || target.type === 'date' || target.closest('.btn-opciones')) {
+      e.stopPropagation(); return;
     }
-    
     e.stopPropagation();
     navigatePush(index);
   });
@@ -1611,131 +1607,200 @@ function crearIndice(item, index, nivel) {
 
   if (!item.editando) item.editando = false;
 
-  // Contenedor para icono + input
-  const contentContainer = document.createElement('div');
-  contentContainer.style.display = 'flex';
-  contentContainer.style.alignItems = 'center';
-  contentContainer.style.gap = '8px';
-  contentContainer.style.flex = '1';
+  // ── Helpers ──────────────────────────────────────────────
+  const tieneEjercicios = (it) =>
+    it.hijos?.length > 0 && it.hijos.some(h => h.series);
 
-  // Función para detectar si un item tiene ejercicios en el siguiente nivel
-  const tieneEjercicios = (item) => {
-    if (!item.hijos || item.hijos.length === 0) return false;
-    // Buscar solo en el siguiente nivel si hay ejercicios
-    return item.hijos.some(hijo => hijo.series);
-  };
+  const contarHijos = (it) => it.hijos?.length || 0;
 
-  // Icono para diferenciar carpeta vs sesión (nivel 1-3)
-  if (rutaActual.length >= 1 && rutaActual.length <= 3) {
-    const iconoContainer = document.createElement('div');
-    iconoContainer.style.width = '32px';
-    iconoContainer.style.height = '32px';
-    iconoContainer.style.borderRadius = '6px';
-    iconoContainer.style.display = 'flex';
-    iconoContainer.style.alignItems = 'center';
-    iconoContainer.style.justifyContent = 'center';
-    iconoContainer.style.flexShrink = '0';
-    iconoContainer.style.background = 'var(--bg-main)';
-    iconoContainer.style.fontSize = '1.2rem';
-    
-    // Mostrar sesión (💪) si tiene ejercicios, carpeta (📁) si no
-    if (tieneEjercicios(item)) {
-      iconoContainer.textContent = '💪';
-    } else {
-      iconoContainer.textContent = '📁';
-    }
-    
-    contentContainer.appendChild(iconoContainer);
+  // Emojis por nivel: 1=🗂️, 2=🗂️, 3=📅 siempre, 4=🏋️ (o imagen)
+  const NIVEL_EMOJIS = ['', '🗂️', '🗂️', '📅', '🏋️'];
+
+  // ── Zona icono ────────────────────────────────────────────
+  const liIcon = document.createElement('div');
+  liIcon.className = 'li-icon';
+
+  // Si el item tiene imagen (solo posible en nivel 4 / ejercicios)
+  if (item.imagen && item.imagen.trim()) {
+    const emojiPlaceholder = document.createElement('span');
+    emojiPlaceholder.className = 'li-emoji';
+    emojiPlaceholder.textContent = '⏳';
+    liIcon.appendChild(emojiPlaceholder);
+
+    const img = document.createElement('img');
+    img.alt = item.nombre || '';
+    img.onload = () => { liIcon.innerHTML = ''; liIcon.appendChild(img); };
+    img.onerror = () => { emojiPlaceholder.textContent = NIVEL_EMOJIS[rutaActual.length] || '🏋️'; };
+    img.src = item.imagen;
+  } else {
+    const emoji = document.createElement('span');
+    emoji.className = 'li-emoji';
+    emoji.textContent = NIVEL_EMOJIS[rutaActual.length] || '📁';
+    liIcon.appendChild(emoji);
   }
 
+  div.appendChild(liIcon);
+
+  // ── Zona cuerpo ───────────────────────────────────────────
+  const liBody = document.createElement('div');
+  liBody.className = 'li-body';
+
+  // Nombre (editable o lectura)
   if (item.editando) {
     const input = document.createElement('input');
+    input.className = 'li-name-input';
     input.value = item.nombre || '';
-    input.placeholder = item.placeholder || '';
-    input.style.flex = '1 1 auto';
-    input.style.minWidth = '40px';
+    input.placeholder = item.placeholder || 'Sin nombre';
+
     requestAnimationFrame(() => setTimeout(() => { input.focus(); input.select(); }, 0));
 
-    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt => input.addEventListener(evt, e => e.stopPropagation()));
+    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
+      input.addEventListener(evt, e => e.stopPropagation())
+    );
 
     input.addEventListener('keydown', e => {
       if (e.key === 'Enter') {
-        item.nombre = input.value || 'Sin nombre';
-        item.editando = false; guardarDatos(); renderizar();
+        item.nombre = input.value.trim() || 'Sin nombre';
+        item.editando = false;
+        guardarDatos(); renderizar();
       }
     });
     input.addEventListener('blur', () => {
-      item.nombre = input.value || 'Sin nombre';
-      item.editando = false; guardarDatos(); renderizar();
+      item.nombre = input.value.trim() || 'Sin nombre';
+      item.editando = false;
+      guardarDatos(); renderizar();
     });
 
-    contentContainer.appendChild(input);
-    div.appendChild(contentContainer);
-
-    if (rutaActual.length === 3) {
-      const fechaInput = document.createElement('input');
-      fechaInput.type = 'date';
-      fechaInput.value = nivel.hijos[index].fecha || '';
-      ['pointerdown','mousedown','touchstart','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
-      fechaInput.addEventListener('change', async e => {
-        const raw = e.target.value;
-        nivel.hijos[index].fecha = raw;
-        nivel.hijos[index]._fecha = raw;
-        guardarDatos();
-        const user = auth.currentUser;
-        if (user) {
-          try { await guardarDatosUsuario(user.uid, datos); } catch(err){ console.error(err); }
-        }
-      });
-      div.appendChild(fechaInput);
-    }
+    liBody.appendChild(input);
   } else {
-    const input = document.createElement('input');
-    input.value = item.nombre;
-    input.readOnly = true;
-    input.style.flex = '1';
-    input.style.cursor = 'pointer';
+    const nameDiv = document.createElement('div');
+    nameDiv.className = 'li-name';
+    nameDiv.textContent = item.nombre || 'Sin nombre';
+    liBody.appendChild(nameDiv);
+  }
 
-    contentContainer.appendChild(input);
-    div.appendChild(contentContainer);
+  // Meta-tags
+  const liMeta = document.createElement('div');
+  liMeta.className = 'li-meta';
 
-    if (rutaActual.length === 3) {
-      const fechaInput = document.createElement('input');
-      fechaInput.type = 'date';
-      fechaInput.value = nivel.hijos[index].fecha ? nivel.hijos[index].fecha.slice(0,10) : '';
-      ['mousedown','click'].forEach(evt => fechaInput.addEventListener(evt, e => e.stopPropagation()));
-      fechaInput.addEventListener('change', async e => {
-        const raw = e.target.value;
-        nivel.hijos[index].fecha = raw;
-        nivel.hijos[index]._fecha = raw;
-        guardarDatos();
-        const user = auth.currentUser;
-        if (user) {
-          try { await guardarDatosUsuario(user.uid, datos); } catch(err){ console.error(err); }
-        }
-      });
-      div.appendChild(fechaInput);
-    }
+  // Nivel 1 y 2: mostrar número de hijos
+  if (rutaActual.length <= 2 && contarHijos(item) > 0) {
+    const tagHijos = document.createElement('span');
+    tagHijos.className = 'li-tag';
+    const nextLabel = rutaActual.length === 1 ? 'Micro' : 'Sesión';
+    const n = contarHijos(item);
+    tagHijos.textContent = `${n} ${nextLabel}${n !== 1 ? 's' : ''}`;
+    liMeta.appendChild(tagHijos);
+  }
 
-    if (rutaActual.length >= 1 && rutaActual.length <= 3) {
-      const opcionesBtn = document.createElement('button');
-      opcionesBtn.className = "btn-opciones";
-      const punto = document.createElement('span');
-      opcionesBtn.appendChild(punto);
-      opcionesBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
-        mostrarMenuOpciones({
-          anchorElement: opcionesBtn,
-          onEditar: () => { item.editando = true; guardarDatos(); renderizar(); },
-          onEliminar: () => { mostrarConfirmacion(`¿Desea borrar "${item.nombre}"?`, () => { nivel.hijos.splice(index, 1); guardarDatos(); renderizar(); }); },
-          onCopiar: () => { return { nivel: rutaActual.length, datos: structuredClone(item) }; }
-        });
-      });
-      div.appendChild(opcionesBtn);
+  // Nivel 3: mostrar número de ejercicios contando en profundidad
+  if (rutaActual.length === 3) {
+    const numEjercicios = (item.hijos || []).reduce((acc, bloque) =>
+      acc + (bloque.hijos?.length || 0), 0);
+    if (numEjercicios > 0) {
+      const tagEj = document.createElement('span');
+      tagEj.className = 'li-tag green';
+      tagEj.textContent = `${numEjercicios} ejercicio${numEjercicios !== 1 ? 's' : ''}`;
+      liMeta.appendChild(tagEj);
     }
   }
-  
+
+  // Fecha (solo nivel 3 = sesiones)
+  if (rutaActual.length === 3) {
+    const fechaInput = document.createElement('input');
+    fechaInput.type = 'date';
+    fechaInput.className = 'li-date';
+    fechaInput.value = nivel.hijos[index].fecha || '';
+    fechaInput.title = 'Fecha de la sesión';
+
+    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt =>
+      fechaInput.addEventListener(evt, e => e.stopPropagation())
+    );
+
+    fechaInput.addEventListener('change', async e => {
+      const raw = e.target.value;
+      nivel.hijos[index].fecha = raw;
+      nivel.hijos[index]._fecha = raw;
+      guardarDatos();
+      const user = auth.currentUser;
+      if (user) {
+        try { await guardarDatosUsuario(user.uid, datos); } catch (err) { console.error(err); }
+      }
+    });
+
+    liMeta.appendChild(fechaInput);
+  }
+
+  if (liMeta.children.length > 0) liBody.appendChild(liMeta);
+
+  div.appendChild(liBody);
+
+  // ── Zona acciones ─────────────────────────────────────────
+  const liActions = document.createElement('div');
+  liActions.className = 'li-actions';
+
+  // Flecha indicadora de navegación
+  const arrow = document.createElement('span');
+  arrow.className = 'li-arrow';
+  arrow.textContent = '›';
+  liActions.appendChild(arrow);
+
+  // Botón de opciones (tres puntos)
+  const btnOpc = document.createElement('button');
+  btnOpc.className = 'btn-opciones';
+  btnOpc.title = 'Opciones';
+  btnOpc.innerHTML = '<span></span>';  // el ::before y ::after hacen los otros dos puntos
+
+  btnOpc.addEventListener('click', (e) => {
+    e.stopPropagation();
+
+    // Cerrar cualquier menú abierto
+    document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
+
+    const menu = document.createElement('div');
+    menu.className = 'menu-opciones';
+    menu.style.cssText = `
+      position: fixed;
+      z-index: 999;
+    `;
+
+    const rect = btnOpc.getBoundingClientRect();
+    menu.style.top = `${rect.bottom + 4}px`;
+    menu.style.right = `${document.body.clientWidth - rect.right}px`;
+
+    const opciones = [
+      { label: '✏️  Renombrar', action: () => { item.editando = true; guardarDatos(); renderizar(); } },
+      { label: '📋  Copiar',    action: () => { window.itemCopiado = { nivel: rutaActual.length, datos: structuredClone(item) }; menu.remove(); } },
+      { label: '🗑️  Eliminar',  action: () => {
+        mostrarConfirmacion('¿Eliminar este elemento?', () => {
+          nivel.hijos.splice(index, 1);
+          guardarDatos(); renderizar();
+        });
+      }},
+    ];
+
+    opciones.forEach(({ label, action }) => {
+      const btn = document.createElement('button');
+      btn.textContent = label;
+      btn.addEventListener('click', (ev) => { ev.stopPropagation(); menu.remove(); action(); });
+      menu.appendChild(btn);
+    });
+
+    document.body.appendChild(menu);
+
+    // Cerrar al hacer click fuera
+    const cerrar = (ev) => {
+      if (!menu.contains(ev.target) && ev.target !== btnOpc) {
+        menu.remove();
+        document.removeEventListener('click', cerrar);
+      }
+    };
+    setTimeout(() => document.addEventListener('click', cerrar), 0);
+  });
+
+  liActions.appendChild(btnOpc);
+  div.appendChild(liActions);
+
   return div;
 }
 
