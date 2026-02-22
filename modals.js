@@ -16,121 +16,153 @@ function resetCompletadas(nodo) {
 }
 
 // Muestra el menú de opciones (Editar, Eliminar, Copiar) como modal flotante
-export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCopiar }) {
-  let anterior = document.getElementById('modalMenuOpciones');
-  if (anterior) anterior.remove();
+// ============================================================
+//  PARCHE — modals.js
+//  Reemplaza la función mostrarMenuOpciones COMPLETA
+//  (desde "export function mostrarMenuOpciones" hasta su "}")
+// ============================================================
 
+// ============================================================
+//  PARCHE — modals.js
+//
+//  Reemplaza la función mostrarMenuOpciones COMPLETA.
+//  Busca desde:
+//    // Muestra el menú de opciones (Editar, Eliminar, Copiar) como modal flotante
+//    export function mostrarMenuOpciones
+//  hasta su llave de cierre final "}"
+//  y sustituye TODO por este bloque.
+// ============================================================
+
+// Muestra el menú de opciones (Editar, Eliminar, Copiar) como modal flotante
+export function mostrarMenuOpciones({ anchorElement, onEditar, onEliminar, onCopiar }) {
+  // Limpiar instancias anteriores
+  document.getElementById('modalMenuOpciones')?.remove();
+  document.getElementById('menuOpcionesOverlay')?.remove();
+
+  // ── Overlay transparente ─────────────────────────────────
+  // Ocupa toda la pantalla por debajo del menú.
+  // Al hacer click fuera, el overlay lo consume → el item de
+  // debajo NO recibe el evento → hace falta un 2º tap para navegar.
+  const overlay = document.createElement('div');
+  overlay.id = 'menuOpcionesOverlay';
+  overlay.style.cssText = `
+    position: fixed; inset: 0;
+    z-index: 999;
+    background: transparent;
+  `;
+  const closeAll = () => {
+    overlay.remove();
+    menu.remove();
+  };
+  overlay.addEventListener('click', closeAll);
+  overlay.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    closeAll();
+  }, { passive: false });
+  document.body.appendChild(overlay);
+
+  // ── Menú ─────────────────────────────────────────────────
   const menu = document.createElement('div');
   menu.id = 'modalMenuOpciones';
   menu.className = 'menu-opciones';
-  menu.style.position = 'fixed';
-  menu.style.background = '#fff';
-  menu.style.border = '1px solid #ccc';
-  menu.style.borderRadius = '8px';
-  menu.style.boxShadow = '0 2px 8px #bbb';
-  menu.style.zIndex = '1000';
-  menu.style.display = 'flex';
-  menu.style.flexDirection = 'column';
-  menu.style.minWidth = '120px';
-
-  // Posicionamiento relativo al botón
-  if (anchorElement) {
-    const rect = anchorElement.getBoundingClientRect();
-    menu.style.top = (rect.bottom + window.scrollY) + 'px';
-    menu.style.visibility = 'hidden';
-    document.body.appendChild(menu);
-    menu.style.left = (rect.right + window.scrollX - menu.offsetWidth) + 'px';
-    menu.style.visibility = 'visible';
-  } else {
-    menu.style.top = '40px';
-    menu.style.right = '10px';
-    document.body.appendChild(menu);
-  }
-  menu.style.textAlign = 'left';
+  menu.style.cssText = `
+    position: fixed;
+    z-index: 1000;
+    visibility: hidden;
+  `;
+  document.body.appendChild(menu);
 
   // Estilos comunes para botones
-  const btnStyle = { display:'block', width:'100%', height:'30px', border:'none', background:'none', padding:'8px', margin:'2px', textAlign:'left' };
-
-  // Editar
-  const editarBtn = document.createElement('button');
-  editarBtn.textContent = 'Editar';
-  Object.assign(editarBtn.style, btnStyle);
-  editarBtn.onclick = (e) => {
-    e.stopPropagation();
-    menu.remove();
-    if (onEditar) onEditar();
+  const btnStyle = {
+    display: 'block', width: '100%', height: '40px',
+    border: 'none', background: 'none',
+    padding: '8px 16px', margin: '0', textAlign: 'left',
+    cursor: 'pointer', fontSize: '0.9rem', fontWeight: '500',
+    color: '#000',
   };
-  menu.appendChild(editarBtn);
 
-  // Eliminar
-  const eliminarBtn = document.createElement('button');
-  eliminarBtn.textContent = 'Eliminar';
-  Object.assign(eliminarBtn.style, btnStyle);
-  eliminarBtn.onclick = (e) => {
-    e.stopPropagation();
-    menu.remove();
-    if (onEliminar) onEliminar();
+  const addBtn = (label, color, handler) => {
+    const btn = document.createElement('button');
+    btn.textContent = label;
+    Object.assign(btn.style, btnStyle);
+    if (color) btn.style.color = color;
+    btn.addEventListener('mouseenter', () => {
+      btn.style.background = 'var(--bg-main, #F5F9F7)';
+      btn.style.color = color || 'var(--primary-mint, #3DD598)';
+    });
+    btn.addEventListener('mouseleave', () => {
+      btn.style.background = 'none';
+      btn.style.color = color || '#000';
+    });
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closeAll();
+      if (handler) handler();
+    });
+    menu.appendChild(btn);
   };
-  menu.appendChild(eliminarBtn);
 
-  // Copiar (robusta: maneja retorno directo, promise o asignación a window.itemCopiado)
-  const copiarBtn = document.createElement('button');
-  copiarBtn.textContent = 'Copiar';
-  Object.assign(copiarBtn.style, btnStyle);
-  copiarBtn.onclick = async (e) => {
-    e.stopPropagation();
-    menu.remove();
+  addBtn('Editar',   null,      onEditar);
+  addBtn('Copiar',   null,      async () => {
     if (!onCopiar) return;
-
     try {
-      const ret = onCopiar(); // puede devolver algo o asignar window.itemCopiado
+      const ret = onCopiar();
       const resolved = (ret && typeof ret.then === 'function') ? await ret : ret;
-
-      // prioridad: lo que retorne la función, si no -> window.itemCopiado
       let resultado = resolved || window.itemCopiado || null;
-
-      if (!resultado) {
-        // nada devuelto ni window.itemCopiado definido: nada que resetear
-        return;
-      }
-
-      // Normalizar: resultado puede ser { nivel, datos } o puede ser directamente los datos.
-      let datosCopiados;
-      if (resultado && resultado.datos) datosCopiados = resultado.datos;
-      else datosCopiados = resultado;
-
+      if (!resultado) return;
+      let datosCopiados = resultado.datos || resultado;
       if (!datosCopiados) return;
-
-      // Resetear recursivamente las series dentro de la copia
       resetCompletadas(datosCopiados);
-
-      // Guardar la copia reseteada en window.itemCopiado (forma consistente)
-      if (resultado && resultado.datos) {
-        // resultado ya tenía la forma {nivel, datos}
+      if (resultado.datos) {
         resultado.datos = datosCopiados;
         window.itemCopiado = resultado;
       } else {
-        // no tenía nivel, intentar mantener nivel anterior si existía
         const nivelPrev = window.itemCopiado ? window.itemCopiado.nivel : undefined;
         window.itemCopiado = { nivel: nivelPrev, datos: datosCopiados };
       }
     } catch (err) {
       console.error('Error en onCopiar:', err);
     }
-  };
-  menu.appendChild(copiarBtn);
+  });
 
-  // Cerrar al hacer click fuera
-  setTimeout(() => {
-    document.addEventListener('mousedown', function cerrar(e) {
-      if (!menu.contains(e.target)) {
-        menu.remove();
-        document.removeEventListener('mousedown', cerrar);
-      }
-    });
-  }, 50);
+  // Separador visual
+  const sep = document.createElement('div');
+  sep.style.cssText = 'height:1px; background:var(--border-color,#E8E8E8); margin:2px 0;';
+  menu.appendChild(sep);
 
-  document.body.appendChild(menu);
+  addBtn('Eliminar', '#e74c3c', onEliminar);
+
+  // ── Posicionamiento inteligente ──────────────────────────
+  if (anchorElement) {
+    const rect   = anchorElement.getBoundingClientRect();
+    const menuH  = menu.offsetHeight;
+    const menuW  = menu.offsetWidth;
+    const vw     = window.innerWidth;
+    const vh     = window.innerHeight;
+    const margin = 6;
+
+    // Vertical: abajo si cabe, si no → arriba
+    let top;
+    if (rect.bottom + menuH + margin <= vh) {
+      top = rect.bottom;
+    } else {
+      top = rect.top - menuH;
+      if (top < margin) top = margin;
+    }
+
+    // Horizontal: alinear borde derecho con el botón
+    let left = rect.right - menuW;
+    if (left < margin) left = margin;
+    if (left + menuW > vw - margin) left = vw - menuW - margin;
+
+    menu.style.top  = top  + 'px';
+    menu.style.left = left + 'px';
+  } else {
+    menu.style.top   = '40px';
+    menu.style.right = '10px';
+  }
+
+  menu.style.visibility = 'visible';
 }
 
 

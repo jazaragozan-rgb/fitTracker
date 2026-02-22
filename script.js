@@ -37,6 +37,100 @@ let ejercicioExpandido = null;
 let contenido, tituloNivel, headerButtons, addButton, backButton, timerContainer, homeButton, logoutButton, menuButton, sideMenu, menuOverlay, subHeader;
 let menuTitulo;
 let ultimoMenuSeleccionado = 'Dashboard';
+let sessionTimerSecs = 0;
+let sessionTimerRunning = false;
+let sessionTimerInterval = null;
+
+function sessionTimerStart() {
+  if (sessionTimerRunning) return;
+  sessionTimerRunning = true;
+  sessionTimerInterval = setInterval(() => {
+    sessionTimerSecs++;
+    _updateSessionTimerUI();
+  }, 1000);
+  _updateSessionTimerBtns();
+}
+
+function sessionTimerPause() {
+  sessionTimerRunning = false;
+  clearInterval(sessionTimerInterval);
+  _updateSessionTimerBtns();
+}
+
+function sessionTimerReset() {
+  sessionTimerRunning = false;
+  clearInterval(sessionTimerInterval);
+  sessionTimerSecs = 0;
+  _updateSessionTimerUI();
+  _updateSessionTimerBtns();
+}
+
+function _updateSessionTimerUI() {
+  const display = document.getElementById('sessionTimerDisplay');
+  if (!display) return;
+  const h = Math.floor(sessionTimerSecs / 3600);
+  const m = Math.floor((sessionTimerSecs % 3600) / 60);
+  const s = sessionTimerSecs % 60;
+  display.textContent = h > 0
+    ? `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`
+    : `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  display.className = 'session-timer-display' + (sessionTimerSecs >= 5400 ? ' warning' : '');
+  const bar = document.getElementById('sessionTimerBar');
+  if (bar) {
+    const pct = Math.min((sessionTimerSecs / 5400) * 100, 100);
+    bar.style.width = pct + '%';
+    bar.style.background = sessionTimerSecs >= 5400 ? 'var(--primary-coral)' : 'var(--primary-mint)';
+  }
+}
+
+function _updateSessionTimerBtns() {
+  const btnStart = document.getElementById('sessionTimerBtnStart');
+  const btnPause = document.getElementById('sessionTimerBtnPause');
+  if (!btnStart || !btnPause) return;
+  if (sessionTimerRunning) {
+    btnStart.style.display = 'none';
+    btnPause.style.display = 'flex';
+  } else {
+    btnStart.style.display = 'flex';
+    btnStart.textContent = sessionTimerSecs > 0 ? '▶ Reanudar' : '▶ Iniciar';
+    btnPause.style.display = 'none';
+  }
+}
+
+function _crearSessionTimerBar() {
+  // Evitar duplicados
+  const existing = document.getElementById('sessionTimerBar_container');
+  if (existing) return existing;
+
+  const bar = document.createElement('div');
+  bar.id = 'sessionTimerBar_container';
+  bar.className = 'session-timer-bar';
+  bar.innerHTML = `
+    <div class="session-timer-left">
+      <div class="session-timer-label">⏱ Tiempo entrenando</div>
+      <div class="session-timer-display" id="sessionTimerDisplay">00:00</div>
+    </div>
+    <div class="session-timer-controls">
+      <button class="session-timer-btn start" id="sessionTimerBtnStart">▶ Iniciar</button>
+      <button class="session-timer-btn pause" id="sessionTimerBtnPause" style="display:none">⏸ Pausar</button>
+      <button class="session-timer-btn reset" id="sessionTimerBtnReset">↺</button>
+    </div>
+    <div class="session-timer-progress-wrap">
+      <div class="session-timer-progress" id="sessionTimerBar" style="width:0%"></div>
+    </div>
+  `;
+
+  // Eventos
+  bar.querySelector('#sessionTimerBtnStart').addEventListener('click', sessionTimerStart);
+  bar.querySelector('#sessionTimerBtnPause').addEventListener('click', sessionTimerPause);
+  bar.querySelector('#sessionTimerBtnReset').addEventListener('click', sessionTimerReset);
+
+  // Restaurar estado visual si ya corría
+  _updateSessionTimerUI();
+  _updateSessionTimerBtns();
+
+  return bar;
+}
 
 function navigatePush(index) {
   rutaActual.push(index);
@@ -810,6 +904,8 @@ if (rutaActual.length === 1 && rutaActual[0] === 3) {
     tituloNivel.textContent = nivel.nombre;
 
     if (nivel.hijos && nivel.hijos.length) {
+      const timerBar = _crearSessionTimerBar();
+      contenido.appendChild(timerBar);
       nivel.hijos.forEach((ejercicio, index) => {
         const ejercicioWrapper = crearEjercicioAcordeon(ejercicio, index, nivel);
         contenido.appendChild(ejercicioWrapper);
@@ -836,228 +932,168 @@ if (rutaActual.length === 1 && rutaActual[0] === 3) {
 function crearEjercicioAcordeon(ejercicio, index, nivel) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
-  wrapper.style.marginBottom = '8px';
   wrapper.dataset.index = index;
   wrapper.dataset.nivel = rutaActual.length;
 
-  // Header del ejercicio (siempre visible)
-  const header = document.createElement('div');
-  header.className = 'ejercicio-header';
-  header.style.display = 'flex';
-  header.style.alignItems = 'center';
-  header.style.gap = '8px';
-  header.style.padding = '12px';
-  header.style.background = 'var(--bg-card)';
-  header.style.borderRadius = '12px';
-  header.style.cursor = 'pointer';
-  header.style.boxShadow = 'var(--shadow-sm)';
-  header.style.transition = 'all 0.2s ease';
-  header.style.border = '1px solid transparent';
-
-  // ===== DRAG & DROP para ejercicios =====
+  // ── Drag & drop (igual que antes) ──
   wrapper.addEventListener('mousedown', startDragEjercicio, { passive: false, capture: true });
   wrapper.addEventListener('touchstart', startDragEjercicio, { passive: false, capture: true });
 
-  header.addEventListener('mouseenter', () => {
-    header.style.boxShadow = 'var(--shadow-md)';
-    header.style.borderColor = 'var(--border-color)';
-  });
+  // ════════════════════════
+  //  HEADER
+  // ════════════════════════
+  const header = document.createElement('div');
+  header.className = 'ejercicio-header' + (ejercicioExpandido === index ? ' expanded' : '');
 
-  header.addEventListener('mouseleave', () => {
-    if (ejercicioExpandido !== index) {
-      header.style.boxShadow = 'var(--shadow-sm)';
-      header.style.borderColor = 'transparent';
-    }
-  });
-
-  // Modo edición
   if (ejercicio.editando) {
+    // ── Modo edición ──
+    header.style.padding = '12px';
+    header.style.gap = '8px';
+
     const input = document.createElement('input');
     input.value = ejercicio.nombre || '';
     input.placeholder = ejercicio.placeholder || 'Nombre del ejercicio';
-    input.style.flex = '1';
-    input.style.border = 'none';
-    input.style.background = 'transparent';
-    input.style.fontSize = '1rem';
-    input.style.fontWeight = '600';
+    input.style.cssText = 'flex:1;border:none;background:transparent;font-size:1rem;font-weight:600;outline:none;min-width:0;';
     requestAnimationFrame(() => setTimeout(() => { input.focus(); input.select(); }, 0));
-
-    ['pointerdown', 'mousedown', 'touchstart', 'click'].forEach(evt => 
-      input.addEventListener(evt, e => e.stopPropagation())
-    );
-
+    ['pointerdown','mousedown','touchstart','click'].forEach(ev => input.addEventListener(ev, e => e.stopPropagation()));
     input.addEventListener('keydown', e => {
-      if (e.key === 'Enter') {
-        ejercicio.nombre = input.value || 'Sin nombre';
-        ejercicio.editando = false;
-        guardarDatos();
-        renderizar();
-      }
+      if (e.key === 'Enter') { ejercicio.nombre = input.value || 'Sin nombre'; ejercicio.editando = false; guardarDatos(); renderizar(); }
     });
-
     input.addEventListener('blur', () => {
-      ejercicio.nombre = input.value || 'Sin nombre';
-      ejercicio.editando = false;
-      guardarDatos();
-      renderizar();
+      ejercicio.nombre = input.value || 'Sin nombre'; ejercicio.editando = false; guardarDatos(); renderizar();
     });
-
     header.appendChild(input);
+
   } else {
-    // Icono expandir/contraer
+    // ── Modo normal ──
+
+    // Icono expand
     const iconoExpand = document.createElement('span');
+    iconoExpand.className = 'ej-expand-icon';
     iconoExpand.textContent = ejercicioExpandido === index ? '▼' : '▶';
-    iconoExpand.style.fontSize = '0.8rem';
-    iconoExpand.style.color = 'var(--text-secondary)';
-    iconoExpand.style.transition = 'transform 0.2s ease';
-    iconoExpand.style.flexShrink = '0';
     header.appendChild(iconoExpand);
 
-    // Contenedor de imagen del ejercicio
-    const imagenContainer = document.createElement('div');
-    imagenContainer.className = 'ejercicio-imagen';
-    imagenContainer.style.width = '48px';
-    imagenContainer.style.height = '48px';
-    imagenContainer.style.borderRadius = '8px';
-    imagenContainer.style.overflow = 'hidden';
-    imagenContainer.style.flexShrink = '0';
-    imagenContainer.style.background = 'var(--bg-main)';
-    imagenContainer.style.display = 'flex';
-    imagenContainer.style.alignItems = 'center';
-    imagenContainer.style.justifyContent = 'center';
-    
-    // Si existe imagen, mostrarla
-    if (ejercicio.imagen && ejercicio.imagen.trim() !== '') {
+    // Imagen / emoji
+    const imgBox = document.createElement('div');
+    imgBox.className = 'ej-icon-box';
+
+    if (ejercicio.imagen && ejercicio.imagen.trim()) {
+      const placeholder = document.createElement('span');
+      placeholder.textContent = '⏳';
+      imgBox.appendChild(placeholder);
       const img = document.createElement('img');
-      img.src = ejercicio.imagen;
       img.alt = ejercicio.nombre;
-      img.style.width = '100%';
-      img.style.height = '100%';
-      img.style.objectFit = 'cover';
-      img.style.display = 'block';
-      
-      // Manejar error de carga de imagen
-      img.onerror = () => {
-        imagenContainer.innerHTML = '🏋️';
-        imagenContainer.style.fontSize = '1.5rem';
-        imagenContainer.style.color = 'var(--text-secondary)';
-      };
-      
-      imagenContainer.appendChild(img);
+      img.onload = () => { imgBox.innerHTML = ''; imgBox.appendChild(img); };
+      img.onerror = () => { placeholder.textContent = '🏋️'; };
+      img.src = ejercicio.imagen;
     } else {
-      // Placeholder cuando no hay imagen
-      imagenContainer.innerHTML = '🏋️';
-      imagenContainer.style.fontSize = '1.5rem';
-      imagenContainer.style.color = 'var(--text-secondary)';
+      const emoji = document.createElement('span');
+      emoji.textContent = '🏋️';
+      imgBox.appendChild(emoji);
     }
-    header.appendChild(imagenContainer);
+    header.appendChild(imgBox);
 
-    // Nombre del ejercicio
+    // Info (nombre + tags)
+    const infoBlock = document.createElement('div');
+    infoBlock.className = 'ej-info-block';
+
     const nombre = document.createElement('div');
+    nombre.className = 'ej-name';
     nombre.textContent = ejercicio.nombre;
-    nombre.style.flex = '1';
-    nombre.style.fontWeight = '600';
-    nombre.style.fontSize = '0.95rem';
-    nombre.style.textAlign = 'left';
-    nombre.style.paddingLeft = '8px';
-    header.appendChild(nombre);
+    infoBlock.appendChild(nombre);
 
-    // Contador de series
-    const seriesCount = document.createElement('div');
-    const numSeries = (ejercicio.series || []).length;
-    seriesCount.textContent = `${numSeries} ${numSeries === 1 ? 'serie' : 'series'}`;
-    seriesCount.style.fontSize = '0.8rem';
-    seriesCount.style.color = 'var(--text-secondary)';
-    seriesCount.style.marginRight = '8px';
-    header.appendChild(seriesCount);
+    const meta = document.createElement('div');
+    meta.className = 'ej-meta';
 
-    // Botón opciones
+    const nSeries = (ejercicio.series || []).length;
+    if (nSeries > 0) {
+      const tagS = document.createElement('span');
+      tagS.className = 'li-tag green';
+      tagS.textContent = `${nSeries} serie${nSeries !== 1 ? 's' : ''}`;
+      meta.appendChild(tagS);
+    }
+    const nDone = (ejercicio.series || []).filter(s => s.completada).length;
+    if (nDone > 0) {
+      const tagD = document.createElement('span');
+      tagD.className = 'li-tag cyan';
+      tagD.textContent = `${nDone} ✓`;
+      meta.appendChild(tagD);
+    }
+    infoBlock.appendChild(meta);
+    header.appendChild(infoBlock);
+
+    // Acciones (botón opciones)
     const opcionesBtn = document.createElement('button');
-    opcionesBtn.className = "btn-opciones";
-    const punto = document.createElement('span');
-    opcionesBtn.appendChild(punto);
-    opcionesBtn.addEventListener('click', (e) => {
+    opcionesBtn.className = 'btn-opciones';
+    opcionesBtn.appendChild(document.createElement('span')); // punto central (::before y ::after hacen los otros)
+    opcionesBtn.addEventListener('click', e => {
       e.stopPropagation();
       document.querySelectorAll('.menu-opciones').forEach(m => m.remove());
       mostrarMenuOpciones({
         anchorElement: opcionesBtn,
-        onEditar: () => { ejercicio.editando = true; guardarDatos(); renderizar(); },
-        onEliminar: () => { 
-          mostrarConfirmacion(`¿Desea borrar "${ejercicio.nombre}"?`, () => { 
-            nivel.hijos.splice(index, 1); 
+        onEditar:  () => { ejercicio.editando = true; guardarDatos(); renderizar(); },
+        onEliminar: () => {
+          mostrarConfirmacion(`¿Desea borrar "${ejercicio.nombre}"?`, () => {
+            nivel.hijos.splice(index, 1);
             ejercicioExpandido = null;
-            guardarDatos(); 
-            renderizar(); 
-          }); 
+            guardarDatos(); renderizar();
+          });
         },
-        onCopiar: () => { return { nivel: rutaActual.length, datos: structuredClone(ejercicio) }; }
+        onCopiar: () => ({ nivel: rutaActual.length, datos: structuredClone(ejercicio) })
       });
     });
     header.appendChild(opcionesBtn);
 
-    // Click en header para expandir/contraer
-    header.addEventListener('click', (e) => {
-      if (draggingEjercicio) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      
+    // Toggle expand
+    header.addEventListener('click', e => {
+      if (draggingEjercicio) { e.preventDefault(); e.stopPropagation(); return; }
       if (e.target === opcionesBtn || opcionesBtn.contains(e.target)) return;
-      
-      if (ejercicioExpandido === index) {
-        ejercicioExpandido = null;
-      } else {
-        ejercicioExpandido = index;
-      }
+      ejercicioExpandido = ejercicioExpandido === index ? null : index;
       renderizar();
     });
   }
 
   wrapper.appendChild(header);
 
-  // Contenido expandible (series)
+  // ════════════════════════
+  //  BODY EXPANDIDO
+  // ════════════════════════
   if (ejercicioExpandido === index && !ejercicio.editando) {
-    const contenidoExpandible = document.createElement('div');
-    contenidoExpandible.className = 'ejercicio-contenido';
-    contenidoExpandible.style.padding = '12px';
-    contenidoExpandible.style.background = 'var(--bg-main)';
-    contenidoExpandible.style.borderRadius = '0 0 12px 12px';
-    contenidoExpandible.style.marginTop = '-8px';
+    const body = document.createElement('div');
+    body.className = 'ejercicio-body';
+    const inner = document.createElement('div');
+    inner.className = 'ejercicio-body-inner';
 
-    // Botón añadir serie
+    // ── Botón + Serie ──
     const addSerieBtn = document.createElement('button');
     addSerieBtn.textContent = '+ Serie';
     addSerieBtn.className = 'btn-add-serie-compact';
-    addSerieBtn.onclick = (e) => {
+    addSerieBtn.onclick = e => {
       e.stopPropagation();
       if (!ejercicio.series) ejercicio.series = [];
       ejercicio.series.push({});
-      guardarDatos();
-      renderizar();
+      guardarDatos(); renderizar();
     };
-    contenidoExpandible.appendChild(addSerieBtn);
+    inner.appendChild(addSerieBtn);
 
-    // Encabezados de series
+    // ── Cabeceras grid ──
     const encabezados = document.createElement('div');
     encabezados.className = 'series-header-compact';
     ['', 'REPS', 'PESO', 'RIR', 'DESC', '', ''].forEach(txt => {
-      const col = document.createElement('div');
-      col.textContent = txt;
-      col.style.textAlign = 'center';
-      encabezados.appendChild(col);
+      const c = document.createElement('div'); c.textContent = txt; encabezados.appendChild(c);
     });
-    contenidoExpandible.appendChild(encabezados);
+    inner.appendChild(encabezados);
 
-    // Series
+    // ── Filas de series ──
     ejercicio.series = ejercicio.series || [];
     ejercicio.series.forEach((serie, idx) => {
       const serieDiv = document.createElement('div');
-      serieDiv.className = "serie-row-compact";
+      serieDiv.className = 'serie-row-compact';
+      if (serie.completada) serieDiv.style.background = 'rgba(61,213,152,0.08)';
 
-      // Botón número de serie
+      // Número / marca
       const numBtn = document.createElement('button');
-      numBtn.className = "serie-num";
+      numBtn.className = 'serie-num';
       numBtn.textContent = serie.marca || (idx + 1);
       numBtn.addEventListener('click', e => {
         e.stopPropagation();
@@ -1065,261 +1101,147 @@ function crearEjercicioAcordeon(ejercicio, index, nivel) {
       });
 
       // Inputs
-      const createInput = (placeholder, value, key) => {
-        const input = document.createElement('input');
-        input.placeholder = placeholder;
-        input.value = value || '';
-        input.addEventListener('blur', e => {
-          serie[key] = e.target.value;
-          guardarDatos();
-        });
-        return input;
+      const mkInput = (placeholder, value, key) => {
+        const inp = document.createElement('input');
+        inp.placeholder = placeholder;
+        inp.value = value || '';
+        inp.addEventListener('click', e => e.stopPropagation());
+        inp.addEventListener('blur', e => { serie[key] = e.target.value; guardarDatos(); });
+        return inp;
       };
+      const reps     = mkInput('R', serie.reps,     'reps');
+      const peso     = mkInput('P', serie.peso,     'peso');
+      const rir      = mkInput('R', serie.rir,      'rir');
+      const descanso = mkInput('D', serie.descanso, 'descanso');
 
-      const reps = createInput('R', serie.reps, 'reps');
-      const peso = createInput('P', serie.peso, 'peso');
-      const rir = createInput('R', serie.rir, 'rir');
-      const descanso = createInput('D', serie.descanso, 'descanso');
-
-      // Botón check/timer
-      const checkBtn = document.createElement('serie-button');
-      if (serie.completada) {
-        checkBtn.textContent = '✔️';
-        serieDiv.style.background = 'rgba(61, 213, 152, 0.25)';
-      } else {
-        checkBtn.textContent = '🕔';
-      }
-      checkBtn.addEventListener('click', (e) => {
+      // Check
+      const checkBtn = document.createElement('button');
+      checkBtn.className = 'serie-button';
+      checkBtn.textContent = serie.completada ? '✔️' : '🕔';
+      checkBtn.addEventListener('click', e => {
         e.stopPropagation();
         serie.completada = !serie.completada;
-        if (serie.completada && serie.descanso) {
-          iniciarTimer(serie.descanso);
-        }
-        guardarDatos();
-        renderizar();
+        if (serie.completada && serie.descanso) iniciarTimer(serie.descanso);
+        guardarDatos(); renderizar();
       });
 
-      // Botón eliminar
-      const deleteBtn = document.createElement('serie-button');
-      deleteBtn.textContent = '❌';
-      deleteBtn.addEventListener('click', (e) => {
+      // Eliminar serie
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'serie-button btn-del-serie';
+      deleteBtn.textContent = '✕';
+      deleteBtn.title = 'Eliminar serie';
+      deleteBtn.addEventListener('click', e => {
         e.stopPropagation();
-        mostrarConfirmacion("¿Desea borrar esta serie?", () => {
+        mostrarConfirmacion('¿Desea borrar esta serie?', () => {
           ejercicio.series.splice(idx, 1);
-          guardarDatos();
-          renderizar();
+          guardarDatos(); renderizar();
         });
       });
 
       [numBtn, reps, peso, rir, descanso, checkBtn, deleteBtn].forEach(el => serieDiv.appendChild(el));
-      contenidoExpandible.appendChild(serieDiv);
+      inner.appendChild(serieDiv);
     });
 
-    // ==================== ESTADÍSTICAS DEL EJERCICIO ACTUAL ====================
+    // ── Stats sesión actual ──
     const statsActual = calcularEstadisticasEjercicio(ejercicio);
     if (statsActual.pesoMax > 0 || statsActual.volumenTotal > 0) {
-      const statsContainer = document.createElement('div');
-      statsContainer.style.marginTop = '16px';
-      statsContainer.style.padding = '12px';
-      statsContainer.style.background = 'linear-gradient(135deg, rgba(61, 213, 152, 0.1) 0%, rgba(0, 212, 212, 0.1) 100%)';
-      statsContainer.style.borderRadius = '10px';
-      statsContainer.style.border = '1px solid var(--border-color)';
-
-      const statsTitulo = document.createElement('div');
-      statsTitulo.textContent = '📊 Estadísticas de esta sesión';
-      statsTitulo.style.fontSize = '0.8rem';
-      statsTitulo.style.fontWeight = '700';
-      statsTitulo.style.color = 'var(--text-secondary)';
-      statsTitulo.style.marginBottom = '10px';
-      statsTitulo.style.textTransform = 'uppercase';
-      statsTitulo.style.letterSpacing = '0.5px';
-      statsContainer.appendChild(statsTitulo);
-
-      const statsGrid = document.createElement('div');
-      statsGrid.style.display = 'grid';
-      statsGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-      statsGrid.style.gap = '8px';
-
-      // Peso máximo
-      const statPesoMax = document.createElement('div');
-      statPesoMax.style.textAlign = 'center';
-      statPesoMax.style.padding = '8px';
-      statPesoMax.style.background = 'var(--bg-card)';
-      statPesoMax.style.borderRadius = '8px';
-      statPesoMax.innerHTML = `
-        <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary-mint);">${statsActual.pesoMax}<span style="font-size: 0.8rem; font-weight: 500;">kg</span></div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">PESO MÁX</div>
+      const sc = document.createElement('div');
+      sc.className = 'ej-stats-card';
+      sc.innerHTML = `
+        <div class="ej-card-label">📊 Estadísticas de esta sesión</div>
+        <div class="ej-stats-grid">
+          <div class="ej-stat-cell">
+            <div class="ej-stat-val" style="color:var(--primary-mint)">${statsActual.pesoMax}<span>kg</span></div>
+            <div class="ej-stat-lbl">Peso máx</div>
+          </div>
+          <div class="ej-stat-cell">
+            <div class="ej-stat-val" style="color:var(--secondary-cyan)">${statsActual.volumenTotal}<span>kg</span></div>
+            <div class="ej-stat-lbl">Volumen</div>
+          </div>
+          <div class="ej-stat-cell">
+            <div class="ej-stat-val" style="color:var(--primary-coral)">${statsActual.oneRM}<span>kg</span></div>
+            <div class="ej-stat-lbl">1RM est.</div>
+          </div>
+        </div>
       `;
-      statsGrid.appendChild(statPesoMax);
-
-      // Volumen total
-      const statVolumen = document.createElement('div');
-      statVolumen.style.textAlign = 'center';
-      statVolumen.style.padding = '8px';
-      statVolumen.style.background = 'var(--bg-card)';
-      statVolumen.style.borderRadius = '8px';
-      statVolumen.innerHTML = `
-        <div style="font-size: 1.3rem; font-weight: 700; color: var(--secondary-cyan);">${statsActual.volumenTotal}<span style="font-size: 0.8rem; font-weight: 500;">kg</span></div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">VOLUMEN</div>
-      `;
-      statsGrid.appendChild(statVolumen);
-
-      // 1RM estimado
-      const stat1RM = document.createElement('div');
-      stat1RM.style.textAlign = 'center';
-      stat1RM.style.padding = '8px';
-      stat1RM.style.background = 'var(--bg-card)';
-      stat1RM.style.borderRadius = '8px';
-      stat1RM.innerHTML = `
-        <div style="font-size: 1.3rem; font-weight: 700; color: var(--primary-coral);">${statsActual.oneRM}<span style="font-size: 0.8rem; font-weight: 500;">kg</span></div>
-        <div style="font-size: 0.65rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">1RM EST.</div>
-      `;
-      statsGrid.appendChild(stat1RM);
-
-      statsContainer.appendChild(statsGrid);
-      contenidoExpandible.appendChild(statsContainer);
+      inner.appendChild(sc);
     }
 
-    // ==================== COMPARACIÓN CON SESIÓN ANTERIOR ====================
+    // ── Comparación sesión anterior ──
     const sesionAnterior = buscarSesionAnteriorEjercicio(ejercicio.nombre);
     if (sesionAnterior) {
       const statsAnterior = calcularEstadisticasEjercicio(sesionAnterior.ejercicio);
-      
-      const comparacionContainer = document.createElement('div');
-      comparacionContainer.style.marginTop = '12px';
-      comparacionContainer.style.padding = '12px';
-      comparacionContainer.style.background = 'linear-gradient(135deg, rgba(255, 107, 107, 0.1) 0%, rgba(255, 152, 0, 0.1) 100%)';
-      comparacionContainer.style.borderRadius = '10px';
-      comparacionContainer.style.border = '1px solid var(--border-color)';
+      const fechaStr = new Date(sesionAnterior.fecha).toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
 
-      const comparacionTitulo = document.createElement('div');
-      comparacionTitulo.style.fontSize = '0.8rem';
-      comparacionTitulo.style.fontWeight = '700';
-      comparacionTitulo.style.color = 'var(--text-secondary)';
-      comparacionTitulo.style.marginBottom = '8px';
-      comparacionTitulo.style.textTransform = 'uppercase';
-      comparacionTitulo.style.letterSpacing = '0.5px';
-      comparacionTitulo.style.display = 'flex';
-      comparacionTitulo.style.justifyContent = 'space-between';
-      comparacionTitulo.style.alignItems = 'center';
-      
-      const tituloTexto = document.createElement('span');
-      tituloTexto.textContent = '📈 Última vez';
-      
-      const fechaTexto = document.createElement('span');
-      fechaTexto.textContent = new Date(sesionAnterior.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-      fechaTexto.style.fontSize = '0.75rem';
-      fechaTexto.style.fontWeight = '600';
-      fechaTexto.style.color = 'var(--text-light)';
-      
-      comparacionTitulo.appendChild(tituloTexto);
-      comparacionTitulo.appendChild(fechaTexto);
-      comparacionContainer.appendChild(comparacionTitulo);
-
-      const comparacionGrid = document.createElement('div');
-      comparacionGrid.style.display = 'grid';
-      comparacionGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-      comparacionGrid.style.gap = '8px';
-
-      // Calcular progresos
-      const progresoPesoMax = statsActual.pesoMax > 0 && statsAnterior.pesoMax > 0
-        ? ((statsActual.pesoMax - statsAnterior.pesoMax) / statsAnterior.pesoMax * 100)
-        : 0;
-      
-      const progresoVolumen = statsActual.volumenTotal > 0 && statsAnterior.volumenTotal > 0
-        ? ((statsActual.volumenTotal - statsAnterior.volumenTotal) / statsAnterior.volumenTotal * 100)
-        : 0;
-
-      const progreso1RM = statsActual.oneRM > 0 && statsAnterior.oneRM > 0
-        ? ((statsActual.oneRM - statsAnterior.oneRM) / statsAnterior.oneRM * 100)
-        : 0;
-
-      // Función helper para crear stat con progreso
-      const crearStatProgreso = (valor, progresoPercent, label) => {
-        const div = document.createElement('div');
-        div.style.textAlign = 'center';
-        div.style.padding = '8px';
-        div.style.background = 'var(--bg-card)';
-        div.style.borderRadius = '8px';
-        
-        let colorProgreso = 'var(--text-secondary)';
-        let iconoProgreso = '━';
-        if (progresoPercent > 0) {
-          colorProgreso = 'var(--success)';
-          iconoProgreso = '↗';
-        } else if (progresoPercent < 0) {
-          colorProgreso = 'var(--danger)';
-          iconoProgreso = '↘';
-        }
-        
-        div.innerHTML = `
-          <div style="font-size: 1.1rem; font-weight: 700; color: var(--text-primary);">${valor}<span style="font-size: 0.7rem; font-weight: 500;">kg</span></div>
-          <div style="font-size: 0.7rem; color: ${colorProgreso}; font-weight: 700; margin-top: 2px;">
-            ${iconoProgreso} ${Math.abs(progresoPercent).toFixed(1)}%
-          </div>
-          <div style="font-size: 0.6rem; color: var(--text-secondary); font-weight: 600; margin-top: 2px;">${label}</div>
-        `;
-        return div;
+      const progBadge = (actual, prev) => {
+        if (!prev || prev === 0) return '';
+        const pct = ((actual - prev) / prev * 100).toFixed(1);
+        const cl = pct > 0 ? 'up' : pct < 0 ? 'down' : 'eq';
+        const icon = pct > 0 ? '▲' : pct < 0 ? '▼' : '=';
+        return `<span class="ej-prog-badge ${cl}">${icon} ${Math.abs(pct)}%</span>`;
       };
 
-      comparacionGrid.appendChild(crearStatProgreso(statsAnterior.pesoMax, progresoPesoMax, 'PESO MÁX'));
-      comparacionGrid.appendChild(crearStatProgreso(statsAnterior.volumenTotal, progresoVolumen, 'VOLUMEN'));
-      comparacionGrid.appendChild(crearStatProgreso(statsAnterior.oneRM, progreso1RM, '1RM EST.'));
+      const pc = document.createElement('div');
+      pc.className = 'ej-prev-card';
 
-      comparacionContainer.appendChild(comparacionGrid);
-      contenidoExpandible.appendChild(comparacionContainer);
+      const progresoPesoMax  = ((statsActual.pesoMax - statsAnterior.pesoMax) / (statsAnterior.pesoMax || 1) * 100).toFixed(1);
+      const progresoVolumen  = ((statsActual.volumenTotal - statsAnterior.volumenTotal) / (statsAnterior.volumenTotal || 1) * 100).toFixed(1);
+      const progreso1RM      = ((statsActual.oneRM - statsAnterior.oneRM) / (statsAnterior.oneRM || 1) * 100).toFixed(1);
+
+      pc.innerHTML = `
+        <div class="ej-prev-header">
+          <div class="ej-card-label" style="margin-bottom:0">📈 Última sesión</div>
+          <div class="ej-prev-date">${fechaStr}</div>
+        </div>
+        <div class="ej-stats-grid">
+          <div class="ej-stat-cell">
+            <div class="ej-stat-val" style="color:var(--primary-mint)">
+              ${statsAnterior.pesoMax}<span>kg</span>
+              ${progBadge(statsActual.pesoMax, statsAnterior.pesoMax)}
+            </div>
+            <div class="ej-stat-lbl">Peso máx</div>
+          </div>
+          <div class="ej-stat-cell">
+            <div class="ej-stat-val" style="color:var(--secondary-cyan)">
+              ${statsAnterior.volumenTotal}<span>kg</span>
+              ${progBadge(statsActual.volumenTotal, statsAnterior.volumenTotal)}
+            </div>
+            <div class="ej-stat-lbl">Volumen</div>
+          </div>
+          <div class="ej-stat-cell">
+            <div class="ej-stat-val" style="color:var(--primary-coral)">
+              ${statsAnterior.oneRM}<span>kg</span>
+              ${progBadge(statsActual.oneRM, statsAnterior.oneRM)}
+            </div>
+            <div class="ej-stat-lbl">1RM est.</div>
+          </div>
+        </div>
+      `;
+      inner.appendChild(pc);
     }
 
-    // ==================== NOTAS DEL EJERCICIO ====================
-    const notasContainer = document.createElement('div');
-    notasContainer.style.marginTop = '12px';
-    notasContainer.style.padding = '8px';
-    notasContainer.style.background = 'var(--bg-card)';
-    notasContainer.style.borderRadius = '8px';
-    notasContainer.style.border = '1px solid var(--border-color)';
-
-    const notasLabel = document.createElement('div');
-    notasLabel.textContent = '📝 Notas';
-    notasLabel.style.fontSize = '0.7rem';
-    notasLabel.style.fontWeight = '700';
-    notasLabel.style.color = 'var(--text-secondary)';
-    notasLabel.style.marginBottom = '4px';
-    notasLabel.style.textTransform = 'uppercase';
-    notasLabel.style.letterSpacing = '0.5px';
-    notasContainer.appendChild(notasLabel);
-
-    const notasTextarea = document.createElement('textarea');
-    notasTextarea.value = ejercicio.notas || '';
-    notasTextarea.placeholder = 'Añade notas sobre el ejercicio...';
-    notasTextarea.style.width = '100%';
-    notasTextarea.style.minHeight = '36px';
-    notasTextarea.style.maxHeight = '54px';
-    notasTextarea.style.padding = '6px 8px';
-    notasTextarea.style.border = '1px solid var(--border-color)';
-    notasTextarea.style.borderRadius = '6px';
-    notasTextarea.style.fontSize = '0.85rem';
-    notasTextarea.style.fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
-    notasTextarea.style.resize = 'vertical';
-    notasTextarea.style.background = 'var(--bg-main)';
-    notasTextarea.style.color = 'var(--text-primary)';
-    notasTextarea.style.transition = 'all 0.2s ease';
-    
-    notasTextarea.addEventListener('focus', () => {
-      notasTextarea.style.borderColor = 'var(--primary-mint)';
-      notasTextarea.style.background = 'white';
+    // ── Notas ──
+    const nc = document.createElement('div');
+    nc.className = 'ej-notas-card';
+    const nl = document.createElement('div');
+    nl.className = 'ej-card-label';
+    nl.textContent = '📝 Notas';
+    const ta = document.createElement('textarea');
+    ta.className = 'ej-notas-textarea';
+    ta.value = ejercicio.notas || '';
+    ta.placeholder = 'Añade notas sobre el ejercicio...';
+    ta.addEventListener('click', e => e.stopPropagation());
+    ta.addEventListener('focus', () => { ta.style.borderColor = 'var(--primary-mint)'; ta.style.background = 'white'; });
+    ta.addEventListener('blur', () => {
+      ta.style.borderColor = 'var(--border-color)'; ta.style.background = 'var(--bg-main)';
+      ejercicio.notas = ta.value; guardarDatos();
     });
-    
-    notasTextarea.addEventListener('blur', () => {
-      notasTextarea.style.borderColor = 'var(--border-color)';
-      notasTextarea.style.background = 'var(--bg-main)';
-      ejercicio.notas = notasTextarea.value;
-      guardarDatos();
-    });
-    
-    notasContainer.appendChild(notasTextarea);
-    contenidoExpandible.appendChild(notasContainer);
+    nc.appendChild(nl);
+    nc.appendChild(ta);
+    inner.appendChild(nc);
 
-    wrapper.appendChild(contenidoExpandible);
+    body.appendChild(inner);
+    wrapper.appendChild(body);
   }
 
   return wrapper;
