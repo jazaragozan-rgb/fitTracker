@@ -40,6 +40,184 @@ let ultimoMenuSeleccionado = 'Dashboard';
 let sessionTimerSecs = 0;
 let sessionTimerRunning = false;
 let sessionTimerInterval = null;
+// ==================== TIMER DE SESIÓN ====================
+let sessionTimer = {
+  interval: null,
+  corriendo: false,
+  rutaSesion: null
+};
+
+function sessionTimerGetSegundos() {
+  const v = localStorage.getItem('sessionTimerSegundos');
+  return v ? parseInt(v) : 0;
+}
+function sessionTimerSetSegundos(s) {
+  localStorage.setItem('sessionTimerSegundos', s);
+}
+function sessionTimerGetRuta() {
+  const v = localStorage.getItem('sessionTimerRuta');
+  return v ? JSON.parse(v) : null;
+}
+function sessionTimerSetRuta(ruta) {
+  if (ruta) localStorage.setItem('sessionTimerRuta', JSON.stringify(ruta));
+  else localStorage.removeItem('sessionTimerRuta');
+}
+
+// ==================== FUNCIONES TIMER DE SESIÓN ====================
+function iniciarTimerSesion(rutaSesion) {
+  if (sessionTimer.corriendo) return;
+  sessionTimer.rutaSesion = [...rutaSesion];
+  sessionTimerSetRuta(rutaSesion);
+  sessionTimer.corriendo = true;
+  sessionTimer.interval = setInterval(() => {
+    sessionTimerSetSegundos(sessionTimerGetSegundos() + 1);
+    actualizarDisplayTimerSesion();
+  }, 1000);
+}
+
+function pausarTimerSesion() {
+  if (!sessionTimer.corriendo) return;
+  clearInterval(sessionTimer.interval);
+  sessionTimer.interval = null;
+  sessionTimer.corriendo = false;
+}
+
+function resetearTimerSesion() {
+  clearInterval(sessionTimer.interval);
+  sessionTimer.interval = null;
+  sessionTimer.corriendo = false;
+  sessionTimer.rutaSesion = null;
+  sessionTimerSetSegundos(0);
+  sessionTimerSetRuta(null);
+}
+
+function restaurarTimerSesion() {
+  const ruta = sessionTimerGetRuta();
+  if (!ruta) return;
+  sessionTimer.rutaSesion = ruta;
+  sessionTimer.corriendo = true;
+  sessionTimer.interval = setInterval(() => {
+    sessionTimerSetSegundos(sessionTimerGetSegundos() + 1);
+    actualizarDisplayTimerSesion();
+  }, 1000);
+}
+
+function actualizarDisplayTimerSesion() {
+  const display = document.getElementById('sessionTimerDisplay');
+  if (!display) return;
+  const seg = sessionTimerGetSegundos();
+  const m = Math.floor(seg / 60);
+  const s = seg % 60;
+  display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function formatearDuracion(minutos) {
+  if (!minutos || minutos === 0) return null;
+  if (minutos < 60) return `${minutos} min`;
+  const h = Math.floor(minutos / 60);
+  const m = minutos % 60;
+  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+}
+
+function mostrarModalGuardarTiempo(rutaSesion, segundos) {
+  const minutos = Math.round(segundos / 60);
+  const m = Math.floor(segundos / 60);
+  const s = segundos % 60;
+  const tiempoStr = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    backdrop-filter: blur(4px);
+  `;
+
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 28px 24px;
+    width: 88%;
+    max-width: 340px;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: slideDown 0.25s ease;
+  `;
+
+  modal.innerHTML = `
+    <div style="font-size: 2.5rem;">🏁</div>
+    <div style="text-align:center;">
+      <div style="font-size:1rem; font-weight:700; color:var(--text-primary); margin-bottom:6px;">
+        ¿Guardar tiempo de sesión?
+      </div>
+      <div style="font-size:0.85rem; color:var(--text-secondary);">
+        Tiempo registrado
+      </div>
+      <div style="font-size:2.2rem; font-weight:900; color:var(--primary-mint); font-family:monospace; margin-top:4px;">
+        ${tiempoStr}
+      </div>
+      <div style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">${minutos} minutos</div>
+    </div>
+  `;
+
+  const btnGuardar = document.createElement('button');
+  btnGuardar.textContent = '💾 Guardar';
+  btnGuardar.style.cssText = `
+    width: 100%; padding: 14px;
+    background: var(--primary-mint);
+    color: white; border: none; border-radius: 12px;
+    font-size: 1rem; font-weight: 700; cursor: pointer;
+    transition: all 0.2s;
+  `;
+  btnGuardar.onmouseover = () => btnGuardar.style.background = 'var(--mint-light)';
+  btnGuardar.onmouseout = () => btnGuardar.style.background = 'var(--primary-mint)';
+  btnGuardar.onclick = async () => {
+      try {
+        let n = { hijos: datos };
+        for (let i of rutaSesion) n = n.hijos[i];
+        n.duracionMinutos = minutos;
+
+        // Guardar en Firestore explícitamente
+        const user = auth.currentUser;
+        if (user) {
+          await guardarDatosUsuario(user.uid, datos);
+          console.log(`[Timer Sesión] ✓ ${minutos} min guardados en Firestore`);
+        }
+      } catch(e) {
+        console.error('[Timer Sesión] Error al guardar:', e);
+      }
+      resetearTimerSesion();
+      overlay.remove();
+      renderizar();
+    };
+
+  const btnDescartar = document.createElement('button');
+  btnDescartar.textContent = 'Descartar';
+  btnDescartar.style.cssText = `
+    width: 100%; padding: 12px;
+    background: transparent;
+    color: var(--text-secondary); border: 1px solid var(--border-color); border-radius: 12px;
+    font-size: 0.95rem; font-weight: 600; cursor: pointer;
+    transition: all 0.2s;
+  `;
+  btnDescartar.onmouseover = () => btnDescartar.style.background = 'var(--bg-main)';
+  btnDescartar.onmouseout = () => btnDescartar.style.background = 'transparent';
+  btnDescartar.onclick = () => {
+    resetearTimerSesion();
+    overlay.remove();
+    renderizar();
+  };
+
+  modal.appendChild(btnGuardar);
+  modal.appendChild(btnDescartar);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
 
 function sessionTimerStart() {
   if (sessionTimerRunning) return;
@@ -346,6 +524,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (isAppPage()) {
     renderizar();
+    // Restaurar timer de sesión si estaba corriendo
+    if (sessionTimerGetRuta()) {
+      restaurarTimerSesion();
+    }
     restaurarTimer();
     
     console.log('[DOMContentLoaded] Página cargada, usando datos locales');
@@ -739,6 +921,114 @@ window.abrirBuscadorEjercicios = function(callback) {
   renderizar();
 }
 
+function crearTimerSesionBanda(rutaSesion) {
+  const banda = document.createElement('div');
+  banda.id = 'sessionTimerBanda';
+  banda.style.cssText = `
+    background: var(--bg-card);
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-shrink: 0;
+  `;
+
+  const seg = sessionTimerGetSegundos();
+  const m = Math.floor(seg / 60);
+  const s = seg % 60;
+
+  const display = document.createElement('div');
+  display.id = 'sessionTimerDisplay';
+  display.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  display.style.cssText = `
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primary-mint);
+    font-family: monospace;
+    min-width: 80px;
+    text-align: center;
+  `;
+
+  const btnPlay = document.createElement('button');
+  btnPlay.id = 'btnStartTimerSesion';
+  btnPlay.textContent = sessionTimer.corriendo ? '⏸' : '▶';
+  btnPlay.style.cssText = `
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: var(--primary-mint);
+    color: white; font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  `;
+  btnPlay.onmouseover = () => btnPlay.style.background = 'var(--mint-light)';
+  btnPlay.onmouseout = () => btnPlay.style.background = 'var(--primary-mint)';
+  btnPlay.onclick = () => {
+    if (sessionTimer.corriendo) {
+      pausarTimerSesion();
+      btnPlay.textContent = '▶';
+    } else {
+      iniciarTimerSesion(rutaSesion);
+      btnPlay.textContent = '⏸';
+    }
+  };
+
+  const btnReset = document.createElement('button');
+  btnReset.textContent = '↻';
+  btnReset.style.cssText = `
+    width: 32px; height: 32px;
+    border: none; border-radius: 50%;
+    background: var(--bg-main);
+    color: var(--text-secondary); font-size: 0.95rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  `;
+  btnReset.onmouseover = () => { btnReset.style.background = 'var(--border-color)'; };
+  btnReset.onmouseout = () => { btnReset.style.background = 'var(--bg-main)'; };
+  btnReset.onclick = () => {
+    resetearTimerSesion();
+    renderizar();
+  };
+
+  const btnStop = document.createElement('button');
+  btnStop.textContent = '⏹';
+  btnStop.style.cssText = `
+    width: 36px; height: 36px;
+    border: none; border-radius: 50%;
+    background: #FF6B6B;
+    color: white; font-size: 1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  `;
+  btnStop.onmouseover = () => { btnStop.style.background = '#FF8787'; btnStop.style.transform = 'scale(1.05)'; };
+  btnStop.onmouseout = () => { btnStop.style.background = '#FF6B6B'; btnStop.style.transform = 'scale(1)'; };
+  btnStop.onclick = () => {
+    pausarTimerSesion();
+    mostrarModalGuardarTiempo(rutaSesion, sessionTimerGetSegundos());
+  };
+
+  banda.appendChild(display);
+  banda.appendChild(btnPlay);
+  banda.appendChild(btnReset);
+  banda.appendChild(btnStop);
+  return banda;
+}
+
+function ajustarPaddingContenido() {
+  const headerEl = document.querySelector('header');
+  const subHeaderEl = document.getElementById('subHeader');
+  const offsetTop = (headerEl ? headerEl.offsetHeight : 48) +
+                    (subHeaderEl ? subHeaderEl.offsetHeight : 60);
+  contenido.style.marginTop = '0';
+  contenido.style.paddingTop = `${offsetTop + 0}px`;
+}
+
 // ==================== RENDERIZADO PRINCIPAL ====================
 function renderizar() {
   console.log('[renderizar] ========== INICIO RENDER ==========');
@@ -897,20 +1187,68 @@ if (rutaActual.length === 1 && rutaActual[0] === 3) {
   return;
 }
 
+  // Resetear padding antes de cualquier nivel
+  contenido.style.padding = '';
+  contenido.style.marginTop = '0';
+  ajustarPaddingContenido();
+
   // NIVEL 4 UNIFICADO (ejercicios con series desplegables)
   if (rutaActual.length === 4) {
     backButton.style.visibility = 'visible';
     addButton.style.visibility = 'visible';
     tituloNivel.textContent = nivel.nombre;
 
+    // Calcular la ruta de la sesión padre (primeros 3 índices)
+    const rutaSesionPadre = rutaActual.slice(0, 3);
+
+    // Restaurar timer si estaba corriendo en background
+    if (!sessionTimer.corriendo && sessionTimerGetRuta() &&
+        JSON.stringify(sessionTimerGetRuta()) === JSON.stringify(rutaSesionPadre)) {
+      restaurarTimerSesion();
+    }
+
+    // Wrapper con layout fijo (banda timer no scrolleable + ejercicios scrolleables)
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: flex;
+      flex-direction: column;
+      z-index: 1;
+    `;
+
+    // Calcular offset del header + subheader
+    const headerEl = document.querySelector('header');
+    const subHeaderEl = document.getElementById('subHeader');
+    const offsetTop = (headerEl ? headerEl.offsetHeight : 48) +
+                      (subHeaderEl ? subHeaderEl.offsetHeight : 60);
+    wrapper.style.paddingTop = `${offsetTop}px`;
+
+    // Banda del timer (fija, no scrolleable)
+    const banda = crearTimerSesionBanda(rutaSesionPadre);
+    wrapper.appendChild(banda);
+
+    // Zona scrolleable de ejercicios
+    const zonaScroll = document.createElement('div');
+    zonaScroll.style.cssText = `
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+      padding-bottom: 80px;
+      background: var(--bg-main);
+    `;
+
     if (nivel.hijos && nivel.hijos.length) {
-      const timerBar = _crearSessionTimerBar();
-      contenido.appendChild(timerBar);
       nivel.hijos.forEach((ejercicio, index) => {
         const ejercicioWrapper = crearEjercicioAcordeon(ejercicio, index, nivel);
-        contenido.appendChild(ejercicioWrapper);
+        zonaScroll.appendChild(ejercicioWrapper);
       });
     }
+
+    wrapper.appendChild(zonaScroll);
+    contenido.style.padding = '0';
+    contenido.appendChild(wrapper);
     return;
   }
 
@@ -919,6 +1257,9 @@ if (rutaActual.length === 1 && rutaActual[0] === 3) {
   addButton.style.visibility  = 'visible';
   const nombres = ['Mesociclos','Microciclos','Sesiones','Ejercicios'];
   tituloNivel.textContent = nombres[rutaActual.length - 1] || nivel.nombre;
+
+  // Ajustar padding para que el contenido quede bajo el subheader fijo
+  ajustarPaddingContenido();
 
   if (nivel.hijos && nivel.hijos.length) {
     nivel.hijos.forEach((item, index) => {

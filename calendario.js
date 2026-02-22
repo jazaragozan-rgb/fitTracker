@@ -1565,6 +1565,24 @@ function mostrarInfoDia(fechaStr, fechaDia, sesiones, rutaActual, renderizar) {
       });
 
       infoDiv.appendChild(fechaInput);
+// ⏱ Duración de la sesión si está guardada
+      if (item.duracionMinutos > 0) {
+        const durLabel = document.createElement('span');
+        durLabel.style.cssText = `
+          font-size: 0.7rem;
+          color: var(--text-secondary);
+          font-weight: 600;
+          background: var(--bg-main);
+          padding: 2px 8px;
+          border-radius: 10px;
+          margin-left: 4px;
+          white-space: nowrap;
+          flex-shrink: 0;
+        `;
+        durLabel.textContent = `⏱ ${formatearDuracion(item.duracionMinutos)}`;
+        div.appendChild(durLabel);
+      }
+
       sesionDiv.appendChild(infoDiv);
 
       sesionesContainer.appendChild(sesionDiv);

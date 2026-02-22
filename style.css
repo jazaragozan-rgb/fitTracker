@@ -967,7 +967,7 @@ main#contenido {
   z-index: 20;
   background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(10px);
-  padding-top: 116px;
+  padding-top: 80px;
   padding-bottom: 75px;
   min-height: 100vh;
   overflow-y: auto;
