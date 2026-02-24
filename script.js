@@ -1103,7 +1103,7 @@ function renderizar() {
     botonesContainer.id = 'subHeaderButtons';
 
     // -------------------- BOTÓN VOLVER --------------------
-    if (rutaActual.length >= 1 && rutaActual.length <= 4) {
+    if (rutaActual.length >= 2 && rutaActual.length <= 4) {
       const backSubBtn = document.createElement('button');
       backSubBtn.className = 'btn-back-subheader';
       backSubBtn.innerHTML = '⬅';
@@ -1606,7 +1606,7 @@ function startDragEjercicio(e) {
 
   draggingEjercicio = false;
   hasMovedEjercicio = false;
-  dragEjercicioStartIndex = [...dragEjercicio.parentElement.children].indexOf(dragEjercicio);
+  dragEjercicioStartIndex = [...contenido.children].indexOf(dragEjercicio);
 
   const touch = e.touches ? e.touches[0] : e;
   dragEjercicioStartX = touch.clientX;
@@ -1676,9 +1676,9 @@ function dragMoveEjercicio(e) {
   }
 
   if (targetItem) {
-    dragEjercicio.parentElement.insertBefore(dragEjercicio, targetItem);
+    contenido.insertBefore(dragEjercicio, targetItem);
   } else if (items.length > 0) {
-    dragEjercicio.parentElement.appendChild(dragEjercicio);
+    contenido.appendChild(dragEjercicio);
   }
 }
 
@@ -1702,7 +1702,7 @@ function dragEndEjercicio() {
   draggingEjercicio = false;
   dragEjercicio.classList.remove("dragging");
 
-  const newIndex = [...dragEjercicio.parentElement.children].indexOf(dragEjercicio);
+  const newIndex = [...contenido.children].indexOf(dragEjercicio);
 
   if (dragEjercicioStartIndex !== null && newIndex !== dragEjercicioStartIndex) {
     const nivel = nivelActual();
