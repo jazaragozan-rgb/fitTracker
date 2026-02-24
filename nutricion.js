@@ -206,7 +206,7 @@ export async function renderizarNutricion(nivel, contenido, subHeader, addButton
   const registrosHoy = (nivel.hijos || []).filter(r => r.fecha === fechaActual);
   
   // ==================== RESUMEN CIRCULAR DE CALORÍAS ====================
-  const resumenCalorias = crearResumenCaloriasCircular(registrosHoy);
+  const resumenCalorias = await crearResumenCaloriasCircular(registrosHoy, fechaActual);
   contenidoScrolleable.appendChild(resumenCalorias);
   
   // ==================== MACROS CON BARRAS DE PROGRESO ====================
@@ -252,6 +252,52 @@ export async function renderizarNutricion(nivel, contenido, subHeader, addButton
   });
 }
 
+// ==================== CALORÍAS QUEMADAS MET ====================
+async function calcularCaloriasQuemadasMET(fecha) {
+  const MET = 5.0; // Entrenamiento de fuerza
+  const datosGlobales = window.datos;
+
+  if (!datosGlobales || !datosGlobales[0]) return 0;
+
+  // Buscar todas las sesiones que coincidan con la fecha
+  let duracionTotalMinutos = 0;
+
+  datosGlobales[0].hijos?.forEach(meso => {
+    meso.hijos?.forEach(micro => {
+      micro.hijos?.forEach(sesion => {
+        const fechaSesion = sesion.fecha ? sesion.fecha.slice(0, 10) : null;
+        if (fechaSesion === fecha && sesion.duracionMinutos > 0) {
+          duracionTotalMinutos += sesion.duracionMinutos;
+        }
+      });
+    });
+  });
+
+  if (duracionTotalMinutos === 0) return 0;
+
+  // Obtener peso del usuario desde Firestore
+  let pesoKg = 75; // fallback por defecto
+  try {
+    const user = auth.currentUser;
+    if (user) {
+      const ref = doc(db, "usuarios", user.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const metas = snap.data().metasNutricionales;
+        if (metas?.medidas?.peso) {
+          pesoKg = parseFloat(metas.medidas.peso);
+        }
+      }
+    }
+  } catch (e) {
+    console.warn('[MET] No se pudo obtener el peso, usando 75kg por defecto');
+  }
+
+  // Fórmula MET: kcal = MET × peso_kg × (minutos / 60)
+  const kcal = MET * pesoKg * (duracionTotalMinutos / 60);
+  console.log(`[MET] ${duracionTotalMinutos} min × ${pesoKg}kg = ${Math.round(kcal)} kcal quemadas`);
+  return Math.round(kcal);
+}
 
 // ==================== SELECTOR DE FECHA FIJO (NUEVA FUNCIÓN) ====================
 function crearSelectorFechaFijo(fechaActual, nivel) {
@@ -437,7 +483,7 @@ function cambiarFecha(dias) {
 
 
 // ==================== RESUMEN CIRCULAR DE CALORÍAS ====================
-function crearResumenCaloriasCircular(registros) {
+  async function crearResumenCaloriasCircular(registros, fecha) {
   const container = document.createElement('div');
   container.style.background = 'var(--bg-card)';
   container.style.borderRadius = '16px';
@@ -455,7 +501,7 @@ function crearResumenCaloriasCircular(registros) {
   const porcentaje = Math.min(100, (consumidas / meta) * 100);
 
   // 🔥 Placeholder para calorías quemadas
-  const caloriasQuemadas = 0; // ← aquí luego conectas tu lógica
+  const caloriasQuemadas = await calcularCaloriasQuemadasMET(fecha);
 
   // ================= CONTENEDOR CÍRCULO =================
   const circleContainer = document.createElement('div');

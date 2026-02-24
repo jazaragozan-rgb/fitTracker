@@ -113,10 +113,9 @@ function actualizarDisplayTimerSesion() {
 
 function formatearDuracion(minutos) {
   if (!minutos || minutos === 0) return null;
-  if (minutos < 60) return `${minutos} min`;
   const h = Math.floor(minutos / 60);
   const m = minutos % 60;
-  return m > 0 ? `${h}h ${m}min` : `${h}h`;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
 }
 
 function mostrarModalGuardarTiempo(rutaSesion, segundos) {
@@ -178,9 +177,11 @@ function mostrarModalGuardarTiempo(rutaSesion, segundos) {
   btnGuardar.onmouseout = () => btnGuardar.style.background = 'var(--primary-mint)';
   btnGuardar.onclick = async () => {
       try {
+        // rutaSesion = [0, mesoIdx, microIdx, sesionIdx] — 4 índices
         let n = { hijos: datos };
         for (let i of rutaSesion) n = n.hijos[i];
         n.duracionMinutos = minutos;
+        console.log('[Timer] Nodo donde se guarda:', n.nombre, 'minutos:', minutos);
 
         // Guardar en Firestore explícitamente
         const user = auth.currentUser;
@@ -1199,7 +1200,7 @@ if (rutaActual.length === 1 && rutaActual[0] === 3) {
     tituloNivel.textContent = nivel.nombre;
 
     // Calcular la ruta de la sesión padre (primeros 3 índices)
-    const rutaSesionPadre = rutaActual.slice(0, 3);
+    const rutaSesionPadre = rutaActual.slice(0, 4);
 
     // Restaurar timer si estaba corriendo en background
     if (!sessionTimer.corriendo && sessionTimerGetRuta() &&
@@ -1992,6 +1993,26 @@ function crearIndice(item, index, nivel) {
     });
 
     liMeta.appendChild(fechaInput);
+console.log('[badge duracion] item.nombre:', item.nombre, 'duracionMinutos:', item.duracionMinutos);
+    // Badge duración de sesión
+    const durLabel = document.createElement('span');
+    durLabel.className = 'li-tag';
+    durLabel.style.cssText = `
+      color: var(--primary-mint);
+      background: rgba(61,213,152,0.1);
+      border: 1px solid rgba(61,213,152,0.25);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 10px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    `;
+    const duracion = item.duracionMinutos;
+    durLabel.textContent = duracion && duracion > 0 
+      ? `⏱ ${formatearDuracion(duracion)}` 
+      : '⏱ --';
+    liMeta.appendChild(durLabel); 
   }
 
   if (liMeta.children.length > 0) liBody.appendChild(liMeta);
