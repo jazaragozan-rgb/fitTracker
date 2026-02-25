@@ -2130,6 +2130,14 @@ function initGlobalListeners() {
     }
   };
 
+    // ==================== REGISTRO SERVICE WORKER (PWA) ====================
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('/sw.js')
+        .then(reg => console.log('[PWA] Service Worker registrado:', reg.scope))
+        .catch(err => console.error('[PWA] Error al registrar SW:', err));
+    });
+  }
   console.log('💾 Función restaurarDesdeJSON() disponible. Uso: restaurarDesdeJSON(\'tu json aquí\')');
 
   document.addEventListener("mousemove", dragMove);
