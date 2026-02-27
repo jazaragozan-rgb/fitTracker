@@ -1,10 +1,10 @@
 // ==================== fitTracker Service Worker ====================
-const CACHE_NAME = 'fittracker-v2';
+const CACHE_NAME = 'fittracker-BUILD_TIMESTAMP';
 
-// Archivos a cachear para funcionamiento offline
 const STATIC_ASSETS = [
   '/',
   '/index.html',
+  '/auth.html',
   '/subindex.html',
   '/style.css',
   '/script.js',
@@ -28,11 +28,11 @@ const STATIC_ASSETS = [
 
 // ==================== INSTALL ====================
 self.addEventListener('install', event => {
-  console.log('[SW] Instalando...');
+  console.log('[SW] Instalando versión:', CACHE_NAME);
+  self.skipWaiting(); // Activa inmediatamente, sin esperar a que cierren pestañas
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       console.log('[SW] Cacheando assets estáticos');
-      // addAll falla si algún archivo no existe, usamos add individual para ser tolerantes
       return Promise.allSettled(
         STATIC_ASSETS.map(url => cache.add(url).catch(err => {
           console.warn(`[SW] No se pudo cachear ${url}:`, err);
@@ -40,52 +40,59 @@ self.addEventListener('install', event => {
       );
     })
   );
-  self.skipWaiting();
 });
 
 // ==================== ACTIVATE ====================
 self.addEventListener('activate', event => {
-  console.log('[SW] Activando...');
+  console.log('[SW] Activando versión:', CACHE_NAME);
   event.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
+    caches.keys()
+      .then(keys => Promise.all(
         keys
           .filter(key => key !== CACHE_NAME)
           .map(key => {
             console.log('[SW] Eliminando caché antigua:', key);
             return caches.delete(key);
           })
-      )
-    )
+      ))
+      .then(() => self.clients.claim()) // Toma control de todas las pestañas abiertas
+      .then(() => {
+        // Notifica a todos los clientes que hay una versión nueva
+        return self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
+          });
+        });
+      })
   );
-  self.clients.claim();
 });
 
 // ==================== FETCH ====================
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
 
-  // No interceptar peticiones a Firebase, APIs externas ni CDNs
+  // No interceptar peticiones externas
   const externalDomains = [
     'firebaseapp.com',
     'googleapis.com',
     'gstatic.com',
+    'firebaseio.com',
     'firestore.googleapis.com',
     'identitytoolkit.googleapis.com',
     'openfoodfacts.org',
     'cdn.jsdelivr.net',
+    'rapidapi.com',
     'wger.de'
   ];
 
   if (externalDomains.some(domain => url.hostname.includes(domain))) {
-    return; // Dejar pasar sin interceptar
+    return;
   }
 
   // Estrategia: Network First con fallback a caché
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Si la respuesta es válida, guardarla en caché
         if (response && response.status === 200 && event.request.method === 'GET') {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => {
@@ -95,10 +102,8 @@ self.addEventListener('fetch', event => {
         return response;
       })
       .catch(() => {
-        // Sin red: servir desde caché
         return caches.match(event.request).then(cached => {
           if (cached) return cached;
-          // Fallback para navegación (rutas HTML)
           if (event.request.mode === 'navigate') {
             return caches.match('/index.html');
           }

@@ -3,9 +3,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { 
   getAuth, onAuthStateChanged, 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
-  sendEmailVerification, setPersistence, browserLocalPersistence
+  sendEmailVerification, setPersistence, browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ==================== FIREBASE CONFIG ====================
@@ -18,11 +17,13 @@ const firebaseConfig = {
   appId: "1:730288236333:web:e4418ca39ffcd48f47d5a4",
   measurementId: "G-T8QZ7WZT5Y"
 };
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-setPersistence(auth, browserLocalPersistence).catch(e => 
+// setPersistence de forma segura, sin bloquear la inicialización
+setPersistence(auth, browserSessionPersistence).catch(e => 
   console.warn('[auth] setPersistence error:', e)
 );
 
@@ -101,6 +102,8 @@ window.salir = async function () {
 };
 
 // ==================== BIND BOTONES ====================
+// Los módulos ES6 no exponen funciones al scope global para onclick=""
+// Por eso enlazamos los botones desde aquí
 document.addEventListener('DOMContentLoaded', () => {
   const btnLogin = document.getElementById('btnLogin');
   const btnRegister = document.getElementById('btnRegister');

@@ -34,24 +34,43 @@
     }
   </style>
 </head>
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
-      reg.update(); // Fuerza comprobar actualizaciones al abrir
-    });
-  }
-</script>
 <body>
   <div id="splash">
     <img id="logo" src="imagenes/logo.png" alt="fitTracker">
-  <!-- Sin botón, solo animación del logo -->
   </div>
+
   <script>
     // Redirigir automáticamente después de la animación
     setTimeout(function() {
       window.location.href = 'auth.html';
-    }, 2200); // 2.2 segundos para coincidir con la animación
+    }, 2200);
+
+    // ==================== SERVICE WORKER ====================
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('[PWA] SW registrado');
+        reg.update(); // Comprueba si hay versión nueva al abrir
+
+        // Si hay un SW nuevo esperando, activarlo
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              console.log('[PWA] Nueva versión activada, recargando...');
+              window.location.reload();
+            }
+          });
+        });
+      }).catch(err => console.error('[PWA] Error SW:', err));
+
+      // Escucha el mensaje del SW cuando se activa una versión nueva
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data?.type === 'SW_UPDATED') {
+          console.log('[PWA] SW_UPDATED recibido, recargando...');
+          window.location.reload();
+        }
+      });
+    }
   </script>
 </body>
 </html>
-  <main id="contenido" class="hidden"></main>

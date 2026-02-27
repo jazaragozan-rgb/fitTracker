@@ -11,70 +11,91 @@
   <link rel="apple-touch-icon" href="/icon-192.png">
 </head>
 <body>
+
 <!-- Header -->
-REEMPLAZAR POR:
 <header>
   <button id="menuButton">&#9776;</button>
   <div id="headerLogo">
-    <!-- Preparado para insertar logo/imagen aquí -->
     <img src="imagenes/logo.png" alt="Logo">
   </div>
   <button id="logoutButton"><img src="iconos/Power.png" alt="Logout"></button>
 </header>
 
-<!--NOTA: El h1 con id="menuTitulo" se ha eliminado del HTML y su CSS está oculto.
-      Cuando tengas el logo, descomenta la línea de la imagen y añade la ruta correcta.-->
-
 <!-- Subheader con botones -->
 <div id="subHeader">
   <h2 id="tituloNivel">Dashboard</h2>
   <div id="subHeaderButtons">
-  <button id="backButton" class="header-btn">←</button>
-  <button id="addButton" class="header-btn">+ Añadir</button>
+    <button id="backButton" class="header-btn">←</button>
+    <button id="addButton" class="header-btn">+ Añadir</button>
   </div>
 </div>
 
-  <!-- Overlay y Menú lateral -->
-  <div id="menuOverlay" class="hidden"></div>
-<!-- Menú lateral -->
+<!-- Overlay y Menú lateral -->
+<div id="menuOverlay" class="hidden"></div>
 <nav id="sideMenu" class="sideMenu">
-    <header1 id="header1">
-        <h2 id="logomenulateral"><img src="imagenes/logo.png" alt="fitTracker"><span style="font-weight: lighter;">fit</span><span style="font-weight: bold;color: rgb(26, 127, 185);">Tracker</span></h2>
-    </header1>
-    <button id="btnDashboard" class="sideMenu-btn" data-seccion="dashboard">Dashboard</button>
-    <button id="btnEntrenamiento" class="sideMenu-btn" data-seccion="entrenamiento">Entrenamiento</button>
-    <button id="btnSeguimiento" class="sideMenu-btn" data-seccion="seguimiento">Seguimiento</button>
-    <button id="btnCalendario" class="sideMenu-btn" data-seccion="calendario">Calendario</button>
-    <button id="btnNutricion" class="sideMenu-btn" data-seccion="nutricion">Nutrición</button>
+  <header1 id="header1">
+    <h2 id="logomenulateral">
+      <img src="imagenes/logo.png" alt="fitTracker">
+      <span style="font-weight: lighter;">fit</span><span style="font-weight: bold;color: rgb(26, 127, 185);">Tracker</span>
+    </h2>
+  </header1>
+  <button id="btnDashboard" class="sideMenu-btn" data-seccion="dashboard">Dashboard</button>
+  <button id="btnEntrenamiento" class="sideMenu-btn" data-seccion="entrenamiento">Entrenamiento</button>
+  <button id="btnSeguimiento" class="sideMenu-btn" data-seccion="seguimiento">Seguimiento</button>
+  <button id="btnCalendario" class="sideMenu-btn" data-seccion="calendario">Calendario</button>
+  <button id="btnNutricion" class="sideMenu-btn" data-seccion="nutricion">Nutrición</button>
 </nav>
 
-  <!-- App -->
-  <section id="app" class="hidden">
+<!-- App -->
+<section id="app" class="hidden"></section>
 
-  </section>
-
-  <div id="contenidoWrapper">
+<div id="contenidoWrapper">
   <div id="contenidoSwipe">
     <main id="contenido"></main>
   </div>
-  </div>
+</div>
 
-  <div id="timerContainer" class="hidden"></div>
+<div id="timerContainer" class="hidden"></div>
 
-  <!-- Footer -->
-  <footer id="footerNav">
-    <button id="navHome" class="footer-btn">
-      <img src="iconos/Home.png" alt="Home">
-    </button>
-    <button id="navSettings" class="footer-btn">
-      <img src="iconos/Settings.png" alt="Ajustes">
-    </button>
-  </footer>
-  <!-- JS -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
-  <script type="module" src="script.js"></script>
+<!-- Footer -->
+<footer id="footerNav">
+  <button id="navHome" class="footer-btn">
+    <img src="iconos/Home.png" alt="Home">
+  </button>
+  <button id="navSettings" class="footer-btn">
+    <img src="iconos/Settings.png" alt="Ajustes">
+  </button>
+</footer>
 
+<!-- JS -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns"></script>
+<script type="module" src="script.js"></script>
+
+<script>
+  // ==================== SERVICE WORKER ====================
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('[PWA] SW registrado en subindex');
+      reg.update();
+
+      reg.addEventListener('updatefound', () => {
+        const newWorker = reg.installing;
+        newWorker.addEventListener('statechange', () => {
+          if (newWorker.state === 'activated') {
+            window.location.reload();
+          }
+        });
+      });
+    }).catch(err => console.error('[PWA] Error SW:', err));
+
+    navigator.serviceWorker.addEventListener('message', event => {
+      if (event.data?.type === 'SW_UPDATED') {
+        window.location.reload();
+      }
+    });
+  }
+</script>
 
 </body>
 </html>

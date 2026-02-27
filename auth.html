@@ -27,68 +27,73 @@
       <div id="reg-msg" class="hint"></div>
     </form>
   </section>
-  
-  <!-- ✅ Script inline para manejar el toggle (se ejecuta ANTES de los módulos) -->
+
   <script>
     console.log('[auth.html] Script inline cargado');
-    
-    // Esperar a que el DOM esté listo
+
     document.addEventListener('DOMContentLoaded', function() {
       console.log('[auth.html] DOMContentLoaded - Inicializando toggle');
-      
+
       const formLogin = document.getElementById('form-login');
       const formRegister = document.getElementById('form-register');
       const showRegisterBtn = document.getElementById('showRegisterBtn');
       const showLoginBtn = document.getElementById('showLoginBtn');
-      
+
       console.log('[auth.html] Elementos encontrados:', {
         formLogin: !!formLogin,
         formRegister: !!formRegister,
         showRegisterBtn: !!showRegisterBtn,
         showLoginBtn: !!showLoginBtn
       });
-      
+
       if (showRegisterBtn) {
-        console.log('[auth.html] ✓ Añadiendo listener a "Crear cuenta nueva"');
         showRegisterBtn.addEventListener('click', function(e) {
-          console.log('[auth.html] ¡Click en Crear cuenta nueva!');
           e.preventDefault();
           e.stopPropagation();
-          
           formLogin.classList.add('hidden');
           formRegister.classList.remove('hidden');
-          
           const logMsg = document.getElementById('log-msg');
           if (logMsg) logMsg.textContent = '';
-          
-          console.log('[auth.html] Toggle ejecutado - form-register visible');
         });
-      } else {
-        console.error('[auth.html] ❌ No se encontró showRegisterBtn');
       }
-      
+
       if (showLoginBtn) {
-        console.log('[auth.html] ✓ Añadiendo listener a "Ya tengo cuenta"');
         showLoginBtn.addEventListener('click', function(e) {
-          console.log('[auth.html] ¡Click en Ya tengo cuenta!');
           e.preventDefault();
           e.stopPropagation();
-          
           formRegister.classList.add('hidden');
           formLogin.classList.remove('hidden');
-          
           const regMsg = document.getElementById('reg-msg');
           if (regMsg) regMsg.textContent = '';
-          
-          console.log('[auth.html] Toggle ejecutado - form-login visible');
         });
-      } else {
-        console.error('[auth.html] ❌ No se encontró showLoginBtn');
       }
     });
+
+    // ==================== SERVICE WORKER ====================
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then(reg => {
+        console.log('[PWA] SW registrado en auth');
+        reg.update();
+
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'activated') {
+              window.location.reload();
+            }
+          });
+        });
+      }).catch(err => console.error('[PWA] Error SW:', err));
+
+      navigator.serviceWorker.addEventListener('message', event => {
+        if (event.data?.type === 'SW_UPDATED') {
+          window.location.reload();
+        }
+      });
+    }
   </script>
-  
-  <!-- ✅ Módulo auth.js se carga DESPUÉS (para las funciones de Firebase) -->
+
+  <!-- Módulo auth.js se carga DESPUÉS (para las funciones de Firebase) -->
   <script type="module" src="auth.js"></script>
 </body>
 </html>
