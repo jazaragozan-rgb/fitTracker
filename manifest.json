@@ -2,7 +2,7 @@
   "name": "fitTracker",
   "short_name": "fitTracker",
   "description": "Tu app de entrenamiento y nutrición personalizada",
-  "start_url": "/subindex.html",
+  "start_url": "/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#ffffff",

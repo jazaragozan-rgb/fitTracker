@@ -1,11 +1,9 @@
 // ==================== fitTracker Service Worker ====================
+// IMPORTANTE: Los archivos HTML NO se cachean para que Firebase Auth funcione siempre
 const CACHE_NAME = 'fittracker-BUILD_TIMESTAMP';
 
+// Solo cacheamos assets estáticos (JS, CSS, imágenes) — NUNCA HTML
 const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/auth.html',
-  '/subindex.html',
   '/style.css',
   '/script.js',
   '/auth.js',
@@ -29,13 +27,13 @@ const STATIC_ASSETS = [
 // ==================== INSTALL ====================
 self.addEventListener('install', event => {
   console.log('[SW] Instalando versión:', CACHE_NAME);
-  self.skipWaiting(); // Activa inmediatamente, sin esperar a que cierren pestañas
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
-      console.log('[SW] Cacheando assets estáticos');
+      console.log('[SW] Cacheando assets estáticos (sin HTML)');
       return Promise.allSettled(
         STATIC_ASSETS.map(url => cache.add(url).catch(err => {
-          console.warn(`[SW] No se pudo cachear ${url}:`, err);
+          console.warn('[SW] No se pudo cachear ' + url + ':', err);
         }))
       );
     })
@@ -55,9 +53,8 @@ self.addEventListener('activate', event => {
             return caches.delete(key);
           })
       ))
-      .then(() => self.clients.claim()) // Toma control de todas las pestañas abiertas
+      .then(() => self.clients.claim())
       .then(() => {
-        // Notifica a todos los clientes que hay una versión nueva
         return self.clients.matchAll({ includeUncontrolled: true }).then(clients => {
           clients.forEach(client => {
             client.postMessage({ type: 'SW_UPDATED', version: CACHE_NAME });
@@ -89,25 +86,31 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Estrategia: Network First con fallback a caché
+  // HTML: SIEMPRE ir a red, nunca caché — así Firebase Auth siempre verifica sesión
+  const esHTML = event.request.mode === 'navigate' ||
+    (event.request.headers.get('accept') || '').includes('text/html');
+
+  if (esHTML) {
+    event.respondWith(
+      fetch(event.request).catch(() => {
+        // Sin red: fallback a index.html (que redirige a auth.html)
+        return caches.match('/index.html') || new Response('Sin conexión', { status: 503 });
+      })
+    );
+    return;
+  }
+
+  // Assets estáticos (JS, CSS, imágenes): caché primero, red como respaldo
   event.respondWith(
-    fetch(event.request)
-      .then(response => {
+    caches.match(event.request).then(cached => {
+      if (cached) return cached;
+      return fetch(event.request).then(response => {
         if (response && response.status === 200 && event.request.method === 'GET') {
-          const responseClone = response.clone();
-          caches.open(CACHE_NAME).then(cache => {
-            cache.put(event.request, responseClone);
-          });
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      })
-      .catch(() => {
-        return caches.match(event.request).then(cached => {
-          if (cached) return cached;
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-        });
-      })
+      });
+    })
   );
 });
