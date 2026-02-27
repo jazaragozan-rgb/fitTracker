@@ -1606,7 +1606,7 @@ function startDragEjercicio(e) {
 
   draggingEjercicio = false;
   hasMovedEjercicio = false;
-  dragEjercicioStartIndex = [...contenido.children].indexOf(dragEjercicio);
+  dragEjercicioStartIndex = [...dragEjercicio.parentElement.children].indexOf(dragEjercicio);
 
   const touch = e.touches ? e.touches[0] : e;
   dragEjercicioStartX = touch.clientX;
@@ -1676,9 +1676,9 @@ function dragMoveEjercicio(e) {
   }
 
   if (targetItem) {
-    contenido.insertBefore(dragEjercicio, targetItem);
+    dragEjercicio.parentElement.insertBefore(dragEjercicio, targetItem);
   } else if (items.length > 0) {
-    contenido.appendChild(dragEjercicio);
+    dragEjercicio.parentElement.appendChild(dragEjercicio);
   }
 }
 
@@ -1702,7 +1702,7 @@ function dragEndEjercicio() {
   draggingEjercicio = false;
   dragEjercicio.classList.remove("dragging");
 
-  const newIndex = [...contenido.children].indexOf(dragEjercicio);
+  const newIndex = [...dragEjercicio.parentElement.children].indexOf(dragEjercicio);
 
   if (dragEjercicioStartIndex !== null && newIndex !== dragEjercicioStartIndex) {
     const nivel = nivelActual();

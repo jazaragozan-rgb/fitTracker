@@ -34,6 +34,13 @@
     }
   </style>
 </head>
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      reg.update(); // Fuerza comprobar actualizaciones al abrir
+    });
+  }
+</script>
 <body>
   <div id="splash">
     <img id="logo" src="imagenes/logo.png" alt="fitTracker">
