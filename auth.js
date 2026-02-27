@@ -6,8 +6,6 @@ import {
   sendEmailVerification, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-setPersistence(auth, browserLocalPersistence);
-
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ==================== FIREBASE CONFIG ====================
@@ -22,8 +20,11 @@ const firebaseConfig = {
 };
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
-setPersistence(auth, browserSessionPersistence);
 const db = getFirestore(app);
+
+setPersistence(auth, browserLocalPersistence).catch(e => 
+  console.warn('[auth] setPersistence error:', e)
+);
 
 // ==================== HELPERS ====================
 const $ = id => document.getElementById(id);
@@ -98,6 +99,14 @@ window.salir = async function () {
     console.error("Error al cerrar sesión:", err);
   }
 };
+
+// ==================== BIND BOTONES ====================
+document.addEventListener('DOMContentLoaded', () => {
+  const btnLogin = document.getElementById('btnLogin');
+  const btnRegister = document.getElementById('btnRegister');
+  if (btnLogin) btnLogin.addEventListener('click', window.login);
+  if (btnRegister) btnRegister.addEventListener('click', window.register);
+});
 
 // ==================== EXPORTS ====================
 export { auth, db, onAuthStateChanged };
