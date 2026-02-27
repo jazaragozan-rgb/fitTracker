@@ -1,5 +1,5 @@
 // ==================== fitTracker Service Worker ====================
-const CACHE_NAME = 'fittracker-v1';
+const CACHE_NAME = 'fittracker-v2';
 
 // Archivos a cachear para funcionamiento offline
 const STATIC_ASSETS = [
