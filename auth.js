@@ -3,8 +3,11 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/fireba
 import { 
   getAuth, onAuthStateChanged, 
   createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut,
-  sendEmailVerification, setPersistence, browserSessionPersistence
+  sendEmailVerification, setPersistence, browserLocalPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+setPersistence(auth, browserLocalPersistence);
+
 import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ==================== FIREBASE CONFIG ====================
