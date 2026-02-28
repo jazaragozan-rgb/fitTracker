@@ -9,4 +9,4 @@ sw = sw.replace(/fittracker-[\w-]+/, `fittracker-${timestamp}`);
 fs.writeFileSync('sw.js', sw);
 
 console.log(`✅ SW actualizado con versión: fittracker-${timestamp}`);
-console.log(`🚀 Ahora ejecuta: firebase deploy --only hosting`);
+console.log(`🚀 Ahora ejecuta: node build.js && firebase deploy --only hosting`);

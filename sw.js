@@ -1,6 +1,6 @@
 // ==================== fitTracker Service Worker ====================
 // IMPORTANTE: Los archivos HTML NO se cachean para que Firebase Auth funcione siempre
-const CACHE_NAME = 'fittracker-1772188811398';
+const CACHE_NAME = 'fittracker-1772197178672';
 
 // Solo cacheamos assets estáticos (JS, CSS, imágenes) — NUNCA HTML
 const STATIC_ASSETS = [
