@@ -112,8 +112,9 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     { icon: '📅', value: sesionesEsteMes,  label: 'Este mes' },
     { icon: '💪', value: ejerciciosUnicos, label: 'Ejercicios distintos' },
     { icon: '⚖️', value: `${Math.round(volumenTotal)}<span class="stat-unit">kg</span>`, label: 'Volumen 30 días' },
-    { icon: '🔥', value: racha,            label: 'Racha de días' },
-    { icon: '⏱️', value: sesiones.length > 0 ? `${duracionEstimada}<span class="stat-unit">min</span>` : '—', label: 'Duración estimada' },
+    { icon: '🔥', value: racha,            label: 'Racha actual' },
+    { icon: '🏅', value: mejorRacha,       label: 'Mejor racha' },
+    { icon: '⏱️', value: sesiones.length > 0 ? `${duracionEstimada}<span class="stat-unit">min</span>` : '—', label: 'Duración est.' },
   ].forEach(s => {
     const item = document.createElement('div');
     item.className = 'stat-item';
@@ -166,34 +167,48 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
   }
 
-  function renderDetalle(fs, fd, sesionDia) {
-    detalleDiv.innerHTML = '';
-    const idx = fd.getDay() === 0 ? 6 : fd.getDay() - 1;
+function renderDetalle(fs, fd, sesionDia) {
+  detalleDiv.innerHTML = '';
+  const idx = fd.getDay() === 0 ? 6 : fd.getDay() - 1;
 
-    const tit = document.createElement('div');
-    tit.className = 'detalle-titulo';
-    tit.textContent = `${DIAS_NOMBRE[idx]} ${fd.getDate()} de ${MESES_MIN[fd.getMonth()]}`;
-    detalleDiv.appendChild(tit);
+  const tit = document.createElement('div');
+  tit.className = 'detalle-titulo';
+  tit.textContent = `${DIAS_NOMBRE[idx]} ${fd.getDate()} de ${MESES_MIN[fd.getMonth()]}`;
+  detalleDiv.appendChild(tit);
 
-    if (sesionDia) {
-      const btn = document.createElement('button');
-      btn.textContent = sesionDia.nombre;
-      btn.className = 'btn-sesion';
-      btn.addEventListener('click', () => { rutaActual.length = 0; rutaActual.push(0, ...sesionDia.ruta); window.renderizar(); });
-      detalleDiv.appendChild(btn);
-      sesionDia.ejercicios.forEach(ej => {
-        const p = document.createElement('p');
-        p.className = 'detalle-ejercicio-item';
-        p.textContent = ej.nombre || 'Ejercicio sin nombre';
-        detalleDiv.appendChild(p);
-      });
-    } else {
-      const v = document.createElement('div');
-      v.className = 'detalle-empty';
-      v.textContent = 'Sin entreno este día.';
-      detalleDiv.appendChild(v);
-    }
+  if (sesionDia) {
+    const btn = document.createElement('button');
+    btn.textContent = sesionDia.nombre;
+    btn.className = 'btn-sesion';
+    btn.addEventListener('click', () => { rutaActual.length = 0; rutaActual.push(0, ...sesionDia.ruta); window.renderizar(); });
+    detalleDiv.appendChild(btn);
+
+    sesionDia.ejercicios.forEach(ej => {
+      const p = document.createElement('div');
+      p.className = 'detalle-ejercicio-item';
+
+      // Calcular series totales, completadas y volumen
+      const series = ej.series || [];
+      const total = series.length;
+      const completadas = series.filter(s => s.completada).length;
+      const volumen = series.reduce((sum, s) => sum + ((parseFloat(s.peso) || 0) * (parseInt(s.reps) || 0)), 0);
+
+      p.innerHTML = `
+        <span class="det-ej-nombre">${ej.nombre || 'Ejercicio sin nombre'}</span>
+        <span class="det-ej-stats">
+          ${total > 0 ? `<span class="det-series ${completadas === total && total > 0 ? 'det-series--ok' : ''}">${completadas}/${total}</span>` : ''}
+          ${volumen > 0 ? `<span class="det-vol">${Math.round(volumen)}<span class="det-vol-unit">kg</span></span>` : ''}
+        </span>
+      `;
+      detalleDiv.appendChild(p);
+    });
+  } else {
+    const v = document.createElement('div');
+    v.className = 'detalle-empty';
+    v.textContent = 'Sin entreno este día.';
+    detalleDiv.appendChild(v);
   }
+}
 
   function renderDias() {
     daysRow.innerHTML = '';
@@ -365,45 +380,219 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   cardTop.appendChild(listaTop);
   dashboard.appendChild(cardTop);
 
-  // ==================== 7. DISTRIBUCIÓN MUSCULAR ====================
-  const cardMuscular = crearCard('Distribución Muscular (30 días)', '');
-  const grupoKeywords = {
-    'Pecho':   ['pecho','press','bench','fly','apert'],
-    'Espalda': ['espalda','remo','jalón','pull','dominada','row','lat'],
-    'Piernas': ['pierna','sentadilla','prensa','femoral','cuádric','zancada','squat','lunge','leg'],
-    'Hombros': ['hombro','press militar','elevación','deltoid','shoulder'],
-    'Bíceps':  ['bíceps','bicep','curl'],
-    'Tríceps': ['tríceps','tricep','extensión','dips'],
-    'Core':    ['abdomen','core','plancha','crunch','oblicuo'],
-  };
-  const iconosMuscular = { 'Pecho':'🫀','Espalda':'🦾','Piernas':'🦵','Hombros':'💪','Bíceps':'🤸','Tríceps':'💪','Core':'🏃' };
-  const musculoCounts = {};
-  Object.keys(grupoKeywords).forEach(g => musculoCounts[g] = 0);
+// ==================== 7. DISTRIBUCIÓN MUSCULAR ====================
+const cardMuscular = crearCard('Distribución Muscular (30 días)', '');
 
-  ejerciciosTodos.filter(e => new Date(e.fecha) >= hace30Dias).forEach(e => {
-    const nl = (e.nombre || '').toLowerCase();
-    for (const [g, kws] of Object.entries(grupoKeywords)) {
-      if (kws.some(k => nl.includes(k))) { musculoCounts[g]++; break; }
-    }
-  });
+const grupoKeywords = {
+  'Pecho':   ['pecho','press','bench','fly','apert'],
+  'Espalda': ['espalda','remo','jalón','pull','dominada','row','lat'],
+  'Piernas': ['pierna','sentadilla','prensa','femoral','cuádric','zancada','squat','lunge','leg'],
+  'Hombros': ['hombro','press militar','elevación','deltoid','shoulder'],
+  'Bíceps':  ['bíceps','bicep','curl'],
+  'Tríceps': ['tríceps','tricep','extensión','dips'],
+  'Core':    ['abdomen','core','plancha','crunch','oblicuo'],
+};
+const musculoCounts = {};
+Object.keys(grupoKeywords).forEach(g => musculoCounts[g] = 0);
 
-  const maxM = Math.max(...Object.values(musculoCounts), 1);
-  const muscleGrid = document.createElement('div');
-  muscleGrid.className = 'muscle-grid';
+ejerciciosTodos.filter(e => new Date(e.fecha) >= hace30Dias).forEach(e => {
+  const nl = (e.nombre || '').toLowerCase();
+  for (const [g, kws] of Object.entries(grupoKeywords)) {
+    if (kws.some(k => nl.includes(k))) { musculoCounts[g]++; break; }
+  }
+});
 
-  Object.entries(musculoCounts).forEach(([grupo, count]) => {
-    const pct = Math.round((count / maxM) * 100);
-    const item = document.createElement('div');
-    item.className = 'muscle-item';
-    item.innerHTML = `
-      <div class="muscle-icon">${iconosMuscular[grupo] || '💪'}</div>
-      <div class="muscle-name">${grupo}</div>
-      <div class="muscle-bar-track"><div class="muscle-bar-fill" style="width:${pct}%"></div></div>
-      <div class="muscle-pct">${count > 0 ? count + '×' : '—'}</div>`;
-    muscleGrid.appendChild(item);
-  });
-  cardMuscular.appendChild(muscleGrid);
-  dashboard.appendChild(cardMuscular);
+const maxM = Math.max(...Object.values(musculoCounts), 1);
+
+// Colores por intensidad (de transparente a verde)
+function muscleColor(grupo) {
+  const count = musculoCounts[grupo] || 0;
+  const pct = count / maxM;
+  if (pct === 0) return 'rgba(180,180,180,0.15)';
+  const alpha = 0.25 + pct * 0.75;
+  return `rgba(61,213,152,${alpha.toFixed(2)})`;
+}
+function muscleStroke(grupo) {
+  const count = musculoCounts[grupo] || 0;
+  return count > 0 ? 'rgba(61,213,152,0.8)' : 'rgba(150,150,150,0.2)';
+}
+function musclePct(grupo) {
+  const count = musculoCounts[grupo] || 0;
+  return count > 0 ? Math.round((count / maxM) * 100) + '%' : null;
+}
+
+const muscleWrapper = document.createElement('div');
+muscleWrapper.className = 'muscle-body-wrapper';
+
+// SVG del cuerpo humano con grupos musculares como paths
+muscleWrapper.innerHTML = `
+<div class="muscle-body-container">
+  <div class="muscle-body-side">
+    <div class="muscle-side-label">FRONTAL</div>
+    <svg viewBox="0 0 120 260" class="muscle-svg" xmlns="http://www.w3.org/2000/svg">
+      <!-- Cabeza -->
+      <ellipse cx="60" cy="18" rx="13" ry="16" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1.2"/>
+      <!-- Cuello -->
+      <rect x="54" y="32" width="12" height="10" rx="3" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- Torso base -->
+      <path d="M35,42 Q60,38 85,42 L88,110 Q60,115 32,110 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- PECHO -->
+      <path d="M37,44 Q50,41 60,43 Q60,43 60,60 Q50,63 37,60 Z"
+        fill="${muscleColor('Pecho')}" stroke="${muscleStroke('Pecho')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Pecho"/>
+      <path d="M83,44 Q70,41 60,43 Q60,43 60,60 Q70,63 83,60 Z"
+        fill="${muscleColor('Pecho')}" stroke="${muscleStroke('Pecho')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Pecho"/>
+      <!-- HOMBROS front -->
+      <ellipse cx="31" cy="50" rx="8" ry="11"
+        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Hombros"/>
+      <ellipse cx="89" cy="50" rx="8" ry="11"
+        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Hombros"/>
+      <!-- BÍCEPS front -->
+      <path d="M19,61 Q14,72 16,85 Q22,88 27,85 Q25,72 24,61 Z"
+        fill="${muscleColor('Bíceps')}" stroke="${muscleStroke('Bíceps')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Bíceps"/>
+      <path d="M101,61 Q106,72 104,85 Q98,88 93,85 Q95,72 96,61 Z"
+        fill="${muscleColor('Bíceps')}" stroke="${muscleStroke('Bíceps')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Bíceps"/>
+      <!-- TRÍCEPS front (lateral del brazo) -->
+      <path d="M16,85 Q13,98 15,108 Q20,110 24,108 Q22,96 22,85 Z"
+        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Tríceps"/>
+      <path d="M104,85 Q107,98 105,108 Q100,110 96,108 Q98,96 98,85 Z"
+        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Tríceps"/>
+      <!-- CORE / ABS -->
+      <path d="M42,63 Q60,60 78,63 L76,108 Q60,112 44,108 Z"
+        fill="${muscleColor('Core')}" stroke="${muscleStroke('Core')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Core"/>
+      <!-- Línea alba y separaciones abs -->
+      <line x1="60" y1="63" x2="60" y2="108" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
+      <line x1="44" y1="75" x2="76" y2="75" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
+      <line x1="44" y1="88" x2="76" y2="88" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
+      <line x1="44" y1="100" x2="76" y2="100" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
+      <!-- PIERNAS front — cuádriceps -->
+      <path d="M36,112 Q30,135 31,162 Q40,167 50,163 Q54,138 52,112 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Piernas"/>
+      <path d="M84,112 Q90,135 89,162 Q80,167 70,163 Q66,138 68,112 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Piernas"/>
+      <!-- Gemelos front -->
+      <path d="M31,164 Q28,182 30,200 Q37,203 44,200 Q46,182 50,164 Z"
+        fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <path d="M89,164 Q92,182 90,200 Q83,203 76,200 Q74,182 70,164 Z"
+        fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- Pies -->
+      <ellipse cx="37" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <ellipse cx="83" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- Antebrazos -->
+      <path d="M15,108 Q11,124 13,136 Q18,138 22,136 Q24,124 22,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <path d="M105,108 Q109,124 107,136 Q102,138 98,136 Q96,124 98,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- Manos -->
+      <ellipse cx="15" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <ellipse cx="105" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+
+      ${['Pecho','Hombros','Bíceps','Core','Piernas'].filter(g => musculoPct(g)).map(g => {
+        const positions = { 'Pecho':'60,52', 'Hombros':'60,44', 'Bíceps':'60,73', 'Core':'60,84', 'Piernas':'60,138' };
+        const [px,py] = (positions[g]||'60,50').split(',');
+        return `<text x="${px}" y="${py}" class="muscle-label-pct" text-anchor="middle">${musclePct(g)}</text>`;
+      }).join('')}
+    </svg>
+  </div>
+
+  <div class="muscle-body-side">
+    <div class="muscle-side-label">POSTERIOR</div>
+    <svg viewBox="0 0 120 260" class="muscle-svg" xmlns="http://www.w3.org/2000/svg">
+      <!-- Cabeza -->
+      <ellipse cx="60" cy="18" rx="13" ry="16" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1.2"/>
+      <!-- Cuello -->
+      <rect x="54" y="32" width="12" height="10" rx="3" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- Torso base -->
+      <path d="M35,42 Q60,38 85,42 L88,110 Q60,115 32,110 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- ESPALDA / DORSALES -->
+      <path d="M37,44 Q48,41 60,43 L58,80 Q46,85 36,78 Z"
+        fill="${muscleColor('Espalda')}" stroke="${muscleStroke('Espalda')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Espalda"/>
+      <path d="M83,44 Q72,41 60,43 L62,80 Q74,85 84,78 Z"
+        fill="${muscleColor('Espalda')}" stroke="${muscleStroke('Espalda')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Espalda"/>
+      <!-- Trapecio -->
+      <path d="M47,38 Q60,34 73,38 Q60,46 47,38 Z"
+        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1"
+        class="muscle-path" data-grupo="Hombros"/>
+      <!-- Espalda baja / lumbar -->
+      <path d="M42,80 Q60,85 78,80 L76,110 Q60,114 44,110 Z"
+        fill="${muscleColor('Espalda')}" stroke="${muscleStroke('Espalda')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Espalda"/>
+      <!-- HOMBROS posterior -->
+      <ellipse cx="31" cy="50" rx="8" ry="11"
+        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Hombros"/>
+      <ellipse cx="89" cy="50" rx="8" ry="11"
+        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Hombros"/>
+      <!-- TRÍCEPS posterior -->
+      <path d="M19,61 Q13,74 15,87 Q21,90 26,87 Q25,74 24,61 Z"
+        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Tríceps"/>
+      <path d="M101,61 Q107,74 105,87 Q99,90 94,87 Q95,74 96,61 Z"
+        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Tríceps"/>
+      <!-- Antebrazos -->
+      <path d="M15,108 Q11,124 13,136 Q18,138 22,136 Q24,124 22,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <path d="M105,108 Q109,124 107,136 Q102,138 98,136 Q96,124 98,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- Manos -->
+      <ellipse cx="15" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <ellipse cx="105" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <!-- PIERNAS posterior — femorales/glúteos -->
+      <path d="M36,112 Q30,136 32,162 Q41,167 50,163 Q53,138 52,112 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Piernas"/>
+      <path d="M84,112 Q90,136 88,162 Q79,167 70,163 Q67,138 68,112 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Piernas"/>
+      <!-- Glúteos -->
+      <path d="M36,110 Q44,107 52,110 Q52,122 44,125 Q36,122 36,110 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1" opacity="0.7"/>
+      <path d="M84,110 Q76,107 68,110 Q68,122 76,125 Q84,122 84,110 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1" opacity="0.7"/>
+      <!-- Gemelos -->
+      <path d="M31,164 Q27,182 30,200 Q37,204 44,200 Q47,182 50,164 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Piernas" opacity="0.7"/>
+      <path d="M89,164 Q93,182 90,200 Q83,204 76,200 Q73,182 70,164 Z"
+        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
+        class="muscle-path" data-grupo="Piernas" opacity="0.7"/>
+      <!-- Pies -->
+      <ellipse cx="37" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+      <ellipse cx="83" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+
+      ${['Espalda','Hombros','Tríceps','Piernas'].filter(g => musclePct(g)).map(g => {
+        const positions = { 'Espalda':'60,62', 'Hombros':'60,44', 'Tríceps':'60,74', 'Piernas':'60,138' };
+        const [px,py] = (positions[g]||'60,50').split(',');
+        return `<text x="${px}" y="${py}" class="muscle-label-pct" text-anchor="middle">${musclePct(g)}</text>`;
+      }).join('')}
+    </svg>
+  </div>
+</div>
+
+<!-- Leyenda -->
+<div class="muscle-legend">
+  ${Object.entries(musculoCounts).map(([g, c]) => `
+    <div class="muscle-legend-item">
+      <span class="muscle-legend-dot" style="background:${c>0?muscleColor(g):'rgba(150,150,150,0.2)'}; border: 1px solid ${muscleStroke(g)}"></span>
+      <span class="muscle-legend-name">${g}</span>
+      <span class="muscle-legend-count">${c > 0 ? c + '×' : '—'}</span>
+    </div>
+  `).join('')}
+</div>
+`;
+
+cardMuscular.appendChild(muscleWrapper);
+dashboard.appendChild(cardMuscular);
 
   // ==================== 8. RÉCORDS PERSONALES ====================
   const cardRecords = crearCard('🏆 Récords Personales', '');

@@ -329,11 +329,17 @@ main#contenido {
   padding-bottom: 75px;
   min-height: 100vh;
   overflow-y: auto;
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
 #contenidoWrapper {
   position: relative;
   overflow: hidden;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 #contenidoSwipe {
@@ -511,6 +517,11 @@ button:hover {
 /* ═══════════════════════════════════════
    DASHBOARD
 ═══════════════════════════════════════ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
 .dashboard-container {
   display: flex;
   flex-wrap: wrap;
@@ -522,21 +533,46 @@ button:hover {
 /* ── Grid contenedor ── */
 .dashboard-container-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 16px;
-  padding: 16px 12px;
+  grid-template-columns: minmax(0, 1fr);          /* 1 columna por defecto (móvil) */
+  gap: 12px;
+  padding: 12px;
   width: 100%;
+  box-sizing: border-box;
+  max-width: 100%;        /* ← añade esto */
+  overflow: hidden;
+}
+
+/* 2 columnas solo cuando hay suficiente espacio */
+@media (min-width: 900px) {
+  .dashboard-container-grid {
+    /*grid-template-columns: repeat(2, 1fr);*/
+    grid-template-columns: 1fr !important;
+    gap: 16px;
+    padding: 16px 12px;
+  }
+}
+
+/* 3+ columnas en pantallas grandes */
+@media (min-width: 1100px) {
+  .dashboard-container-grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
 }
 
 /* ── Card base ── */
 .dashboard-card {
   background: var(--bg-card);
-  padding: 20px;
+  padding: 16px;
   border-radius: 16px;
   box-shadow: var(--shadow-sm);
   border: 1px solid transparent;
   transition: all 0.3s ease;
   animation: fadeInUp 0.4s ease both;
+  box-sizing: border-box;
+  min-width: 0;         /* evita desbordamiento en grid */
+  overflow: hidden;
+  width: 100%;        /* ← añade esto */
+  max-width: 100%;
 }
 .dashboard-card:hover {
   box-shadow: var(--shadow-md);
@@ -603,13 +639,20 @@ button:hover {
 
 .stat-item {
   text-align: center;
-  padding: 16px 12px;
   background: #e8edf0;
   border-radius: 14px;
   box-shadow: var(--neu-in-sm);
   border: none;
   transition: box-shadow 0.2s ease;
+  flex: 0 0 118px;
+  min-width: 118px;
+  padding: 10px 8px;
+  gap: 3px;
 }
+.stat-icon-emoji { font-size: 1.1rem; }
+.stat-value { font-size: 1.5rem; }
+.stat-label { font-size: 0.62rem; }
+
 .stat-item:hover {
   box-shadow: var(--neu-out-sm);
 }
@@ -701,15 +744,21 @@ button:hover {
   background: var(--bg-card);
   cursor: pointer;
   min-height: 60px;
-  box-shadow: 3px 3px 8px rgba(0,0,0,0.09), -2px -2px 6px rgba(255,255,255,0.95);
+    box-shadow:
+    3px 3px 8px rgba(0,0,0,0.10),
+    -2px -2px 6px rgba(255,255,255,0.95);
   transition: box-shadow 0.2s ease;
 }
 .day-btn:hover {
-  box-shadow: 4px 4px 10px rgba(0,0,0,0.11), -3px -3px 8px rgba(255,255,255,0.98);
+    box-shadow:
+    4px 4px 10px rgba(0,0,0,0.13),
+    -3px -3px 8px rgba(255,255,255,0.98);
 }
-
 .day-btn.selected {
-  box-shadow: inset 2px 2px 6px rgba(0,0,0,0.13), inset -2px -2px 5px rgba(255,255,255,0.8);
+    box-shadow:
+    inset 3px 3px 7px rgba(0,0,0,0.14),
+    inset -2px -2px 5px rgba(255,255,255,0.80);
+  background: var(--bg-main);
 }
 
 /* Texto dentro del día */
@@ -745,37 +794,6 @@ button:hover {
 }
 .day-btn.done .day-dot { opacity: 1; }
 
-.day-btn .num {
-  font-weight: 700;
-  font-size: 1rem;
-  color: var(--text-primary);
-}
-.day-btn .letra {
-  font-size: 0.6rem;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-}
-.day-btn.today {
-  box-shadow: var(--neu-in);
-  border: 2px solid rgba(61,213,152,0.4);
-}
-.day-btn.today .num { color: var(--primary-mint); }
-
-.day-btn.today-done {
-  background: var(--primary-mint);
-  box-shadow: 3px 3px 8px rgba(61,213,152,0.4), -2px -2px 6px rgba(255,255,255,0.5);
-}
-.day-btn.today-done .num,
-.day-btn.today-done .letra { color: #ffffff; }
-
-.day-btn.done {
-  background: rgba(61,213,152,0.15);
-  box-shadow: var(--neu-in-sm);
-}
-.day-btn.done .num { color: var(--mint-dark); font-weight: 900; }
-.day-btn.done .letra { color: var(--mint-dark); }
-
 /* Detalle del día seleccionado */
 .detalle-dia {
   background: var(--bg-card);
@@ -795,14 +813,144 @@ button:hover {
 }
 
 .detalle-ejercicio-item {
-  font-size: 0.82rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 0.80rem;
   color: var(--text-secondary);
-  padding: 3px 0;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color);
 }
+.detalle-ejercicio-item:last-child { border-bottom: none; }
+
 .detalle-empty {
   font-size: 0.8rem;
   color: var(--text-secondary);
   font-style: italic;
+}
+
+.det-ej-nombre {
+  flex: 1;
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+.det-ej-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.det-series {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  background: var(--bg-main);
+  padding: 1px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.det-series--ok {
+  color: var(--primary-mint);
+  background: rgba(61,213,152,0.12);
+}
+.det-vol {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--primary-mint);
+  white-space: nowrap;
+}
+.det-vol-unit {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-left: 1px;
+}
+
+/* ============================================================
+   CARD 7 — CUERPO HUMANO SVG
+   ============================================================ */
+.muscle-body-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.muscle-body-container {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+.muscle-body-side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+.muscle-side-label {
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.muscle-svg {
+  width: 100%;
+  max-width: 130px;
+  height: auto;
+  overflow: visible;
+}
+.muscle-path {
+  transition: opacity 0.3s ease, filter 0.3s ease;
+  cursor: default;
+}
+.muscle-path:hover {
+  filter: brightness(1.2);
+  opacity: 0.9;
+}
+.muscle-label-pct {
+  font-size: 6px;
+  font-weight: 800;
+  fill: rgba(61,213,152,0.9);
+  pointer-events: none;
+  text-shadow: 0 0 3px rgba(0,0,0,0.3);
+}
+
+/* Leyenda muscular */
+.muscle-legend {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px 8px;
+  margin-top: 4px;
+}
+.muscle-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.muscle-legend-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.muscle-legend-name {
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.muscle-legend-count {
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--primary-mint);
 }
 
 .btn-sesion {
@@ -2070,6 +2218,335 @@ button:hover {
 }
 
 /* ─────────────────────────────────────────
+   SEGUIMIENTO — seguimiento.js  (clases nuevas)
+   Añadir dentro de la sección ya existente de seguimiento
+───────────────────────────────────────── */
+
+/* Sub-header botones */
+.seg-sub-header-buttons {
+  display: flex;
+  justify-content: center;
+}
+
+/* Botón añadir */
+.seg-btn-add {
+  font-size: 0.813rem;
+  font-weight: bold;
+}
+
+/* Área de contenido principal */
+.seg-contenido {
+  padding: 16px 12px;
+  overflow-y: auto;
+}
+
+/* ── Sin datos ── */
+.seg-sin-datos {
+  background: var(--bg-card);
+  padding: 40px 20px;
+  margin: 12px 0;
+  border-radius: 12px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.seg-sin-datos-icon  { font-size: 3rem; margin-bottom: 16px; opacity: 0.3; }
+.seg-sin-datos-titulo { color: var(--text-secondary); margin-bottom: 8px; }
+.seg-sin-datos-texto  { color: var(--text-light); font-size: 0.9rem; }
+
+/* ── Card última medición ── */
+.ultima-medicion-card {
+  background: linear-gradient(135deg, var(--primary-mint) 0%, var(--mint-light) 100%);
+  padding: 20px;
+  margin: 0 0 12px 0;
+  border-radius: 16px;
+  box-shadow: var(--shadow-md);
+  color: #fff;
+}
+.seg-ultima-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.seg-ultima-label {
+  font-size: 0.75rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.seg-ultima-fecha {
+  font-size: 0.85rem;
+  opacity: 0.95;
+  font-weight: 500;
+}
+.seg-ultima-icon {
+  width: 50px;
+  height: 50px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.seg-ultima-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.seg-ultima-stat-item {
+  background: rgba(255,255,255,0.15);
+  padding: 12px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+}
+.seg-ultima-stat-label {
+  font-size: 0.7rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.seg-ultima-stat-valor {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+.seg-ultima-stat-unidad {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* ── Card resumen progreso ── */
+.seg-resumen-card {
+  background: var(--bg-card);
+  padding: 16px;
+  margin: 12px 0;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.seg-section-titulo {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.seg-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+.seg-stat-item {
+  background: var(--bg-main);
+  padding: 12px;
+  border-radius: 10px;
+  text-align: center;
+}
+.seg-stat-icon   { font-size: 1.5rem; margin-bottom: 4px; }
+.seg-stat-label  { font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; font-weight: 600; }
+.seg-stat-valor  { font-size: 1.3rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px; }
+.seg-stat-cambio { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); }
+.seg-cambio-positivo { color: var(--success) !important; }
+.seg-cambio-negativo { color: var(--danger)  !important; }
+
+.seg-mensaje-sin-datos {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-light);
+  font-size: 0.85rem;
+}
+
+/* ── Contenedor de gráficos ── */
+.seg-graficos-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  margin-top: 12px;
+}
+.seg-medidas-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Cards de gráfico ── */
+.seg-grafico-card {
+  background: var(--bg-card);
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.seg-grafico-card--compacto { padding: 12px; }
+
+.seg-grafico-titulo {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.seg-grafico-titulo--compacto { font-size: 0.85rem; }
+
+.seg-canvas-wrapper {
+  width: 100%;
+  height: 180px;
+  position: relative;
+}
+.seg-canvas-wrapper--compacto { height: 120px; }
+
+.seg-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* ── Historial ── */
+.seg-historial-section { margin-top: 24px; }
+.seg-historial-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.seg-historial-contador {
+  background: var(--bg-main);
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.seg-historial-item {
+  background: var(--bg-card);
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+.seg-historial-info { flex: 1; }
+.seg-historial-fecha {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+.seg-historial-datos {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* ── Botón eliminar historial ── */
+.seg-btn-eliminar {
+  background: transparent;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+
+/* ── Botón ver más ── */
+.seg-btn-ver-mas {
+  width: 100%;
+  padding: 12px;
+  margin-top: 8px;
+  background: var(--bg-main);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+/* ── Modal añadir medidas ── */
+.seg-modal-titulo {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-align: center;
+}
+.seg-modal-fecha-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.seg-modal-fecha-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.seg-modal-fecha-input {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 0.95rem;
+  width: 100%;
+}
+.medida-campo-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.medida-input-wrapper { position: relative; }
+.medida-input {
+  width: 100%;
+  padding: 12px;
+  padding-right: 45px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+}
+.medida-unidad {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  pointer-events: none;
+}
+.seg-modal-botones {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+.seg-btn-cancelar {
+  flex: 1;
+  padding: 12px;
+  background: var(--bg-main);
+  color: var(--text-secondary);
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.seg-btn-guardar {
+  flex: 1;
+  padding: 12px;
+  background: var(--primary-mint);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* ─────────────────────────────────────────
    NUTRICIÓN — nutricion.js
 ───────────────────────────────────────── */
 
@@ -3120,6 +3597,444 @@ button:hover {
   padding: 16px;
   box-shadow: var(--neu-out-sm);
 }
+
+/* ─────────────────────────────────────────
+   CALENDARIO — calendario.js  (clases nuevas)
+   Añadir dentro de la sección ya existente de calendario
+───────────────────────────────────────── */
+
+/* ── Subheader ── */
+.cal-subheader-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  gap: 12px;
+  padding: 8px 12px 4px 12px;
+  position: relative;
+}
+.cal-subheader-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+}
+.cal-subheader-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 70px;
+  min-width: 180px;
+  flex: 1;
+  align-items: flex-end;
+}
+.cal-selector-vista {
+  display: flex;
+  padding-bottom: 2px;
+  height: 70px;
+}
+.cal-titulo-nivel {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-mint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── Contenedor principal ── */
+.calendario-container {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.calendario-container.cal-padding { padding: 16px; }
+
+/* ── Card de mes ── */
+.cal-mes-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.cal-mes-titulo {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+/* Barra de progreso mes */
+.cal-progress-bar {
+  height: 6px;
+  background: var(--bg-main);
+  border-radius: 3px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.cal-progress-bar--sesion {
+  height: 4px;
+  margin-bottom: 4px;
+}
+.cal-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+/* Cabecera días de la semana */
+.cal-dias-semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.cal-dia-semana-label {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 4px;
+}
+
+/* Grid de días */
+.cal-dias-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-dia-vacio {
+  padding: 8px;
+  min-height: 50px;
+  border-radius: 8px;
+}
+
+/* Celda de día */
+.cal-dia-celda {
+  cursor: pointer;
+  min-height: 50px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  border-radius: 8px;
+  padding: 4px 2px;
+  transition: all 0.2s ease;
+}
+.cal-dia-celda.cal-dia--hoy-con-sesion {
+  background: var(--primary-mint);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: var(--shadow-md);
+}
+.cal-dia-celda.cal-dia--hoy {
+  border: 2px solid var(--primary-mint);
+  color: var(--primary-mint);
+  font-weight: 700;
+}
+.cal-dia-celda.cal-dia--con-sesion {
+  background: var(--secondary-cyan);
+  color: #ffffff;
+  font-weight: 600;
+}
+.cal-dia-numero {
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+/* Indicadores (puntos) */
+.cal-indicadores {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+  justify-content: center;
+}
+.cal-punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+.cal-punto--completada {
+  background: #4CAF50;
+  box-shadow: 0 0 4px rgba(76,175,80,0.6);
+}
+.cal-punto--pendiente {
+  background: #FFA500;
+  box-shadow: 0 0 4px rgba(255,165,0,0.6);
+}
+
+/* Badge de sesiones en celda */
+.cal-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+}
+.cal-badge--completo  { background: rgba(76,175,80,0.2);   color: #4CAF50; border-color: #4CAF50; }
+.cal-badge--parcial   { background: rgba(255,193,7,0.2);   color: #F57C00; border-color: #F57C00; }
+.cal-badge--pendiente { background: rgba(255,165,0,0.2);   color: #FF9800; border-color: #FF9800; }
+
+/* ── Vista semanal: badge en header de día ── */
+.calendario-sesion-badge.cal-badge--completo  { background: rgba(76,175,80,0.2);  color: #4CAF50; }
+.calendario-sesion-badge.cal-badge--parcial   { background: rgba(255,193,7,0.2);  color: #F57C00; }
+.calendario-sesion-badge.cal-badge--pendiente { background: rgba(255,165,0,0.2);  color: #FF9800; }
+
+/* ── Ítem de sesión en vista semanal ── */
+.cal-sesion-item-semanal {
+  transition: box-shadow 0.2s ease;
+}
+.cal-sesion-estado-icon { font-size: 1.1rem; flex-shrink: 0; }
+.cal-sesion-info { flex: 1; }
+.cal-sesion-nombre-semanal { font-weight: 700; font-size: 0.9rem; color: var(--text-primary); }
+.cal-sesion-cant-ejercicios { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+.cal-sesion-duracion {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--bg-main);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cal-sesion-estado { font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+
+/* Sin sesiones en día semanal */
+.cal-sin-sesiones {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+.cal-sin-sesiones-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.3; }
+
+/* ── Botones nav semanal (hover) ── */
+.calendario-btn-semana.cal-btn-nav--hover {
+  background: var(--primary-mint);
+  color: #ffffff;
+}
+
+/* Botón "Hoy" hover */
+.btn-hoy-calendario.cal-btn-hoy--hover {
+  background: var(--mint-light);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Modal info día ── */
+.cal-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+.cal-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  width: min(480px, 90vw);
+}
+.cal-modal-titulo {
+  margin-bottom: 20px;
+  color: var(--primary-mint);
+  font-size: 1.2rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* Info período */
+.cal-info-periodo {
+  background: var(--bg-main);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 2px solid var(--primary-mint);
+}
+.cal-info-periodo-titulo {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-meso-info { margin-bottom: 0; }
+.cal-meso-info.cal-meso-info--con-borde {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.cal-micro-info { margin-top: 4px; }
+.cal-info-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-info-nombre {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  margin: 2px 0;
+}
+.cal-info-rango { font-size: 0.8rem; color: var(--text-secondary); }
+
+/* Sin período */
+.cal-sin-info-periodo {
+  background: var(--bg-main);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+/* Sesiones en modal */
+.cal-sesiones-titulo {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-sesion-modal-item {
+  background: var(--bg-main);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+}
+.cal-sesion-modal-nombre {
+  font-weight: 700;
+  margin-bottom: 8px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.cal-sesion-modal-nombre--hover {
+  background: var(--primary-mint);
+  color: #ffffff;
+}
+.cal-sesion-modal-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.cal-sesion-modal-cant { font-size: 0.85rem; opacity: 0.8; }
+.cal-sesion-fecha-input {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-mint);
+  background: var(--bg-card);
+}
+.cal-sesion-dur-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--bg-main);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cal-sesion-modal-estado { margin-top: 8px; }
+.cal-sesion-pct { font-size: 0.75rem; font-weight: 600; }
+
+/* Descanso */
+.cal-descanso {
+  background: var(--bg-main);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  border: 2px dashed var(--border-color);
+  margin-bottom: 8px;
+}
+.cal-descanso-icon   { font-size: 2.5rem; margin-bottom: 8px; }
+.cal-descanso-titulo { color: var(--text-secondary); font-weight: 600; font-size: 0.95rem; }
+.cal-descanso-subtitulo { color: var(--text-light); font-size: 0.85rem; margin-top: 4px; }
+
+/* Sin sesiones modal */
+.cal-sin-sesiones-modal {
+  background: var(--bg-main);
+  padding: 20px;
+  border-radius: 12px;
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+.cal-sin-sesiones-modal-icon { font-size: 2.5rem; margin-bottom: 8px; opacity: 0.3; }
+
+/* Botones del modal */
+.cal-modal-botones {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+.cal-btn-crear-sesion,
+.cal-btn-ir-entrenamiento {
+  flex: 1;
+  padding: 12px;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cal-btn-crear-sesion     { background: var(--secondary-cyan); }
+.cal-btn-ir-entrenamiento { background: var(--secondary-cyan); }
+
+.cal-btn-crear-sesion--hover,
+.cal-btn-ir-entrenamiento--hover {
+  background: #00B8B8;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+.cal-btn-cerrar {
+  flex: 1;
+  padding: 12px;
+  background: var(--primary-mint);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+.cal-btn-cerrar--hover { background: var(--mint-light); }
 
 /* ─────────────────────────────────────────
    LIVE ENTRENAMIENTO — live.js

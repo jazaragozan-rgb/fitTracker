@@ -15,16 +15,13 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
   // Contenedor de botones
   const botonesContainer = document.createElement('div');
   botonesContainer.id = 'subHeaderButtons';
-  botonesContainer.style.display = 'flex';
-  botonesContainer.style.justifyContent = 'center';
+  botonesContainer.className = 'seg-sub-header-buttons';
   
   // Botón añadir
   const btnAdd = document.createElement('button');
-  btnAdd.className = 'header-btn';
+  btnAdd.className = 'header-btn seg-btn-add';
   btnAdd.textContent = '+ Añadir';
   btnAdd.title = 'Añadir medidas';
-  btnAdd.style.fontSize = '0.813rem';
-  btnAdd.style.fontWeight = 'bold';
   btnAdd.onclick = () => mostrarModalMedidas(nivel, contenido);
   botonesContainer.appendChild(btnAdd);
   
@@ -32,13 +29,8 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
 
   // Contenido principal
   contenido.innerHTML = '';
-  contenido.style.padding = '0';
-  contenido.style.paddingTop = '16px'; // Espacio superior para no taparse con subheader
-  contenido.style.paddingBottom = '16px';
-  contenido.style.paddingLeft = '12px';
-  contenido.style.paddingRight = '12px';
-  contenido.style.overflowY = 'auto';
-  
+  contenido.className = (contenido.className || '') + ' seg-contenido';
+
   const medidas = nivel.hijos || [];
 
   // ==================== SECCIÓN: ÚLTIMA MEDICIÓN ====================
@@ -48,17 +40,11 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
     contenido.appendChild(ultimaMedicionCard);
   } else {
     const sinDatos = document.createElement('div');
-    sinDatos.className = 'sin-datos-card';
-    sinDatos.style.background = 'var(--bg-card)';
-    sinDatos.style.padding = '40px 20px';
-    sinDatos.style.margin = '12px 0';
-    sinDatos.style.borderRadius = '12px';
-    sinDatos.style.textAlign = 'center';
-    sinDatos.style.boxShadow = 'var(--shadow-sm)';
+    sinDatos.className = 'sin-datos-card seg-sin-datos';
     sinDatos.innerHTML = `
-      <div style="font-size: 3rem; margin-bottom: 16px; opacity: 0.3;">📊</div>
-      <h3 style="color: var(--text-secondary); margin-bottom: 8px;">Sin datos registrados</h3>
-      <p style="color: var(--text-light); font-size: 0.9rem;">Pulsa "+ Añadir" para comenzar tu seguimiento</p>
+      <div class="seg-sin-datos-icon">📊</div>
+      <h3 class="seg-sin-datos-titulo">Sin datos registrados</h3>
+      <p class="seg-sin-datos-texto">Pulsa "+ Añadir" para comenzar tu seguimiento</p>
     `;
     contenido.appendChild(sinDatos);
     return;
@@ -70,10 +56,7 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
 
   // ==================== SECCIÓN: GRÁFICOS PRINCIPALES ====================
   const graficosContainer = document.createElement('div');
-  graficosContainer.style.display = 'grid';
-  graficosContainer.style.gridTemplateColumns = '1fr';
-  graficosContainer.style.gap = '12px';
-  graficosContainer.style.marginTop = '12px';
+  graficosContainer.className = 'seg-graficos-container';
 
   // Gráfico de Peso
   const graficoPeso = crearGraficoMetrica(medidas, 'peso', 'Peso', 'kg', '#3DD598');
@@ -85,9 +68,7 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
 
   // Gráficos de Medidas (en grid de 2 columnas)
   const medidasGrid = document.createElement('div');
-  medidasGrid.style.display = 'grid';
-  medidasGrid.style.gridTemplateColumns = '1fr 1fr';
-  medidasGrid.style.gap = '12px';
+  medidasGrid.className = 'seg-medidas-grid';
   
   const graficoBrazo = crearGraficoMetrica(medidas, 'brazo', 'Brazo', 'cm', '#00D4D4', true);
   const graficoCintura = crearGraficoMetrica(medidas, 'cintura', 'Cintura', 'cm', '#FF6B6B', true);
@@ -108,12 +89,6 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
 function crearCardUltimaMedicion(medicion) {
   const card = document.createElement('div');
   card.className = 'ultima-medicion-card';
-  card.style.background = 'linear-gradient(135deg, var(--primary-mint) 0%, var(--mint-light) 100%)';
-  card.style.padding = '20px';
-  card.style.margin = '0 0 12px 0';
-  card.style.borderRadius = '16px';
-  card.style.boxShadow = 'var(--shadow-md)';
-  card.style.color = '#fff';
 
   const fecha = new Date(medicion.fecha);
   const fechaFormateada = fecha.toLocaleDateString('es-ES', { 
@@ -124,31 +99,29 @@ function crearCardUltimaMedicion(medicion) {
   });
 
   card.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+    <div class="seg-ultima-header">
       <div>
-        <div style="font-size: 0.75rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Última medición</div>
-        <div style="font-size: 0.85rem; opacity: 0.95; font-weight: 500;">${fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)}</div>
+        <div class="seg-ultima-label">Última medición</div>
+        <div class="seg-ultima-fecha">${fechaFormateada.charAt(0).toUpperCase() + fechaFormateada.slice(1)}</div>
       </div>
-      <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem;">
-        📏
-      </div>
+      <div class="seg-ultima-icon">📏</div>
     </div>
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px;">
-      <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
-        <div style="font-size: 0.7rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Peso</div>
-        <div style="font-size: 1.5rem; font-weight: 700;">${medicion.peso || '--'} <span style="font-size: 0.9rem; font-weight: 500;">kg</span></div>
+    <div class="seg-ultima-stats">
+      <div class="seg-ultima-stat-item">
+        <div class="seg-ultima-stat-label">Peso</div>
+        <div class="seg-ultima-stat-valor">${medicion.peso || '--'} <span class="seg-ultima-stat-unidad">kg</span></div>
       </div>
-      <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
-        <div style="font-size: 0.7rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Altura</div>
-        <div style="font-size: 1.5rem; font-weight: 700;">${medicion.altura || '--'} <span style="font-size: 0.9rem; font-weight: 500;">cm</span></div>
+      <div class="seg-ultima-stat-item">
+        <div class="seg-ultima-stat-label">Altura</div>
+        <div class="seg-ultima-stat-valor">${medicion.altura || '--'} <span class="seg-ultima-stat-unidad">cm</span></div>
       </div>
-      <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
-        <div style="font-size: 0.7rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Brazo</div>
-        <div style="font-size: 1.5rem; font-weight: 700;">${medicion.brazo || '--'} <span style="font-size: 0.9rem; font-weight: 500;">cm</span></div>
+      <div class="seg-ultima-stat-item">
+        <div class="seg-ultima-stat-label">Brazo</div>
+        <div class="seg-ultima-stat-valor">${medicion.brazo || '--'} <span class="seg-ultima-stat-unidad">cm</span></div>
       </div>
-      <div style="background: rgba(255,255,255,0.15); padding: 12px; border-radius: 10px; backdrop-filter: blur(10px);">
-        <div style="font-size: 0.7rem; opacity: 0.9; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;">Cintura</div>
-        <div style="font-size: 1.5rem; font-weight: 700;">${medicion.cintura || '--'} <span style="font-size: 0.9rem; font-weight: 500;">cm</span></div>
+      <div class="seg-ultima-stat-item">
+        <div class="seg-ultima-stat-label">Cintura</div>
+        <div class="seg-ultima-stat-valor">${medicion.cintura || '--'} <span class="seg-ultima-stat-unidad">cm</span></div>
       </div>
     </div>
   `;
@@ -159,107 +132,53 @@ function crearCardUltimaMedicion(medicion) {
 // ==================== CARD: RESUMEN DE PROGRESO ====================
 function crearCardResumenProgreso(medidas) {
   const card = document.createElement('div');
-  card.style.background = 'var(--bg-card)';
-  card.style.padding = '16px';
-  card.style.margin = '12px 0';
-  card.style.borderRadius = '12px';
-  card.style.boxShadow = 'var(--shadow-sm)';
+  card.className = 'seg-resumen-card';
 
   const titulo = document.createElement('h3');
+  titulo.className = 'seg-section-titulo';
   titulo.textContent = 'Progreso General';
-  titulo.style.fontSize = '1rem';
-  titulo.style.fontWeight = '700';
-  titulo.style.color = 'var(--text-secondary)';
-  titulo.style.marginBottom = '16px';
-  titulo.style.textTransform = 'uppercase';
-  titulo.style.letterSpacing = '0.5px';
   card.appendChild(titulo);
 
   const statsGrid = document.createElement('div');
-  statsGrid.style.display = 'grid';
-  statsGrid.style.gridTemplateColumns = 'repeat(2, 1fr)';
-  statsGrid.style.gap = '12px';
+  statsGrid.className = 'seg-stats-grid';
 
-  // Calcular cambios
   if (medidas.length >= 2) {
     const primera = medidas[0];
     const ultima = medidas[medidas.length - 1];
 
     const cambios = [
-      {
-        label: 'Peso',
-        inicial: parseFloat(primera.peso) || 0,
-        final: parseFloat(ultima.peso) || 0,
-        unidad: 'kg',
-        icon: '⚖️',
-        inverso: true // menor es mejor
-      },
-      {
-        label: 'Brazo',
-        inicial: parseFloat(primera.brazo) || 0,
-        final: parseFloat(ultima.brazo) || 0,
-        unidad: 'cm',
-        icon: '💪'
-      },
-      {
-        label: 'Cintura',
-        inicial: parseFloat(primera.cintura) || 0,
-        final: parseFloat(ultima.cintura) || 0,
-        unidad: 'cm',
-        icon: '📏',
-        inverso: true
-      },
-      {
-        label: 'Mediciones',
-        inicial: 0,
-        final: medidas.length,
-        unidad: 'registros',
-        icon: '📊',
-        sinCambio: true
-      }
+      { label: 'Peso',      inicial: parseFloat(primera.peso)    || 0, final: parseFloat(ultima.peso)    || 0, unidad: 'kg',        icon: '⚖️', inverso: true },
+      { label: 'Brazo',     inicial: parseFloat(primera.brazo)   || 0, final: parseFloat(ultima.brazo)   || 0, unidad: 'cm',        icon: '💪' },
+      { label: 'Cintura',   inicial: parseFloat(primera.cintura) || 0, final: parseFloat(ultima.cintura) || 0, unidad: 'cm',        icon: '📏', inverso: true },
+      { label: 'Mediciones',inicial: 0,                               final: medidas.length,               unidad: 'registros', icon: '📊', sinCambio: true }
     ];
 
     cambios.forEach(cambio => {
       const statDiv = document.createElement('div');
-      statDiv.style.background = 'var(--bg-main)';
-      statDiv.style.padding = '12px';
-      statDiv.style.borderRadius = '10px';
-      statDiv.style.textAlign = 'center';
+      statDiv.className = 'seg-stat-item';
 
       const diferencia = cambio.final - cambio.inicial;
       const porcentaje = cambio.inicial !== 0 ? ((diferencia / cambio.inicial) * 100) : 0;
       
-      let colorCambio = 'var(--text-secondary)';
+      let colorClass = '';
       let iconoCambio = '';
       
       if (!cambio.sinCambio) {
         if (cambio.inverso) {
-          if (diferencia < 0) {
-            colorCambio = 'var(--success)';
-            iconoCambio = '↓';
-          } else if (diferencia > 0) {
-            colorCambio = 'var(--danger)';
-            iconoCambio = '↑';
-          }
+          colorClass = diferencia < 0 ? 'seg-cambio-positivo' : diferencia > 0 ? 'seg-cambio-negativo' : '';
+          iconoCambio = diferencia < 0 ? '↓' : diferencia > 0 ? '↑' : '';
         } else {
-          if (diferencia > 0) {
-            colorCambio = 'var(--success)';
-            iconoCambio = '↑';
-          } else if (diferencia < 0) {
-            colorCambio = 'var(--danger)';
-            iconoCambio = '↓';
-          }
+          colorClass = diferencia > 0 ? 'seg-cambio-positivo' : diferencia < 0 ? 'seg-cambio-negativo' : '';
+          iconoCambio = diferencia > 0 ? '↑' : diferencia < 0 ? '↓' : '';
         }
       }
 
       statDiv.innerHTML = `
-        <div style="font-size: 1.5rem; margin-bottom: 4px;">${cambio.icon}</div>
-        <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 8px; font-weight: 600;">${cambio.label}</div>
-        <div style="font-size: 1.3rem; font-weight: 700; color: var(--text-primary); margin-bottom: 4px;">
-          ${cambio.final.toFixed(cambio.label === 'Mediciones' ? 0 : 1)} ${cambio.unidad}
-        </div>
+        <div class="seg-stat-icon">${cambio.icon}</div>
+        <div class="seg-stat-label">${cambio.label}</div>
+        <div class="seg-stat-valor">${cambio.final.toFixed(cambio.label === 'Mediciones' ? 0 : 1)} ${cambio.unidad}</div>
         ${!cambio.sinCambio ? `
-          <div style="font-size: 0.75rem; color: ${colorCambio}; font-weight: 600;">
+          <div class="seg-stat-cambio ${colorClass}">
             ${iconoCambio} ${Math.abs(diferencia).toFixed(1)} ${cambio.unidad} (${Math.abs(porcentaje).toFixed(1)}%)
           </div>
         ` : ''}
@@ -269,9 +188,7 @@ function crearCardResumenProgreso(medidas) {
     });
   } else {
     const mensaje = document.createElement('div');
-    mensaje.style.textAlign = 'center';
-    mensaje.style.padding = '20px';
-    mensaje.style.color = 'var(--text-light)';
+    mensaje.className = 'seg-mensaje-sin-datos';
     mensaje.textContent = 'Necesitas al menos 2 mediciones para ver el progreso';
     statsGrid.appendChild(mensaje);
   }
@@ -283,48 +200,30 @@ function crearCardResumenProgreso(medidas) {
 // ==================== GRÁFICO: MÉTRICA INDIVIDUAL ====================
 function crearGraficoMetrica(medidas, campo, titulo, unidad, color, compacto = false) {
   const card = document.createElement('div');
-  card.style.background = 'var(--bg-card)';
-  card.style.padding = compacto ? '12px' : '16px';
-  card.style.borderRadius = '12px';
-  card.style.boxShadow = 'var(--shadow-sm)';
+  card.className = 'seg-grafico-card' + (compacto ? ' seg-grafico-card--compacto' : '');
 
   const header = document.createElement('h3');
+  header.className = 'seg-grafico-titulo' + (compacto ? ' seg-grafico-titulo--compacto' : '');
   header.textContent = titulo;
-  header.style.fontSize = compacto ? '0.85rem' : '0.95rem';
-  header.style.fontWeight = '700';
-  header.style.color = 'var(--text-secondary)';
-  header.style.marginBottom = '12px';
-  header.style.textTransform = 'uppercase';
-  header.style.letterSpacing = '0.5px';
   card.appendChild(header);
 
   const canvasWrapper = document.createElement('div');
-  canvasWrapper.style.width = '100%';
-  canvasWrapper.style.height = compacto ? '120px' : '180px';
-  canvasWrapper.style.position = 'relative';
+  canvasWrapper.className = 'seg-canvas-wrapper' + (compacto ? ' seg-canvas-wrapper--compacto' : '');
   
   const canvas = document.createElement('canvas');
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
-  canvas.style.display = 'block';
+  canvas.className = 'seg-canvas';
   
   canvasWrapper.appendChild(canvas);
   card.appendChild(canvasWrapper);
 
   const datos = medidas
     .filter(m => m[campo])
-    .map(m => ({
-      x: new Date(m.fecha),
-      y: parseFloat(m[campo])
-    }))
+    .map(m => ({ x: new Date(m.fecha), y: parseFloat(m[campo]) }))
     .sort((a, b) => a.x - b.x);
 
   if (datos.length === 0) {
     const sinDatos = document.createElement('div');
-    sinDatos.style.textAlign = 'center';
-    sinDatos.style.padding = '20px';
-    sinDatos.style.color = 'var(--text-light)';
-    sinDatos.style.fontSize = '0.85rem';
+    sinDatos.className = 'seg-mensaje-sin-datos';
     sinDatos.textContent = 'Sin datos registrados';
     card.replaceChild(sinDatos, canvasWrapper);
     return card;
@@ -376,36 +275,21 @@ function crearGraficoMetrica(medidas, campo, titulo, unidad, color, compacto = f
           scales: {
             x: {
               type: 'time',
-              time: {
-                unit: 'day',
-                tooltipFormat: 'dd/MM',
-                displayFormats: { day: 'dd/MM' }
-              },
+              time: { unit: 'day', tooltipFormat: 'dd/MM', displayFormats: { day: 'dd/MM' } },
               grid: { display: false },
-              ticks: {
-                font: { size: 10 },
-                color: 'var(--text-secondary)'
-              }
+              ticks: { font: { size: 10 }, color: 'var(--text-secondary)' }
             },
             y: {
               beginAtZero: false,
-              grid: {
-                color: 'rgba(0,0,0,0.05)',
-                drawBorder: false
-              },
+              grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
               ticks: {
                 font: { size: 10 },
                 color: 'var(--text-secondary)',
-                callback: function(value) {
-                  return value.toFixed(0) + ' ' + unidad;
-                }
+                callback: function(value) { return value.toFixed(0) + ' ' + unidad; }
               }
             }
           },
-          interaction: {
-            intersect: false,
-            mode: 'index'
-          }
+          interaction: { intersect: false, mode: 'index' }
         }
       });
     }
@@ -417,97 +301,38 @@ function crearGraficoMetrica(medidas, campo, titulo, unidad, color, compacto = f
 // ==================== GRÁFICO: IMC ====================
 function crearGraficoIMC(medidas) {
   const card = document.createElement('div');
-  card.style.background = 'var(--bg-card)';
-  card.style.padding = '16px';
-  card.style.borderRadius = '12px';
-  card.style.boxShadow = 'var(--shadow-sm)';
+  card.className = 'seg-grafico-card';
 
   const header = document.createElement('h3');
+  header.className = 'seg-grafico-titulo';
   header.textContent = 'Índice de Masa Corporal (IMC)';
-  header.style.fontSize = '0.95rem';
-  header.style.fontWeight = '700';
-  header.style.color = 'var(--text-secondary)';
-  header.style.marginBottom = '12px';
-  header.style.textTransform = 'uppercase';
-  header.style.letterSpacing = '0.5px';
   card.appendChild(header);
 
   const canvasWrapper = document.createElement('div');
-  canvasWrapper.style.width = '100%';
-  canvasWrapper.style.height = '180px';
-  canvasWrapper.style.position = 'relative';
+  canvasWrapper.className = 'seg-canvas-wrapper';
   
   const canvas = document.createElement('canvas');
-  canvas.style.width = '100%';
-  canvas.style.height = '100%';
-  canvas.style.display = 'block';
+  canvas.className = 'seg-canvas';
   
   canvasWrapper.appendChild(canvas);
   card.appendChild(canvasWrapper);
 
-  // Calcular IMC para cada medida
   const datosIMC = medidas
     .filter(m => m.peso && m.altura)
     .map(m => {
       const pesoKg = parseFloat(m.peso);
       const alturaM = parseFloat(m.altura) / 100;
-      const imc = pesoKg / (alturaM * alturaM);
-      return {
-        x: new Date(m.fecha),
-        y: imc
-      };
+      return { x: new Date(m.fecha), y: parseFloat((pesoKg / (alturaM * alturaM)).toFixed(1)) };
     })
     .sort((a, b) => a.x - b.x);
 
   if (datosIMC.length === 0) {
     const sinDatos = document.createElement('div');
-    sinDatos.style.textAlign = 'center';
-    sinDatos.style.padding = '20px';
-    sinDatos.style.color = 'var(--text-light)';
-    sinDatos.style.fontSize = '0.85rem';
-    sinDatos.textContent = 'Necesitas registrar peso y altura';
+    sinDatos.className = 'seg-mensaje-sin-datos';
+    sinDatos.textContent = 'Necesitas peso y altura para calcular el IMC';
     card.replaceChild(sinDatos, canvasWrapper);
     return card;
   }
-
-  // Mostrar IMC actual
-  const imcActual = datosIMC[datosIMC.length - 1].y;
-  let categoria = '';
-  let colorCategoria = '';
-  
-  if (imcActual < 18.5) {
-    categoria = 'Bajo peso';
-    colorCategoria = '#00D4D4';
-  } else if (imcActual < 25) {
-    categoria = 'Peso normal';
-    colorCategoria = '#3DD598';
-  } else if (imcActual < 30) {
-    categoria = 'Sobrepeso';
-    colorCategoria = '#FFA500';
-  } else {
-    categoria = 'Obesidad';
-    colorCategoria = '#FF6B6B';
-  }
-
-  const imcInfo = document.createElement('div');
-  imcInfo.style.display = 'flex';
-  imcInfo.style.justifyContent = 'space-between';
-  imcInfo.style.alignItems = 'center';
-  imcInfo.style.marginBottom = '12px';
-  imcInfo.style.padding = '12px';
-  imcInfo.style.background = 'var(--bg-main)';
-  imcInfo.style.borderRadius = '8px';
-  imcInfo.innerHTML = `
-    <div>
-      <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px; font-weight: 600;">IMC Actual</div>
-      <div style="font-size: 1.5rem; font-weight: 700; color: ${colorCategoria};">${imcActual.toFixed(1)}</div>
-    </div>
-    <div style="text-align: right;">
-      <div style="font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px; font-weight: 600;">Categoría</div>
-      <div style="font-size: 0.9rem; font-weight: 700; color: ${colorCategoria};">${categoria}</div>
-    </div>
-  `;
-  card.insertBefore(imcInfo, canvasWrapper);
 
   setTimeout(() => {
     if (window.Chart) {
@@ -518,14 +343,14 @@ function crearGraficoIMC(medidas) {
           datasets: [{
             label: 'IMC',
             data: datosIMC,
-            borderColor: colorCategoria,
-            backgroundColor: colorCategoria + '20',
+            borderColor: '#FF9F43',
+            backgroundColor: '#FF9F4320',
             tension: 0.4,
             fill: true,
             pointRadius: 4,
             pointHoverRadius: 6,
             pointBackgroundColor: '#fff',
-            pointBorderColor: colorCategoria,
+            pointBorderColor: '#FF9F43',
             pointBorderWidth: 2,
             borderWidth: 2
           }]
@@ -539,90 +364,38 @@ function crearGraficoIMC(medidas) {
               backgroundColor: 'rgba(0,0,0,0.8)',
               padding: 12,
               cornerRadius: 8,
-              titleFont: { size: 12, weight: 'bold' },
-              bodyFont: { size: 14 },
               callbacks: {
                 title: function(context) {
                   const fecha = new Date(context[0].parsed.x);
                   return fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
                 },
-                label: function(context) {
-                  return `IMC: ${context.parsed.y.toFixed(1)}`;
-                }
+                label: function(context) { return `IMC: ${context.parsed.y}`; }
               }
             },
             annotation: {
               annotations: {
-                bajoPeso: {
-                  type: 'line',
-                  yMin: 18.5,
-                  yMax: 18.5,
-                  borderColor: '#00D4D4',
-                  borderWidth: 1,
-                  borderDash: [5, 5],
-                  label: {
-                    content: 'Bajo peso',
-                    enabled: false
-                  }
-                },
-                normal: {
-                  type: 'line',
-                  yMin: 25,
-                  yMax: 25,
-                  borderColor: '#FFA500',
-                  borderWidth: 1,
-                  borderDash: [5, 5],
-                  label: {
-                    content: 'Sobrepeso',
-                    enabled: false
-                  }
-                },
-                obesidad: {
-                  type: 'line',
-                  yMin: 30,
-                  yMax: 30,
-                  borderColor: '#FF6B6B',
-                  borderWidth: 1,
-                  borderDash: [5, 5],
-                  label: {
-                    content: 'Obesidad',
-                    enabled: false
-                  }
-                }
+                pesoNormal: { type: 'box', yMin: 18.5, yMax: 24.9, backgroundColor: 'rgba(61,213,152,0.08)', borderWidth: 0 },
+                sobrepeso:  { type: 'box', yMin: 25,   yMax: 29.9, backgroundColor: 'rgba(255,159,67,0.08)',  borderWidth: 0 },
+                lineaNormal:    { type: 'line', yMin: 18.5, yMax: 18.5, borderColor: 'rgba(61,213,152,0.5)',  borderWidth: 1, borderDash: [5,5] },
+                lineaSobrepeso: { type: 'line', yMin: 25,   yMax: 25,   borderColor: 'rgba(255,159,67,0.5)',  borderWidth: 1, borderDash: [5,5] },
+                lineaObesidad:  { type: 'line', yMin: 30,   yMax: 30,   borderColor: 'rgba(255,107,107,0.5)', borderWidth: 1, borderDash: [5,5] }
               }
             }
           },
           scales: {
             x: {
               type: 'time',
-              time: {
-                unit: 'day',
-                tooltipFormat: 'dd/MM',
-                displayFormats: { day: 'dd/MM' }
-              },
+              time: { unit: 'day', tooltipFormat: 'dd/MM', displayFormats: { day: 'dd/MM' } },
               grid: { display: false },
-              ticks: {
-                font: { size: 10 },
-                color: 'var(--text-secondary)'
-              }
+              ticks: { font: { size: 10 }, color: 'var(--text-secondary)' }
             },
             y: {
-              min: 15,
-              max: 35,
-              grid: {
-                color: 'rgba(0,0,0,0.05)',
-                drawBorder: false
-              },
-              ticks: {
-                font: { size: 10 },
-                color: 'var(--text-secondary)'
-              }
+              min: 15, max: 35,
+              grid: { color: 'rgba(0,0,0,0.05)', drawBorder: false },
+              ticks: { font: { size: 10 }, color: 'var(--text-secondary)' }
             }
           },
-          interaction: {
-            intersect: false,
-            mode: 'index'
-          }
+          interaction: { intersect: false, mode: 'index' }
         }
       });
     }
@@ -634,36 +407,23 @@ function crearGraficoIMC(medidas) {
 // ==================== SECCIÓN: HISTORIAL ====================
 function crearSeccionHistorial(medidas, nivel, contenido) {
   const section = document.createElement('div');
-  section.style.marginTop = '24px';
+  section.className = 'seg-historial-section';
 
   const header = document.createElement('div');
-  header.style.display = 'flex';
-  header.style.justifyContent = 'space-between';
-  header.style.alignItems = 'center';
-  header.style.marginBottom = '12px';
+  header.className = 'seg-historial-header';
 
   const titulo = document.createElement('h3');
+  titulo.className = 'seg-section-titulo';
   titulo.textContent = 'Historial';
-  titulo.style.fontSize = '1rem';
-  titulo.style.fontWeight = '700';
-  titulo.style.color = 'var(--text-secondary)';
-  titulo.style.textTransform = 'uppercase';
-  titulo.style.letterSpacing = '0.5px';
   header.appendChild(titulo);
 
   const contador = document.createElement('div');
-  contador.style.background = 'var(--bg-main)';
-  contador.style.padding = '4px 12px';
-  contador.style.borderRadius = '20px';
-  contador.style.fontSize = '0.75rem';
-  contador.style.fontWeight = '600';
-  contador.style.color = 'var(--text-secondary)';
+  contador.className = 'seg-historial-contador';
   contador.textContent = `${medidas.length} ${medidas.length === 1 ? 'registro' : 'registros'}`;
   header.appendChild(contador);
 
   section.appendChild(header);
 
-  // Lista de mediciones (últimas 10)
   const listaMediciones = medidas.slice().reverse().slice(0, 10);
   
   listaMediciones.forEach((medicion, idx) => {
@@ -673,21 +433,9 @@ function crearSeccionHistorial(medidas, nivel, contenido) {
 
   if (medidas.length > 10) {
     const verMas = document.createElement('button');
+    verMas.className = 'seg-btn-ver-mas';
     verMas.textContent = `Ver todas (${medidas.length - 10} más)`;
-    verMas.style.width = '100%';
-    verMas.style.padding = '12px';
-    verMas.style.marginTop = '8px';
-    verMas.style.background = 'var(--bg-main)';
-    verMas.style.border = 'none';
-    verMas.style.borderRadius = '8px';
-    verMas.style.fontSize = '0.85rem';
-    verMas.style.fontWeight = '600';
-    verMas.style.color = 'var(--text-secondary)';
-    verMas.style.cursor = 'pointer';
-    verMas.onclick = () => {
-      // TODO: Implementar vista expandida del historial
-      alert('Funcionalidad en desarrollo');
-    };
+    verMas.onclick = () => { alert('Funcionalidad en desarrollo'); };
     section.appendChild(verMas);
   }
 
@@ -697,44 +445,26 @@ function crearSeccionHistorial(medidas, nivel, contenido) {
 // ==================== ITEM: HISTORIAL ====================
 function crearItemHistorial(medicion, index, nivel, contenido) {
   const item = document.createElement('div');
-  item.style.background = 'var(--bg-card)';
-  item.style.padding = '12px';
-  item.style.marginBottom = '8px';
-  item.style.borderRadius = '10px';
-  item.style.boxShadow = 'var(--shadow-sm)';
-  item.style.display = 'flex';
-  item.style.justifyContent = 'space-between';
-  item.style.alignItems = 'center';
-  item.style.transition = 'all 0.2s ease';
+  item.className = 'seg-historial-item';
 
   const fecha = new Date(medicion.fecha);
-  const fechaFormateada = fecha.toLocaleDateString('es-ES', { 
-    day: '2-digit', 
-    month: 'short', 
-    year: 'numeric' 
-  });
+  const fechaFormateada = fecha.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
 
   const infoDiv = document.createElement('div');
-  infoDiv.style.flex = '1';
+  infoDiv.className = 'seg-historial-info';
   infoDiv.innerHTML = `
-    <div style="font-size: 0.85rem; font-weight: 600; color: var(--text-primary); margin-bottom: 4px;">${fechaFormateada}</div>
-    <div style="font-size: 0.75rem; color: var(--text-secondary); display: flex; gap: 12px; flex-wrap: wrap;">
-      ${medicion.peso ? `<span>⚖️ ${medicion.peso} kg</span>` : ''}
-      ${medicion.altura ? `<span>📏 ${medicion.altura} cm</span>` : ''}
-      ${medicion.brazo ? `<span>💪 ${medicion.brazo} cm</span>` : ''}
+    <div class="seg-historial-fecha">${fechaFormateada}</div>
+    <div class="seg-historial-datos">
+      ${medicion.peso    ? `<span>⚖️ ${medicion.peso} kg</span>`    : ''}
+      ${medicion.altura  ? `<span>📏 ${medicion.altura} cm</span>`  : ''}
+      ${medicion.brazo   ? `<span>💪 ${medicion.brazo} cm</span>`   : ''}
       ${medicion.cintura ? `<span>⭕ ${medicion.cintura} cm</span>` : ''}
     </div>
   `;
 
   const btnEliminar = document.createElement('button');
+  btnEliminar.className = 'seg-btn-eliminar';
   btnEliminar.textContent = '🗑️';
-  btnEliminar.style.background = 'transparent';
-  btnEliminar.style.border = 'none';
-  btnEliminar.style.fontSize = '1.1rem';
-  btnEliminar.style.cursor = 'pointer';
-  btnEliminar.style.padding = '8px';
-  btnEliminar.style.borderRadius = '6px';
-  btnEliminar.style.transition = 'all 0.2s ease';
   btnEliminar.onclick = (e) => {
     e.stopPropagation();
     if (confirm('¿Desea eliminar esta medición?')) {
@@ -744,138 +474,72 @@ function crearItemHistorial(medicion, index, nivel, contenido) {
     }
   };
 
-  btnEliminar.addEventListener('mouseenter', () => {
-    btnEliminar.style.background = 'var(--bg-main)';
-  });
-
-  btnEliminar.addEventListener('mouseleave', () => {
-    btnEliminar.style.background = 'transparent';
-  });
-
   item.appendChild(infoDiv);
   item.appendChild(btnEliminar);
-
-  item.addEventListener('mouseenter', () => {
-    item.style.boxShadow = 'var(--shadow-md)';
-    item.style.transform = 'translateY(-1px)';
-  });
-
-  item.addEventListener('mouseleave', () => {
-    item.style.boxShadow = 'var(--shadow-sm)';
-    item.style.transform = 'translateY(0)';
-  });
-
   return item;
 }
 
 // ==================== MODAL: AÑADIR MEDIDAS ====================
-export function mostrarModalMedidas(nivel, contenido) {
-  let anterior = document.getElementById('modalMedidas');
-  if (anterior) anterior.remove();
-
+function mostrarModalMedidas(nivel, contenido) {
   const modal = document.createElement('div');
-  modal.id = 'modalMedidas';
-  modal.style.position = 'fixed';
-  modal.style.top = '0';
-  modal.style.left = '0';
-  modal.style.width = '100%';
-  modal.style.height = '100%';
-  modal.style.background = 'rgba(0,0,0,0.5)';
-  modal.style.display = 'flex';
-  modal.style.alignItems = 'center';
-  modal.style.justifyContent = 'center';
-  modal.style.zIndex = '9999';
-  modal.style.backdropFilter = 'blur(4px)';
+  modal.className = 'modal-medidas-overlay';
 
   const caja = document.createElement('div');
-  caja.style.background = '#fff';
-  caja.style.padding = '24px';
-  caja.style.borderRadius = '16px';
-  caja.style.display = 'flex';
-  caja.style.flexDirection = 'column';
-  caja.style.gap = '16px';
-  caja.style.maxWidth = '90%';
-  caja.style.width = '400px';
-  caja.style.boxShadow = 'var(--shadow-lg)';
+  caja.className = 'modal-medidas-caja';
 
-  const titulo = document.createElement('h3');
-  titulo.textContent = 'Añadir Medidas';
-  titulo.style.fontSize = '1.3rem';
-  titulo.style.fontWeight = '700';
-  titulo.style.color = 'var(--text-primary)';
-  titulo.style.marginBottom = '8px';
-  caja.appendChild(titulo);
+  const tituloEl = document.createElement('h3');
+  tituloEl.className = 'seg-modal-titulo';
+  tituloEl.textContent = '📏 Nueva Medición';
+  caja.appendChild(tituloEl);
 
   // Fecha
+  const fechaContainer = document.createElement('div');
+  fechaContainer.className = 'seg-modal-fecha-container';
   const fechaLabel = document.createElement('label');
-  fechaLabel.textContent = 'Fecha';
-  fechaLabel.style.fontSize = '0.85rem';
-  fechaLabel.style.fontWeight = '600';
-  fechaLabel.style.color = 'var(--text-secondary)';
-  fechaLabel.style.marginBottom = '-8px';
+  fechaLabel.className = 'seg-modal-fecha-label';
+  fechaLabel.textContent = '📅 Fecha';
   const fecha = document.createElement('input');
   fecha.type = 'date';
-  fecha.value = new Date().toISOString().slice(0, 10);
-  fecha.style.width = '100%';
-  fecha.style.padding = '12px';
-  fecha.style.border = '1px solid var(--border-color)';
-  fecha.style.borderRadius = '8px';
-  fecha.style.fontSize = '1rem';
-  caja.appendChild(fechaLabel);
-  caja.appendChild(fecha);
+  fecha.className = 'seg-modal-fecha-input';
+  fecha.value = new Date().toISOString().split('T')[0];
+  fechaContainer.appendChild(fechaLabel);
+  fechaContainer.appendChild(fecha);
+  caja.appendChild(fechaContainer);
 
-  // Grid de inputs
-  const inputsGrid = document.createElement('div');
-  inputsGrid.style.display = 'grid';
-  inputsGrid.style.gridTemplateColumns = '1fr 1fr';
-  inputsGrid.style.gap = '12px';
-
+  // Campos de medidas
   const campos = [
-    { id: 'peso', label: 'Peso', unidad: 'kg', icon: '⚖️' },
-    { id: 'altura', label: 'Altura', unidad: 'cm', icon: '📏' },
-    { id: 'brazo', label: 'Brazo', unidad: 'cm', icon: '💪' },
-    { id: 'cintura', label: 'Cintura', unidad: 'cm', icon: '⭕' }
+    { id: 'peso',    label: 'Peso',    icon: '⚖️', unidad: 'kg' },
+    { id: 'altura',  label: 'Altura',  icon: '📏', unidad: 'cm' },
+    { id: 'brazo',   label: 'Brazo',   icon: '💪', unidad: 'cm' },
+    { id: 'cintura', label: 'Cintura', icon: '⭕', unidad: 'cm' }
   ];
 
+  const inputsGrid = document.createElement('div');
+  inputsGrid.className = 'medidas-inputs-grid';
+  
   const inputs = {};
-
   campos.forEach(campo => {
     const container = document.createElement('div');
-    container.style.display = 'flex';
-    container.style.flexDirection = 'column';
-    container.style.gap = '4px';
+    container.className = 'medida-campo';
 
     const label = document.createElement('label');
     label.textContent = `${campo.icon} ${campo.label}`;
-    label.style.fontSize = '0.85rem';
-    label.style.fontWeight = '600';
-    label.style.color = 'var(--text-secondary)';
+    label.className = 'medida-campo-label';
 
     const inputWrapper = document.createElement('div');
-    inputWrapper.style.position = 'relative';
+    inputWrapper.className = 'medida-input-wrapper';
 
     const input = document.createElement('input');
     input.type = 'number';
     input.placeholder = '0.0';
     input.min = '0';
     input.step = '0.1';
-    input.style.width = '100%';
-    input.style.padding = '12px';
-    input.style.paddingRight = '45px';
-    input.style.border = '1px solid var(--border-color)';
-    input.style.borderRadius = '8px';
-    input.style.fontSize = '1rem';
+    input.className = 'medida-input';
     inputs[campo.id] = input;
 
     const unidad = document.createElement('span');
     unidad.textContent = campo.unidad;
-    unidad.style.position = 'absolute';
-    unidad.style.right = '12px';
-    unidad.style.top = '50%';
-    unidad.style.transform = 'translateY(-50%)';
-    unidad.style.fontSize = '0.85rem';
-    unidad.style.color = 'var(--text-secondary)';
-    unidad.style.fontWeight = '600';
+    unidad.className = 'medida-unidad';
 
     inputWrapper.appendChild(input);
     inputWrapper.appendChild(unidad);
@@ -888,46 +552,26 @@ export function mostrarModalMedidas(nivel, contenido) {
 
   // Botones
   const botones = document.createElement('div');
-  botones.style.display = 'flex';
-  botones.style.gap = '12px';
-  botones.style.marginTop = '8px';
+  botones.className = 'seg-modal-botones';
 
   const btnCancelar = document.createElement('button');
   btnCancelar.textContent = 'Cancelar';
-  btnCancelar.style.flex = '1';
-  btnCancelar.style.padding = '12px';
-  btnCancelar.style.background = 'var(--bg-main)';
-  btnCancelar.style.color = 'var(--text-secondary)';
-  btnCancelar.style.border = 'none';
-  btnCancelar.style.borderRadius = '8px';
-  btnCancelar.style.fontSize = '0.95rem';
-  btnCancelar.style.fontWeight = '700';
-  btnCancelar.style.cursor = 'pointer';
+  btnCancelar.className = 'seg-btn-cancelar';
   btnCancelar.onclick = () => modal.remove();
 
   const btnGuardar = document.createElement('button');
   btnGuardar.textContent = 'Guardar';
-  btnGuardar.style.flex = '1';
-  btnGuardar.style.padding = '12px';
-  btnGuardar.style.background = 'var(--primary-mint)';
-  btnGuardar.style.color = 'white';
-  btnGuardar.style.border = 'none';
-  btnGuardar.style.borderRadius = '8px';
-  btnGuardar.style.fontSize = '0.95rem';
-  btnGuardar.style.fontWeight = '700';
-  btnGuardar.style.cursor = 'pointer';
+  btnGuardar.className = 'seg-btn-guardar';
   btnGuardar.onclick = () => {
     const nuevaMedida = {
-      fecha: fecha.value,
-      peso: inputs.peso.value,
-      altura: inputs.altura.value,
-      brazo: inputs.brazo.value,
+      fecha:   fecha.value,
+      peso:    inputs.peso.value,
+      altura:  inputs.altura.value,
+      brazo:   inputs.brazo.value,
       cintura: inputs.cintura.value
     };
-    
     nivel.hijos = nivel.hijos || [];
     nivel.hijos.push(nuevaMedida);
-    
     if (typeof window.guardarDatos === 'function') window.guardarDatos();
     modal.remove();
     if (typeof window.renderizar === 'function') window.renderizar();
