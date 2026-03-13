@@ -183,25 +183,42 @@ function renderDetalle(fs, fd, sesionDia) {
     btn.addEventListener('click', () => { rutaActual.length = 0; rutaActual.push(0, ...sesionDia.ruta); window.renderizar(); });
     detalleDiv.appendChild(btn);
 
-    sesionDia.ejercicios.forEach(ej => {
-      const p = document.createElement('div');
-      p.className = 'detalle-ejercicio-item';
+    // Extrae recursivamente todos los nodos que tienen series
+    function extraerEjerciciosConSeries(nodo, resultado = []) {
+      if (!nodo) return resultado;
+      if (Array.isArray(nodo.series) && nodo.series.length > 0) resultado.push(nodo);
+      (nodo.hijos || []).forEach(h => extraerEjerciciosConSeries(h, resultado));
+      return resultado;
+    }
 
-      // Calcular series totales, completadas y volumen
-      const series = ej.series || [];
-      const total = series.length;
-      const completadas = series.filter(s => s.completada).length;
-      const volumen = series.reduce((sum, s) => sum + ((parseFloat(s.peso) || 0) * (parseInt(s.reps) || 0)), 0);
+    const ejerciciosFlat = extraerEjerciciosConSeries({ hijos: sesionDia.ejercicios });
 
-      p.innerHTML = `
-        <span class="det-ej-nombre">${ej.nombre || 'Ejercicio sin nombre'}</span>
-        <span class="det-ej-stats">
-          ${total > 0 ? `<span class="det-series ${completadas === total && total > 0 ? 'det-series--ok' : ''}">${completadas}/${total}</span>` : ''}
-          ${volumen > 0 ? `<span class="det-vol">${Math.round(volumen)}<span class="det-vol-unit">kg</span></span>` : ''}
-        </span>
-      `;
-      detalleDiv.appendChild(p);
-    });
+    if (ejerciciosFlat.length === 0) {
+      // La sesión existe pero no tiene ejercicios con series aún
+      const v = document.createElement('div');
+      v.className = 'detalle-empty';
+      v.textContent = 'Sesión sin ejercicios registrados.';
+      detalleDiv.appendChild(v);
+    } else {
+      ejerciciosFlat.forEach(ej => {
+        const p = document.createElement('div');
+        p.className = 'detalle-ejercicio-item';
+
+        const series = ej.series || [];
+        const total = series.length;
+        const completadas = series.filter(s => s.completada).length;
+        const volumen = series.reduce((sum, s) => sum + ((parseFloat(s.peso) || 0) * (parseInt(s.reps) || 0)), 0);
+
+        p.innerHTML = `
+          <span class="det-ej-nombre">${ej.nombre || 'Ejercicio sin nombre'}</span>
+          <span class="det-ej-stats">
+            ${total > 0 ? `<span class="det-series ${completadas === total ? 'det-series--ok' : ''}">${completadas}/${total}</span>` : ''}
+            ${volumen > 0 ? `<span class="det-vol">${Math.round(volumen)}<span class="det-vol-unit">kg</span></span>` : ''}
+          </span>
+        `;
+        detalleDiv.appendChild(p);
+      });
+    }
   } else {
     const v = document.createElement('div');
     v.className = 'detalle-empty';
@@ -210,11 +227,13 @@ function renderDetalle(fs, fd, sesionDia) {
   }
 }
 
-  function renderDias() {
+function renderDias() {
     daysRow.innerHTML = '';
     mesEl.textContent = MESES_UP[new Date(primerDiaSemana).getMonth()];
     const hoyLocalStr = fStr(new Date());
     let btnHoy = null;
+    let datosHoy = null;
+    let datosBtnHoy = null;
 
     for (let i = 0; i < 7; i++) {
       const fd = new Date(primerDiaSemana);
@@ -229,12 +248,26 @@ function renderDetalle(fs, fd, sesionDia) {
       if (fs === hoyLocalStr) btn.classList.add('today');
 
       btn.innerHTML = `<span class="day-letter">${DIAS_LETRA[i]}</span><span class="day-number">${fd.getDate()}</span><span class="day-dot"></span>`;
-      btn.addEventListener('click', () => { diaSelStr = fs; renderDias(); renderDetalle(fs, fd, sesionDia); });
 
-      if (fs === hoyLocalStr) btnHoy = btn;
+      // Capturar fs/fd/sesionDia en closure para evitar problemas de scope
+      btn.addEventListener('click', ((fs, fd, sesionDia) => () => {
+        diaSelStr = fs;
+        renderDias();
+        renderDetalle(fs, fd, sesionDia);
+      })(fs, fd, sesionDia));
+
+      if (fs === hoyLocalStr) {
+        btnHoy = btn; datosHoy = { fs, fd, sesionDia };
+        datosBtnHoy = { fs, fd, sesionDia };
+      }
+
       daysRow.appendChild(btn);
     }
-    if (btnHoy) btnHoy.click();
+
+    // Mostrar detalle del día de hoy SIN llamar .click() para evitar recursión
+    if (datosBtnHoy) {
+      renderDetalle(datosHoy.fs, datosHoy.fd, datosHoy.sesionDia);
+    }
   }
 
   btnPrev.addEventListener('click', () => { primerDiaSemana.setDate(primerDiaSemana.getDate()-7); detalleDiv.innerHTML=''; renderDias(); });
@@ -381,218 +414,134 @@ function renderDetalle(fs, fd, sesionDia) {
   dashboard.appendChild(cardTop);
 
 // ==================== 7. DISTRIBUCIÓN MUSCULAR ====================
-const cardMuscular = crearCard('Distribución Muscular (30 días)', '');
+  const cardMuscular = crearCard('Distribución Muscular (30 días)', '');
 
-const grupoKeywords = {
-  'Pecho':   ['pecho','press','bench','fly','apert'],
-  'Espalda': ['espalda','remo','jalón','pull','dominada','row','lat'],
-  'Piernas': ['pierna','sentadilla','prensa','femoral','cuádric','zancada','squat','lunge','leg'],
-  'Hombros': ['hombro','press militar','elevación','deltoid','shoulder'],
-  'Bíceps':  ['bíceps','bicep','curl'],
-  'Tríceps': ['tríceps','tricep','extensión','dips'],
-  'Core':    ['abdomen','core','plancha','crunch','oblicuo'],
-};
-const musculoCounts = {};
-Object.keys(grupoKeywords).forEach(g => musculoCounts[g] = 0);
+  const grupoKeywords = {
+    'Pecho':   ['pecho','press','bench','fly','apert'],
+    'Espalda': ['espalda','remo','jalón','pull','dominada','row','lat'],
+    'Piernas': ['pierna','sentadilla','prensa','femoral','cuádric','zancada','squat','lunge','leg','cuad'],
+    'Hombros': ['hombro','press militar','elevación','deltoid','shoulder','militar'],
+    'Bíceps':  ['bíceps','bicep','curl'],
+    'Tríceps': ['tríceps','tricep','extensión','dips'],
+    'Core':    ['abdomen','core','plancha','crunch','oblicuo','abs'],
+  };
 
-ejerciciosTodos.filter(e => new Date(e.fecha) >= hace30Dias).forEach(e => {
-  const nl = (e.nombre || '').toLowerCase();
-  for (const [g, kws] of Object.entries(grupoKeywords)) {
-    if (kws.some(k => nl.includes(k))) { musculoCounts[g]++; break; }
-  }
-});
+  const musculoCounts = {};
+  Object.keys(grupoKeywords).forEach(g => musculoCounts[g] = 0);
 
-const maxM = Math.max(...Object.values(musculoCounts), 1);
+  ejerciciosTodos.filter(e => new Date(e.fecha) >= hace30Dias).forEach(e => {
+    const nl = (e.nombre || '').toLowerCase();
+    for (const [g, kws] of Object.entries(grupoKeywords)) {
+      if (kws.some(k => nl.includes(k))) { musculoCounts[g]++; break; }
+    }
+  });
 
-// Colores por intensidad (de transparente a verde)
-function muscleColor(grupo) {
-  const count = musculoCounts[grupo] || 0;
-  const pct = count / maxM;
-  if (pct === 0) return 'rgba(180,180,180,0.15)';
-  const alpha = 0.25 + pct * 0.75;
-  return `rgba(61,213,152,${alpha.toFixed(2)})`;
-}
-function muscleStroke(grupo) {
-  const count = musculoCounts[grupo] || 0;
-  return count > 0 ? 'rgba(61,213,152,0.8)' : 'rgba(150,150,150,0.2)';
-}
-function musclePct(grupo) {
-  const count = musculoCounts[grupo] || 0;
-  return count > 0 ? Math.round((count / maxM) * 100) + '%' : null;
-}
+  const maxM = Math.max(...Object.values(musculoCounts), 1);
 
-const muscleWrapper = document.createElement('div');
-muscleWrapper.className = 'muscle-body-wrapper';
+  const mintAlpha = (grupo) => {
+    const pct = (musculoCounts[grupo] || 0) / maxM;
+    if (pct === 0) return 'rgba(61,213,152,0)';
+    return `rgba(61,213,152,${(0.25 + pct * 0.45).toFixed(2)})`;
+  };
+  const musclePct = (grupo) => {
+    const c = musculoCounts[grupo] || 0;
+    return c > 0 ? Math.round((c / maxM) * 100) + '%' : null;
+  };
 
-// SVG del cuerpo humano con grupos musculares como paths
-muscleWrapper.innerHTML = `
-<div class="muscle-body-container">
-  <div class="muscle-body-side">
-    <div class="muscle-side-label">FRONTAL</div>
-    <svg viewBox="0 0 120 260" class="muscle-svg" xmlns="http://www.w3.org/2000/svg">
-      <!-- Cabeza -->
-      <ellipse cx="60" cy="18" rx="13" ry="16" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1.2"/>
-      <!-- Cuello -->
-      <rect x="54" y="32" width="12" height="10" rx="3" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- Torso base -->
-      <path d="M35,42 Q60,38 85,42 L88,110 Q60,115 32,110 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- PECHO -->
-      <path d="M37,44 Q50,41 60,43 Q60,43 60,60 Q50,63 37,60 Z"
-        fill="${muscleColor('Pecho')}" stroke="${muscleStroke('Pecho')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Pecho"/>
-      <path d="M83,44 Q70,41 60,43 Q60,43 60,60 Q70,63 83,60 Z"
-        fill="${muscleColor('Pecho')}" stroke="${muscleStroke('Pecho')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Pecho"/>
-      <!-- HOMBROS front -->
-      <ellipse cx="31" cy="50" rx="8" ry="11"
-        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Hombros"/>
-      <ellipse cx="89" cy="50" rx="8" ry="11"
-        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Hombros"/>
-      <!-- BÍCEPS front -->
-      <path d="M19,61 Q14,72 16,85 Q22,88 27,85 Q25,72 24,61 Z"
-        fill="${muscleColor('Bíceps')}" stroke="${muscleStroke('Bíceps')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Bíceps"/>
-      <path d="M101,61 Q106,72 104,85 Q98,88 93,85 Q95,72 96,61 Z"
-        fill="${muscleColor('Bíceps')}" stroke="${muscleStroke('Bíceps')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Bíceps"/>
-      <!-- TRÍCEPS front (lateral del brazo) -->
-      <path d="M16,85 Q13,98 15,108 Q20,110 24,108 Q22,96 22,85 Z"
-        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Tríceps"/>
-      <path d="M104,85 Q107,98 105,108 Q100,110 96,108 Q98,96 98,85 Z"
-        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Tríceps"/>
-      <!-- CORE / ABS -->
-      <path d="M42,63 Q60,60 78,63 L76,108 Q60,112 44,108 Z"
-        fill="${muscleColor('Core')}" stroke="${muscleStroke('Core')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Core"/>
-      <!-- Línea alba y separaciones abs -->
-      <line x1="60" y1="63" x2="60" y2="108" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
-      <line x1="44" y1="75" x2="76" y2="75" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
-      <line x1="44" y1="88" x2="76" y2="88" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
-      <line x1="44" y1="100" x2="76" y2="100" stroke="${muscleCounts['Core']>0?'rgba(61,213,152,0.4)':'rgba(150,150,150,0.15)'}" stroke-width="0.8"/>
-      <!-- PIERNAS front — cuádriceps -->
-      <path d="M36,112 Q30,135 31,162 Q40,167 50,163 Q54,138 52,112 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Piernas"/>
-      <path d="M84,112 Q90,135 89,162 Q80,167 70,163 Q66,138 68,112 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Piernas"/>
-      <!-- Gemelos front -->
-      <path d="M31,164 Q28,182 30,200 Q37,203 44,200 Q46,182 50,164 Z"
-        fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <path d="M89,164 Q92,182 90,200 Q83,203 76,200 Q74,182 70,164 Z"
-        fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- Pies -->
-      <ellipse cx="37" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <ellipse cx="83" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- Antebrazos -->
-      <path d="M15,108 Q11,124 13,136 Q18,138 22,136 Q24,124 22,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <path d="M105,108 Q109,124 107,136 Q102,138 98,136 Q96,124 98,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- Manos -->
-      <ellipse cx="15" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <ellipse cx="105" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+  const muscleWrapper = document.createElement('div');
+  muscleWrapper.style.cssText = 'position:relative;width:100%;max-width:320px;margin:0 auto;';
 
-      ${['Pecho','Hombros','Bíceps','Core','Piernas'].filter(g => musculoPct(g)).map(g => {
-        const positions = { 'Pecho':'60,52', 'Hombros':'60,44', 'Bíceps':'60,73', 'Core':'60,84', 'Piernas':'60,138' };
-        const [px,py] = (positions[g]||'60,50').split(',');
-        return `<text x="${px}" y="${py}" class="muscle-label-pct" text-anchor="middle">${musclePct(g)}</text>`;
-      }).join('')}
-    </svg>
-  </div>
+  // Imagen de fondo
+  const muscleImg = document.createElement('img');
+  muscleImg.src = 'muscle-map.png';
+  muscleImg.style.cssText = 'width:100%;display:block;';
+  muscleWrapper.appendChild(muscleImg);
 
-  <div class="muscle-body-side">
-    <div class="muscle-side-label">POSTERIOR</div>
-    <svg viewBox="0 0 120 260" class="muscle-svg" xmlns="http://www.w3.org/2000/svg">
-      <!-- Cabeza -->
-      <ellipse cx="60" cy="18" rx="13" ry="16" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1.2"/>
-      <!-- Cuello -->
-      <rect x="54" y="32" width="12" height="10" rx="3" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- Torso base -->
-      <path d="M35,42 Q60,38 85,42 L88,110 Q60,115 32,110 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- ESPALDA / DORSALES -->
-      <path d="M37,44 Q48,41 60,43 L58,80 Q46,85 36,78 Z"
-        fill="${muscleColor('Espalda')}" stroke="${muscleStroke('Espalda')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Espalda"/>
-      <path d="M83,44 Q72,41 60,43 L62,80 Q74,85 84,78 Z"
-        fill="${muscleColor('Espalda')}" stroke="${muscleStroke('Espalda')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Espalda"/>
-      <!-- Trapecio -->
-      <path d="M47,38 Q60,34 73,38 Q60,46 47,38 Z"
-        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1"
-        class="muscle-path" data-grupo="Hombros"/>
-      <!-- Espalda baja / lumbar -->
-      <path d="M42,80 Q60,85 78,80 L76,110 Q60,114 44,110 Z"
-        fill="${muscleColor('Espalda')}" stroke="${muscleStroke('Espalda')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Espalda"/>
-      <!-- HOMBROS posterior -->
-      <ellipse cx="31" cy="50" rx="8" ry="11"
-        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Hombros"/>
-      <ellipse cx="89" cy="50" rx="8" ry="11"
-        fill="${muscleColor('Hombros')}" stroke="${muscleStroke('Hombros')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Hombros"/>
-      <!-- TRÍCEPS posterior -->
-      <path d="M19,61 Q13,74 15,87 Q21,90 26,87 Q25,74 24,61 Z"
-        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Tríceps"/>
-      <path d="M101,61 Q107,74 105,87 Q99,90 94,87 Q95,74 96,61 Z"
-        fill="${muscleColor('Tríceps')}" stroke="${muscleStroke('Tríceps')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Tríceps"/>
-      <!-- Antebrazos -->
-      <path d="M15,108 Q11,124 13,136 Q18,138 22,136 Q24,124 22,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <path d="M105,108 Q109,124 107,136 Q102,138 98,136 Q96,124 98,108 Z" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- Manos -->
-      <ellipse cx="15" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <ellipse cx="105" cy="141" rx="5" ry="7" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <!-- PIERNAS posterior — femorales/glúteos -->
-      <path d="M36,112 Q30,136 32,162 Q41,167 50,163 Q53,138 52,112 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Piernas"/>
-      <path d="M84,112 Q90,136 88,162 Q79,167 70,163 Q67,138 68,112 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Piernas"/>
-      <!-- Glúteos -->
-      <path d="M36,110 Q44,107 52,110 Q52,122 44,125 Q36,122 36,110 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1" opacity="0.7"/>
-      <path d="M84,110 Q76,107 68,110 Q68,122 76,125 Q84,122 84,110 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1" opacity="0.7"/>
-      <!-- Gemelos -->
-      <path d="M31,164 Q27,182 30,200 Q37,204 44,200 Q47,182 50,164 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Piernas" opacity="0.7"/>
-      <path d="M89,164 Q93,182 90,200 Q83,204 76,200 Q73,182 70,164 Z"
-        fill="${muscleColor('Piernas')}" stroke="${muscleStroke('Piernas')}" stroke-width="1.2"
-        class="muscle-path" data-grupo="Piernas" opacity="0.7"/>
-      <!-- Pies -->
-      <ellipse cx="37" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
-      <ellipse cx="83" cy="206" rx="10" ry="6" fill="var(--bg-main)" stroke="var(--border-color)" stroke-width="1"/>
+  // SVG superpuesto con paths por grupo muscular
+  // viewBox basado en las dimensiones originales 507x960
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', '0 0 507 960');
+  svg.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;';
 
-      ${['Espalda','Hombros','Tríceps','Piernas'].filter(g => musclePct(g)).map(g => {
-        const positions = { 'Espalda':'60,62', 'Hombros':'60,44', 'Tríceps':'60,74', 'Piernas':'60,138' };
-        const [px,py] = (positions[g]||'60,50').split(',');
-        return `<text x="${px}" y="${py}" class="muscle-label-pct" text-anchor="middle">${musclePct(g)}</text>`;
-      }).join('')}
-    </svg>
-  </div>
-</div>
+  // Definición de paths por grupo muscular
+  // (coordenadas trazadas sobre imagen 507x960)
+  const musclePaths = [
+    // PECHO
+    { grupo: 'Pecho', d: 'M175,168 Q215,148 253,158 L250,235 Q212,252 175,235 Z' },
+    { grupo: 'Pecho', d: 'M330,168 Q290,148 253,158 L256,235 Q294,252 330,235 Z' },
+    // HOMBROS
+    { grupo: 'Hombros', d: 'M118,148 Q142,135 168,150 Q162,200 148,218 Q124,205 110,180 Z' },
+    { grupo: 'Hombros', d: 'M388,148 Q364,135 338,150 Q344,200 358,218 Q382,205 396,180 Z' },
+    // BÍCEPS
+    { grupo: 'Bíceps', d: 'M95,220 Q72,272 80,325 Q104,338 128,325 Q124,272 115,220 Z' },
+    { grupo: 'Bíceps', d: 'M410,220 Q433,272 424,325 Q400,338 376,325 Q380,272 390,220 Z' },
+    // TRÍCEPS
+    { grupo: 'Tríceps', d: 'M78,222 Q58,275 65,325 Q82,335 100,325 Q96,272 100,220 Z' },
+    { grupo: 'Tríceps', d: 'M428,222 Q448,275 441,325 Q424,335 406,325 Q410,272 406,220 Z' },
+    // CORE / ABS
+    { grupo: 'Core', d: 'M196,238 Q253,224 310,238 L305,388 Q253,400 200,388 Z' },
+    // OBLIQUES
+    { grupo: 'Core', d: 'M176,242 Q196,238 200,388 Q166,372 150,338 Q135,295 155,262 Z' },
+    { grupo: 'Core', d: 'M330,242 Q310,238 306,388 Q340,372 356,338 Q371,295 351,262 Z' },
+    // CUÁDRICEPS izq
+    { grupo: 'Piernas', d: 'M175,455 Q150,525 155,608 Q185,622 215,610 Q228,528 222,455 Z' },
+    // CUÁDRICEPS der
+    { grupo: 'Piernas', d: 'M330,455 Q355,525 350,608 Q320,622 290,610 Q277,528 283,455 Z' },
+    // TIBIALIS / SHIN izq
+    { grupo: 'Piernas', d: 'M162,614 Q152,672 158,730 Q175,738 192,730 Q196,672 194,614 Z' },
+    { grupo: 'Piernas', d: 'M342,614 Q352,672 346,730 Q329,738 312,730 Q308,672 310,614 Z' },
+  ];
 
-<!-- Leyenda -->
-<div class="muscle-legend">
-  ${Object.entries(musculoCounts).map(([g, c]) => `
-    <div class="muscle-legend-item">
-      <span class="muscle-legend-dot" style="background:${c>0?muscleColor(g):'rgba(150,150,150,0.2)'}; border: 1px solid ${muscleStroke(g)}"></span>
-      <span class="muscle-legend-name">${g}</span>
-      <span class="muscle-legend-count">${c > 0 ? c + '×' : '—'}</span>
-    </div>
-  `).join('')}
-</div>
-`;
+  musclePaths.forEach(({ grupo, d }) => {
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('fill', mintAlpha(grupo));
+    path.setAttribute('stroke', musculoCounts[grupo] > 0 ? 'rgba(61,213,152,0.6)' : 'none');
+    path.setAttribute('stroke-width', '1.5');
+    path.style.cursor = 'pointer';
+    path.style.transition = 'fill 0.2s';
 
-cardMuscular.appendChild(muscleWrapper);
-dashboard.appendChild(cardMuscular);
+    // Tooltip hover
+    const pct = musclePct(grupo);
+    if (pct) {
+      path.addEventListener('mouseenter', e => {
+        path.setAttribute('fill', mintAlpha(grupo).replace(/[\d.]+\)$/, v => (parseFloat(v)+0.2).toFixed(2)+')'));
+        // mostrar label
+        let tip = svg.querySelector('.muscle-tip');
+        if (!tip) { tip = document.createElementNS(svgNS, 'text'); tip.setAttribute('class','muscle-tip'); tip.style.cssText='font-size:28px;font-weight:700;fill:rgba(61,213,152,1);pointer-events:none;'; svg.appendChild(tip); }
+        const bb = path.getBBox();
+        tip.setAttribute('x', bb.x + bb.width/2);
+        tip.setAttribute('y', bb.y + bb.height/2 + 10);
+        tip.setAttribute('text-anchor','middle');
+        tip.textContent = `${grupo} ${pct}`;
+      });
+      path.addEventListener('mouseleave', () => {
+        path.setAttribute('fill', mintAlpha(grupo));
+        const tip = svg.querySelector('.muscle-tip');
+        if (tip) tip.textContent = '';
+      });
+    }
+
+    svg.appendChild(path);
+  });
+
+  muscleWrapper.appendChild(svg);
+
+  // Leyenda
+  const leyenda = document.createElement('div');
+  leyenda.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center;';
+  Object.entries(musculoCounts).forEach(([grupo, count]) => {
+    if (count === 0) return;
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;color:var(--text-secondary);';
+    item.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${mintAlpha(grupo).replace('0)', '1)')};display:inline-block;"></span>${grupo} <span style="color:var(--primary-mint)">${musclePct(grupo)}</span>`;
+    leyenda.appendChild(item);
+  });
+
+  cardMuscular.appendChild(muscleWrapper);
+  cardMuscular.appendChild(leyenda);
+  dashboard.appendChild(cardMuscular);
 
   // ==================== 8. RÉCORDS PERSONALES ====================
   const cardRecords = crearCard('🏆 Récords Personales', '');
