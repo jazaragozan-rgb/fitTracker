@@ -1,0 +1,683 @@
+/* ============================================================
+   calendario.css — Estilos del módulo Calendario
+   Depende de: style.css (variables :root y estilos base)
+   Incluir en subindex.html DESPUÉS de style.css:
+   <link rel="stylesheet" href="calendario.css">
+   ============================================================ */
+
+
+/* ═══════════════════════════════════════
+   SUBHEADER DEL CALENDARIO
+═══════════════════════════════════════ */
+
+.cal-subheader-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  width: 100%;
+  gap: 12px;
+  padding: 8px 12px 4px 12px;
+  position: relative;
+}
+.cal-subheader-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: 1;
+}
+.cal-subheader-right {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 70px;
+  min-width: 180px;
+  flex: 1;
+  align-items: flex-end;
+}
+.cal-selector-vista {
+  display: flex;
+  padding-bottom: 2px;
+  height: 70px;
+}
+.cal-titulo-nivel {
+  position: absolute;
+  left: 50%;
+  top: 8px;
+  transform: translateX(-50%);
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--primary-mint);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Botones de selector de vista mensual/semanal */
+.calendario-vista-selector {
+  display: flex;
+  background: rgba(0,0,0,0.04);
+  border-radius: 8px;
+  padding: 2px;
+  box-shadow: var(--neu-in-sm);
+}
+.calendario-vista-btn {
+  padding: 4px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: transparent;
+  color: var(--text-secondary);
+  box-shadow: none;
+  height: auto;
+}
+.calendario-vista-btn.active {
+  background: var(--primary-mint);
+  color: white;
+  box-shadow: 2px 2px 6px rgba(61,213,152,0.35);
+}
+
+/* Botón "Hoy" */
+.btn-hoy-calendario {
+  height: 22px;
+  padding: 0 12px;
+  background: var(--primary-mint);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 2px 2px 6px rgba(61,213,152,0.3);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.btn-hoy-calendario:hover,
+.btn-hoy-calendario.cal-btn-hoy--hover {
+  background: var(--mint-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Selector de mes */
+.selector-mes-calendario {
+  width: 100%;
+  height: 22px;
+  padding: 0 8px;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  background: #e8edf0;
+  color: var(--text-primary);
+  cursor: pointer;
+  box-shadow: var(--neu-in-sm);
+  flex-shrink: 0;
+  margin: 0;
+}
+.selector-mes-calendario:focus {
+  outline: none;
+  box-shadow: var(--neu-in);
+}
+
+
+/* ═══════════════════════════════════════
+   CONTENEDOR PRINCIPAL
+═══════════════════════════════════════ */
+
+.calendario-container {
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+.calendario-container.cal-padding { padding: 16px; }
+
+
+/* ═══════════════════════════════════════
+   CALENDARIO MINI (dashboard — botones día)
+═══════════════════════════════════════ */
+
+.calendario-wrapper { width: 100%; }
+
+.fila-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  width: 100%;
+}
+.week-nav {
+  background: var(--bg-card);
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  cursor: pointer;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.1), -2px -2px 6px rgba(255,255,255,0.9);
+  transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.week-nav:hover { color: var(--primary-mint); }
+.week-nav:active { box-shadow: inset 2px 2px 5px rgba(0,0,0,0.1), inset -1px -1px 4px rgba(255,255,255,0.8); }
+
+.days-row {
+  display: flex;
+  flex: 1;
+  gap: 8px;
+  justify-content: space-between;
+}
+.nombre-mes {
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  color: var(--text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  text-align: left !important;
+  margin-bottom: 10px;
+}
+.day-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 7px 2px;
+  border: none;
+  border-radius: 12px;
+  background: var(--bg-card);
+  cursor: pointer;
+  min-height: 60px;
+  box-shadow: 3px 3px 8px rgba(0,0,0,0.10), -2px -2px 6px rgba(255,255,255,0.95);
+  transition: box-shadow 0.2s ease;
+}
+.day-btn:hover {
+  box-shadow: 4px 4px 10px rgba(0,0,0,0.13), -3px -3px 8px rgba(255,255,255,0.98);
+}
+.day-btn.selected {
+  box-shadow: inset 3px 3px 7px rgba(0,0,0,0.14), inset -2px -2px 5px rgba(255,255,255,0.80);
+  background: var(--bg-main);
+}
+.day-letter {
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+.day-number {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1;
+}
+.day-btn.done .day-letter,
+.day-btn.done .day-number { color: var(--primary-mint); }
+.day-btn.today .day-letter,
+.day-btn.today .day-number { color: var(--primary-mint); }
+
+
+/* ═══════════════════════════════════════
+   VISTA MENSUAL — GRID
+═══════════════════════════════════════ */
+
+.cal-mes-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-sm);
+}
+.cal-mes-titulo {
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+.cal-progress-bar {
+  height: 6px;
+  background: var(--bg-main);
+  border-radius: 3px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.cal-progress-bar--sesion { height: 4px; margin-bottom: 4px; }
+.cal-progress-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+.cal-dias-semana {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+.cal-dia-semana-label {
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  padding: 4px;
+}
+.cal-dias-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-dia-vacio {
+  padding: 8px;
+  min-height: 50px;
+  border-radius: 8px;
+}
+.cal-dia-celda {
+  cursor: pointer;
+  min-height: 50px;
+  height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  border-radius: 8px;
+  padding: 4px 2px;
+  transition: all 0.2s ease;
+}
+.cal-dia-celda.cal-dia--hoy-con-sesion {
+  background: var(--primary-mint);
+  color: #ffffff;
+  font-weight: 700;
+  box-shadow: var(--shadow-md);
+}
+.cal-dia-celda.cal-dia--hoy {
+  border: 2px solid var(--primary-mint);
+  color: var(--primary-mint);
+  font-weight: 700;
+}
+.cal-dia-celda.cal-dia--con-sesion {
+  background: var(--secondary-cyan);
+  color: #ffffff;
+  font-weight: 600;
+}
+.cal-dia-numero { font-size: 1rem; margin-bottom: 4px; }
+
+/* Indicadores (puntos) */
+.cal-indicadores {
+  display: flex;
+  gap: 3px;
+  margin-top: 4px;
+  justify-content: center;
+}
+.cal-punto { width: 6px; height: 6px; border-radius: 50%; transition: all 0.2s ease; }
+.cal-punto--completada { background: #4CAF50; box-shadow: 0 0 4px rgba(76,175,80,0.6); }
+.cal-punto--pendiente  { background: #FFA500; box-shadow: 0 0 4px rgba(255,165,0,0.6); }
+
+/* Badges de estado en celda mensual */
+.cal-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-top: 4px;
+  border: 1px solid transparent;
+}
+.cal-badge--completo  { background: rgba(76,175,80,0.2);   color: #4CAF50; border-color: #4CAF50; }
+.cal-badge--parcial   { background: rgba(255,193,7,0.2);   color: #F57C00; border-color: #F57C00; }
+.cal-badge--pendiente { background: rgba(255,165,0,0.2);   color: #FF9800; border-color: #FF9800; }
+
+/* Card de mes (legacy) */
+.calendario-mes-card {
+  background: #e8edf0;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  padding: 16px;
+  box-shadow: var(--neu-out-sm);
+}
+
+
+/* ═══════════════════════════════════════
+   VISTA SEMANAL
+═══════════════════════════════════════ */
+
+#encabezadoSemanaFijo {
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: var(--topbar-height);
+  z-index: 89;
+  background: #e8edf0;
+  padding: 0 16px 12px 16px;
+}
+.calendario-nav-semana {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: #e8edf0;
+  border-radius: 14px;
+  box-shadow: var(--neu-out-sm);
+}
+.calendario-btn-semana {
+  padding: 8px;
+  width: 44px;
+  height: 44px;
+  background: #e8edf0;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.2rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+  color: var(--primary-mint);
+  box-shadow: var(--neu-out-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.calendario-btn-semana:hover,
+.calendario-btn-semana.cal-btn-nav--hover {
+  box-shadow: var(--neu-in-sm);
+  background: var(--primary-mint);
+  color: #ffffff;
+}
+.calendario-titulo-semana {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: var(--primary-mint);
+  text-align: center;
+  flex: 1;
+}
+.calendario-dias-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+.calendario-dia-card {
+  background: #e8edf0;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: var(--neu-out-sm);
+  transition: box-shadow 0.2s ease;
+}
+.calendario-dia-card:hover { box-shadow: var(--neu-out); }
+.calendario-dia-card.hoy  { box-shadow: var(--neu-in-sm); }
+
+.calendario-dia-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid rgba(0,0,0,0.04);
+}
+.calendario-dia-nombre {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+}
+.calendario-dia-nombre.hoy { color: var(--primary-mint); }
+.calendario-dia-numero {
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--text-primary);
+  line-height: 1;
+  text-align: left;
+}
+.calendario-dia-numero.hoy { color: var(--primary-mint); }
+
+.calendario-sesion-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  box-shadow: var(--neu-out-sm);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.calendario-sesion-badge.cal-badge--completo  { background: rgba(76,175,80,0.2);  color: #4CAF50; }
+.calendario-sesion-badge.cal-badge--parcial   { background: rgba(255,193,7,0.2);  color: #F57C00; }
+.calendario-sesion-badge.cal-badge--pendiente { background: rgba(255,165,0,0.2);  color: #FF9800; }
+
+.calendario-sesion-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+  background: #e8edf0;
+  box-shadow: var(--neu-out-sm);
+  cursor: pointer;
+  transition: box-shadow 0.2s ease;
+}
+.calendario-sesion-item:hover { box-shadow: var(--neu-in-sm); }
+
+/* Sesión semanal — partes internas */
+.cal-sesion-item-semanal   { transition: box-shadow 0.2s ease; }
+.cal-sesion-estado-icon    { font-size: 1.1rem; flex-shrink: 0; }
+.cal-sesion-info           { flex: 1; }
+.cal-sesion-nombre-semanal { font-weight: 700; font-size: 0.9rem; color: var(--text-primary); }
+.cal-sesion-cant-ejercicios{ font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+.cal-sesion-duracion {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--bg-main);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 4px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cal-sesion-estado { font-size: 0.85rem; font-weight: 700; flex-shrink: 0; }
+.cal-sin-sesiones { text-align: center; padding: 20px; color: var(--text-light); font-size: 0.9rem; }
+.cal-sin-sesiones-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.3; }
+
+
+/* ═══════════════════════════════════════
+   MODAL INFO DÍA
+═══════════════════════════════════════ */
+
+.cal-modal-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+.cal-modal {
+  background: var(--bg-card);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  width: min(480px, 90vw);
+}
+.cal-modal-titulo {
+  margin-bottom: 20px;
+  color: var(--primary-mint);
+  font-size: 1.2rem;
+  text-align: center;
+  font-weight: 700;
+}
+.cal-modal-botones {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* Info periodo en modal */
+.cal-info-periodo {
+  background: var(--bg-main);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  border: 2px solid var(--primary-mint);
+}
+.cal-info-periodo-titulo {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-meso-info { margin-bottom: 0; }
+.cal-meso-info.cal-meso-info--con-borde {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.cal-micro-info { margin-top: 4px; }
+.cal-info-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-info-nombre { font-weight: 700; color: var(--text-primary); font-size: 0.95rem; margin: 2px 0; }
+.cal-info-rango  { font-size: 0.8rem; color: var(--text-secondary); }
+
+.cal-sin-info-periodo {
+  background: var(--bg-main);
+  padding: 16px;
+  border-radius: 12px;
+  margin-bottom: 16px;
+  text-align: center;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+/* Sesiones en modal */
+.cal-sesiones-titulo {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-sesion-modal-item {
+  background: var(--bg-main);
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+}
+.cal-sesion-modal-nombre {
+  font-weight: 700;
+  margin-bottom: 8px;
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+}
+.cal-sesion-modal-nombre--hover {
+  background: var(--primary-mint);
+  color: #ffffff;
+}
+.cal-sesion-modal-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.cal-sesion-modal-cant { font-size: 0.85rem; opacity: 0.8; }
+.cal-sesion-fecha-input {
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary-mint);
+  background: var(--bg-card);
+}
+.cal-sesion-dur-label {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  background: var(--bg-main);
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 4px;
+  white-space: nowrap;
+}
+
+/* Descanso y sin sesiones en modal */
+.cal-descanso {
+  text-align: center;
+  padding: 24px;
+  color: var(--text-secondary);
+}
+.cal-descanso-icon      { font-size: 2.5rem; margin-bottom: 8px; }
+.cal-descanso-titulo    { font-size: 1rem; font-weight: 700; margin-bottom: 4px; }
+.cal-descanso-subtitulo { font-size: 0.85rem; color: var(--text-light); }
+.cal-sin-sesiones-modal {
+  text-align: center;
+  padding: 20px;
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+.cal-sin-sesiones-modal-icon { font-size: 2rem; margin-bottom: 8px; opacity: 0.4; }
+
+/* Botones de acción del modal */
+.cal-btn-crear-sesion,
+.cal-btn-ir-entrenamiento {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.cal-btn-crear-sesion {
+  background: var(--primary-mint);
+  color: white;
+  box-shadow: 3px 3px 8px rgba(61,213,152,0.35);
+}
+.cal-btn-crear-sesion--hover,
+.cal-btn-crear-sesion:hover { background: var(--mint-dark); }
+
+.cal-btn-ir-entrenamiento {
+  background: #e8edf0;
+  color: var(--text-secondary);
+  box-shadow: var(--neu-out-sm);
+}
+.cal-btn-ir-entrenamiento--hover,
+.cal-btn-ir-entrenamiento:hover { box-shadow: var(--neu-in-sm); }
