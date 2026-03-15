@@ -1,15 +1,14 @@
 // ==================== IMPORTS ====================
-import { auth, db, onAuthStateChanged } from './auth.js';
+import { auth, db, onAuthStateChanged } from './core/auth.js';
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { renderizarDashboard } from "./dashboard.js";
-import { renderizarSeguimiento } from "./seguimiento.js";
-import { renderizarCalendario } from "./calendario.js";
-import { iniciarEntrenamiento } from './live.js';
-import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./modals.js";
-import { iniciarTimer, restaurarTimer } from "./timer.js";
-import exercises from "./exercises.js";
-import { renderizarNutricion } from "./nutricion.js";
-import { fetchAllExercises, searchExercisesByName } from "./exercises.js";
+import { renderizarDashboard } from "./modules/dashboard/dashboard.js";
+import { renderizarSeguimiento } from "./modules/seguimiento/seguimiento.js";
+import { renderizarCalendario } from "./modules/calendario/calendario.js";
+import { iniciarEntrenamiento } from './modules/live/live.js';
+import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "./shared/ui.js";
+import { iniciarTimer, restaurarTimer } from "./shared/timer.js";
+import { fetchAllExercises, searchExercisesByName } from "./modules/exercises/exercises.js";
+import { renderizarNutricion } from "./modules/nutricion/nutricion.js";
 
 // ==================== HELPERS DOM / UTIL ====================
 const $ = id => document.getElementById(id);

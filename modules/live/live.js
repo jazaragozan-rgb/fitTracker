@@ -2,7 +2,7 @@
 // Lógica para el entrenamiento en vivo nueva
 
 // Importar funciones del timer
-import { iniciarTimer } from './timer.js';
+import { iniciarTimer } from '../../shared/timer.js';
 
 // ==================== FUNCIONES DE ESTADÍSTICAS ====================
 
