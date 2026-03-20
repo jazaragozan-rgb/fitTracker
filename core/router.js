@@ -290,4 +290,5 @@ export function init() {
   // Exponer globalmente para compatibilidad con módulos legacy
   window.renderizar   = renderizar;
   window.rutaActual   = rutaActual;
+  window.abrirBuscadorEjercicios = abrirBuscadorEjercicios;
 }

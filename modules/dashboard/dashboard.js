@@ -298,22 +298,56 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
     detalleDiv.appendChild(titulo);
 
     if (sesionDia) {
-      const ejs = sesionDia.ejercicios || [];
-      ejs.slice(0,5).forEach(ej => {
-        const series = ej.series || [];
-        const completadas = series.filter(s => s.completada).length;
-        const total       = series.length;
-        const volumen     = calcularVolumen(series);
-        const p = document.createElement('div'); p.className='cal-detalle-item';
-        p.innerHTML = `<span class="det-nombre">${ej.nombre || '(sin nombre)'}</span>
-          <span class="det-meta">
-            ${total > 0 ? `<span class="det-series${completadas===total?' det-series--ok':''}">${completadas}/${total}</span>` : ''}
-            ${volumen > 0 ? `<span class="det-vol">${Math.round(volumen)}<span class="det-vol-unit">kg</span></span>` : ''}
-          </span>`;
-        detalleDiv.appendChild(p);
+      // Botón con nombre de la sesión para navegar a ella
+      const btn = document.createElement('button');
+      btn.textContent = sesionDia.nombre || 'Ver sesión';
+      btn.className = 'btn-sesion';
+      btn.style.cssText = 'margin-bottom:8px;width:100%;';
+      btn.addEventListener('click', () => {
+        rutaActual.length = 0;
+        rutaActual.push(0, ...sesionDia.ruta);
+        window.renderizar?.();
       });
+      detalleDiv.appendChild(btn);
+
+      // Extraer ejercicios (pueden estar en hijos directos o un nivel más abajo)
+      const ejerciciosFlat = [];
+      (sesionDia.ejercicios || []).forEach(bloque => {
+        if (Array.isArray(bloque.series) && bloque.series.length > 0) {
+          ejerciciosFlat.push(bloque);
+        }
+        (bloque.hijos || []).forEach(ej => {
+          if (Array.isArray(ej.series) && ej.series.length > 0) {
+            ejerciciosFlat.push(ej);
+          }
+        });
+      });
+
+      if (ejerciciosFlat.length === 0) {
+        const v = document.createElement('div');
+        v.className = 'detalle-empty';
+        v.textContent = 'Sesión sin ejercicios registrados.';
+        detalleDiv.appendChild(v);
+      } else {
+        ejerciciosFlat.slice(0, 5).forEach(ej => {
+          const series      = ej.series || [];
+          const completadas = series.filter(s => s.completada).length;
+          const total       = series.length;
+          const volumen     = calcularVolumen(series);
+          const p = document.createElement('div'); p.className = 'cal-detalle-item';
+          p.innerHTML = `
+            <span class="det-nombre">${ej.nombre || '(sin nombre)'}</span>
+            <span class="det-meta">
+              ${total > 0 ? `<span class="det-series${completadas === total ? ' det-series--ok' : ''}">${completadas}/${total}</span>` : ''}
+              ${volumen > 0 ? `<span class="det-vol">${Math.round(volumen)}<span class="det-vol-unit">kg</span></span>` : ''}
+            </span>`;
+          detalleDiv.appendChild(p);
+        });
+      }
     } else {
-      const v=document.createElement('div'); v.className='detalle-empty'; v.textContent='Sin entreno este día.';
+      const v = document.createElement('div');
+      v.className = 'detalle-empty';
+      v.textContent = 'Sin entreno este día.';
       detalleDiv.appendChild(v);
     }
   };
