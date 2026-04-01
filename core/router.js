@@ -161,8 +161,8 @@ function _buildSubheaderNivel(nivel) {
   const cont = document.createElement('div');
   cont.id = 'subHeaderButtons';
 
-  // Botón volver (niveles 2–4)
-  if (rutaActual.length >= 2 && rutaActual.length <= 4) {
+  // Botón volver (niveles 1–4)
+  if (rutaActual.length >= 1 && rutaActual.length <= 4) {
     const backBtn = document.createElement('button');
     backBtn.className = 'btn-back-subheader';
     backBtn.innerHTML = '⬅';
@@ -182,8 +182,8 @@ function _buildSubheaderNivel(nivel) {
   addBtn.onclick = () => _onAnadir(nivel);
   cont.appendChild(addBtn);
 
-  // Botón buscar ejercicio (solo nivel 4)
-  if (rutaActual.length === 4) {
+  // Botón buscar ejercicio (niveles 1–4)
+  if (rutaActual.length = 4) {
     const searchBtn = document.createElement('button');
     searchBtn.textContent = '🔍';
     searchBtn.className   = 'btn-search';

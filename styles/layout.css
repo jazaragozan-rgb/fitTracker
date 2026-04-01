@@ -20,7 +20,6 @@ header {
   color: var(--text-primary);
   padding: 0 14px;
   height: var(--header-height);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   z-index: 100;
 }
 
@@ -143,6 +142,7 @@ header {
   box-shadow: var(--neu-out-sm);
   transition: all 0.2s ease;
   letter-spacing: 0.3px;
+  width: 150px;
 }
 .header-btn:hover  { background: var(--mint-dark); box-shadow: 2px 2px 5px rgba(61,213,152,0.4); }
 
