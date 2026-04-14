@@ -38,7 +38,7 @@ function ajustarPaddingContenido() {
   const subHeaderEl = document.getElementById('subHeader');
   const offsetTop   = (headerEl    ? headerEl.offsetHeight    : 48)
                     + (subHeaderEl ? subHeaderEl.offsetHeight : 60);
-  contenido.style.paddingTop = `${offsetTop}px`;
+  contenido.style.setProperty('padding-top', `${offsetTop}px`, 'important');
   contenido.style.marginTop  = '0';
 }
 

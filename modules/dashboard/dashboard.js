@@ -504,7 +504,7 @@ function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard) {
         plugins:{legend:{display:false}, tooltip:{backgroundColor:'rgba(26,29,35,0.92)',padding:10,
           callbacks:{label:ctx=>`${ctx.parsed.y} kg`, title:items=>new Date(items[0].raw.x).toLocaleDateString('es-ES',{day:'2-digit',month:'short'})}}},
         scales:{ x:{type:'time',time:{unit:'day'},ticks:{font:{size:11},color:'#6b7280'},grid:{display:false},border:{display:false}},
-                 y:{beginAtZero:false,ticks:{font:{size:11},color:'#9ca3af',callback:v=>`${v}kg`},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}} } }
+                 y:{beginAtZero:false,ticks:{font:{size:11},color:'#9ca3af',callback:v=>`${Math.floor(v)}kg`},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}} } }
     });
   };
 
@@ -515,4 +515,92 @@ function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard) {
     cardProgreso.innerHTML += '<p class="empty-state">Añade ejercicios con series para ver su progreso</p>';
   }
   dashboard.appendChild(cardProgreso);
+
+  // ══════════════════════════════════════════════════════════
+  // 9. NUTRICIÓN (COMPACTO)
+  // ══════════════════════════════════════════════════════════
+  const nivelNutricion = datos[3]; // Nutrición está en índice 3
+  _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
+}
+
+// ── Card: Nutrición compacta ──────────────────────────────────
+function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyStr) {
+  const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
+  
+  const registrosHoy = (nivelNutricion.hijos || []).filter(r => r.fecha === hoyStr);
+  const totales = _calcularTotalNutricion(registrosHoy);
+  
+  // Card resumen calorías compacto
+  const cardCalories = crearCard('Nutrición de Hoy', '');
+  cardCalories.style.cssText = (cardCalories.style.cssText || '') + 'padding: 12px;';
+  
+  const caloriesSummary = document.createElement('div');
+  caloriesSummary.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:12px;';
+  
+  const caloriesCircle = document.createElement('div');
+  caloriesCircle.style.cssText = 'width:80px;min-width:80px;height:80px;border-radius:50%;background:var(--bg-secondary);display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--primary-mint);';
+  const meta = METAS_DIARIAS.calorias;
+  const consumidas = totales.calorias;
+  const pct = Math.min(100, (consumidas / meta) * 100);
+  caloriesCircle.innerHTML = `<div style="font-size:1.2rem;font-weight:900;color:var(--text-primary);">${Math.round(consumidas)}</div><div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);">kcal</div>`;
+  
+  const caloriesInfo = document.createElement('div');
+  caloriesInfo.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;';
+  const restantes = Math.max(0, meta - consumidas);
+  caloriesInfo.innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:0.75rem;">
+      <span style="color:var(--text-secondary);">Meta</span>
+      <span style="font-weight:600;color:var(--text-primary);">${meta} kcal</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;font-size:0.75rem;">
+      <span style="color:var(--text-secondary);">Restante</span>
+      <span style="font-weight:600;color:var(--primary-mint);">${Math.round(restantes)} kcal</span>
+    </div>
+    <div style="width:100%;height:6px;background:var(--border-color);border-radius:3px;overflow:hidden;">
+      <div style="width:${pct}%;height:100%;background:var(--primary-mint);transition:width 0.3s ease;"></div>
+    </div>
+  `;
+  
+  caloriesSummary.append(caloriesCircle, caloriesInfo);
+  cardCalories.appendChild(caloriesSummary);
+  
+  // Macros compactas
+  const macrosGrid = document.createElement('div');
+  macrosGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;';
+  
+  const macros = [
+    { nombre: 'Proteínas', valor: totales.proteinas, meta: METAS_DIARIAS.proteinas, unidad: 'g', color: '#FF6B6B', icono: '💪' },
+    { nombre: 'Carbs', valor: totales.carbohidratos, meta: METAS_DIARIAS.carbohidratos, unidad: 'g', color: '#4FC3F7', icono: '🍞' },
+    { nombre: 'Grasas', valor: totales.grasas, meta: METAS_DIARIAS.grasas, unidad: 'g', color: '#FFB74D', icono: '🥑' }
+  ];
+  
+  macros.forEach(macro => {
+    const macroBox = document.createElement('div');
+    macroBox.style.cssText = 'background:var(--bg-secondary);border-radius:8px;padding:8px;text-align:center;';
+    const pctMacro = Math.min(100, (macro.valor / macro.meta) * 100);
+    macroBox.innerHTML = `
+      <div style="font-size:0.85rem;margin-bottom:4px;">${macro.icono}</div>
+      <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">${macro.nombre}</div>
+      <div style="font-size:0.9rem;font-weight:700;color:${macro.color};margin-bottom:4px;">${Math.round(macro.valor)}</div>
+      <div style="font-size:0.65rem;color:var(--text-light);">de ${macro.meta}${macro.unidad}</div>
+      <div style="width:100%;height:4px;background:rgba(0,0,0,0.05);border-radius:2px;overflow:hidden;margin-top:4px;">
+        <div style="width:${pctMacro}%;height:100%;background:${macro.color};"></div>
+      </div>
+    `;
+    macrosGrid.appendChild(macroBox);
+  });
+  
+  cardCalories.appendChild(macrosGrid);
+  dashboard.appendChild(cardCalories);
+}
+
+// ── Helper: calcular totales de nutrición ──────────────────────
+function _calcularTotalNutricion(registros) {
+  return (registros || []).reduce((acc, r) => {
+    acc.calorias      += r.calorias      || 0;
+    acc.proteinas     += r.proteinas     || 0;
+    acc.carbohidratos += r.carbohidratos || 0;
+    acc.grasas        += r.grasas        || 0;
+    return acc;
+  }, { calorias: 0, proteinas: 0, carbohidratos: 0, grasas: 0 });
 }

@@ -43,22 +43,60 @@ export function renderizarNivel4(nivel, contenido, rutaActual) {
   const offsetTop   = (headerEl?.offsetHeight || 48) + (subHeaderEl?.offsetHeight || 60);
 
   const wrapper = document.createElement('div');
-  wrapper.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;z-index:1;padding-top:${offsetTop}px;`;
+  wrapper.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;z-index:1;`;
 
   // Banda del timer de sesión
   wrapper.appendChild(crearTimerSesionBanda(rutaActual.slice(0, 4)));
 
   // Zona scrolleable
   const zonaScroll = document.createElement('div');
-  zonaScroll.style.cssText = 'flex:1;overflow-y:auto;padding:12px;padding-bottom:80px;background:var(--bg-main);';
+  zonaScroll.style.cssText = `flex:1;overflow-y:auto;padding:${offsetTop + 12}px 12px 80px;`;
 
   (nivel.hijos || []).forEach((ejercicio, index) => {
     zonaScroll.appendChild(crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual));
   });
 
   wrapper.appendChild(zonaScroll);
-  contenido.style.padding = '0';
   contenido.appendChild(wrapper);
+
+  // Exponer zonaScroll para guardar scroll en checks
+  window.zonaScroll = zonaScroll;
+
+  // Función para renderizar guardando scroll
+  window.renderConScroll = () => {
+    // Guardar el index del ejercicio en la parte superior
+    let topIndex = -1;
+    let topEjercicioNombre = '';
+    if (window.zonaScroll) {
+      const rect = window.zonaScroll.getBoundingClientRect();
+      const topVisible = rect.top;
+      const headers = window.zonaScroll.querySelectorAll('.ejercicio-header');
+      for (let i = 0; i < headers.length; i++) {
+        const hRect = headers[i].getBoundingClientRect();
+        if (hRect.top >= topVisible) {
+          topIndex = i;
+          topEjercicioNombre = headers[i].textContent.trim();
+          break;
+        }
+      }
+    }
+    window.topIndex = topIndex;
+    window.topEjercicioNombre = topEjercicioNombre;
+
+    window.renderizar?.();
+
+    requestAnimationFrame(() => {
+      if (window.zonaScroll && window.topEjercicioNombre) {
+        const headers = window.zonaScroll.querySelectorAll('.ejercicio-header');
+        for (let h of headers) {
+          if (h.textContent.trim() === window.topEjercicioNombre) {
+            h.scrollIntoView({ block: 'start', behavior: 'instant' });
+            break;
+          }
+        }
+      }
+    });
+  };
 
   // Exponer para compatibilidad con router.js
   window.crearEjercicioAcordeon = (ej, idx, niv) => crearEjercicioAcordeon(ej, idx, niv, rutaActual);
@@ -287,9 +325,9 @@ function crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
       e.stopPropagation();
       mostrarMenuOpciones({
         anchorElement: opcionesBtn,
-        onEditar:  () => { ejercicio.editando = true; guardarDatos(); window.renderizar?.(); },
+        onEditar:  () => { ejercicio.editando = true; guardarDatos(); window.renderConScroll(); },
         onEliminar: () => mostrarConfirmacion(`¿Desea borrar "${ejercicio.nombre}"?`, () => {
-          nivel.hijos.splice(index, 1); ejercicioExpandido = null; guardarDatos(); window.renderizar?.();
+          nivel.hijos.splice(index, 1); ejercicioExpandido = null; guardarDatos(); window.renderConScroll();
         }),
         onCopiar: () => ({ nivel: rutaActual.length, datos: structuredClone(ejercicio) })
       });
@@ -300,31 +338,51 @@ function crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
     header.addEventListener('click', e => {
       if (draggingEjercicio) { e.preventDefault(); e.stopPropagation(); return; }
       if (e.target === opcionesBtn || opcionesBtn.contains(e.target)) return;
-      ejercicioExpandido = ejercicioExpandido === index ? null : index;
-      window.renderizar?.();
+      e.preventDefault();
+      if (ejercicioExpandido === index) {
+        ejercicioExpandido = null;
+        body.style.display = 'none';
+        iconoExpand.textContent = '▶';
+      } else {
+        ejercicioExpandido = index;
+        actualizarBody(ejercicio, body);
+        body.style.display = 'block';
+        iconoExpand.textContent = '▼';
+      }
     });
   }
 
   wrapper.appendChild(header);
 
-  // ── Body expandido ────────────────────────────────────────
-  if (ejercicioExpandido === index && !ejercicio.editando) {
-    const body  = document.createElement('div'); body.className  = 'ejercicio-body';
-    const inner = document.createElement('div'); inner.className = 'ejercicio-body-inner';
+  // ── Body (siempre presente, oculto inicialmente) ───
+  const body = document.createElement('div'); body.className = 'ejercicio-body'; body.style.display = 'none';
+  const inner = document.createElement('div'); inner.className = 'ejercicio-body-inner';
+  body.appendChild(inner);
+  wrapper.appendChild(body);
+  ejercicio.bodyElement = body;
+
+  // Función para actualizar body
+  function actualizarBody(ejercicio, body) {
+    const inner = body.querySelector('.ejercicio-body-inner');
+    inner.innerHTML = '';
 
     // Botón + Serie
     const addSerieBtn = document.createElement('button');
     addSerieBtn.textContent = '+ Serie'; addSerieBtn.className = 'add-serie';
-    addSerieBtn.onclick = e => { e.stopPropagation(); ejercicio.series = ejercicio.series || []; ejercicio.series.push({}); guardarDatos(); window.renderizar?.(); };
+    addSerieBtn.onclick = e => {
+      e.stopPropagation(); e.preventDefault();
+      ejercicio.series.push({});
+      guardarDatos();
+      actualizarBody(ejercicio, body);
+    };
     inner.appendChild(addSerieBtn);
 
-    // Cabeceras grid
+    // Cabeceras
     const encabezados = document.createElement('div'); encabezados.className = 'series-header-compact';
     ['', 'REPS', 'PESO', 'RIR', 'DESC', '', ''].forEach(txt => { const c = document.createElement('div'); c.textContent = txt; encabezados.appendChild(c); });
     inner.appendChild(encabezados);
 
     // Filas de series
-    ejercicio.series = ejercicio.series || [];
     ejercicio.series.forEach((serie, idx) => {
       const serieDiv = document.createElement('div');
       serieDiv.className = 'serie-row-compact';
@@ -333,9 +391,9 @@ function crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
       // Número / marca
       const numBtn = document.createElement('button'); numBtn.className = 'serie-num';
       numBtn.textContent = serie.marca || (idx + 1);
-      numBtn.addEventListener('click', e => { e.stopPropagation(); mostrarSelectorMarca(serie, idx, () => { guardarDatos(); window.renderizar?.(); }); });
+      numBtn.addEventListener('click', e => { e.stopPropagation(); e.preventDefault(); mostrarSelectorMarca(serie, idx, () => { guardarDatos(); numBtn.textContent = serie.marca || (idx + 1); }); });
 
-      // Helper inputs
+      // Inputs
       const mkInput = (placeholder, value, key) => {
         const inp = document.createElement('input');
         inp.placeholder = placeholder; inp.value = value || '';
@@ -344,34 +402,40 @@ function crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
         inp.addEventListener('blur', e => { serie[key] = e.target.value; guardarDatos(); });
         return inp;
       };
-      const reps     = mkInput('R', serie.reps,     'reps');
-      const peso     = mkInput('P', serie.peso,     'peso');
-      const rir      = mkInput('R', serie.rir,      'rir');
+      const reps = mkInput('R', serie.reps, 'reps');
+      const peso = mkInput('P', serie.peso, 'peso');
+      const rir = mkInput('R', serie.rir, 'rir');
       const descanso = mkInput('D', serie.descanso, 'descanso');
 
-      // Check/timer
+      // Check
       const checkBtn = document.createElement('button'); checkBtn.className = 'serie-button';
       checkBtn.textContent = serie.completada ? '✔️' : '🕔';
       checkBtn.addEventListener('click', e => {
-        e.stopPropagation();
+        e.stopPropagation(); e.preventDefault();
         serie.completada = !serie.completada;
-        if (serie.completada && serie.descanso) iniciarTimer(serie.descanso);
-        guardarDatos(); window.renderizar?.();
+        if (serie.completada) {
+          serieDiv.style.background = 'rgba(61,213,152,0.08)';
+          if (serie.descanso) iniciarTimer(serie.descanso);
+        } else {
+          serieDiv.style.background = '';
+        }
+        checkBtn.textContent = serie.completada ? '✔️' : '🕔';
+        guardarDatos();
       });
 
-      // Eliminar serie
+      // Eliminar
       const deleteBtn = document.createElement('button'); deleteBtn.className = 'serie-button btn-del-serie';
       deleteBtn.textContent = '✕';
       deleteBtn.addEventListener('click', e => {
-        e.stopPropagation();
-        mostrarConfirmacion('¿Desea borrar esta serie?', () => { ejercicio.series.splice(idx, 1); guardarDatos(); window.renderizar?.(); });
+        e.stopPropagation(); e.preventDefault();
+        mostrarConfirmacion('¿Desea borrar esta serie?', () => { ejercicio.series.splice(idx, 1); guardarDatos(); actualizarBody(ejercicio, body); });
       });
 
       [numBtn, reps, peso, rir, descanso, checkBtn, deleteBtn].forEach(el => serieDiv.appendChild(el));
       inner.appendChild(serieDiv);
     });
 
-    // Stats sesión actual
+    // Stats
     const stats = _calcularEstadisticas(ejercicio);
     if (stats.pesoMax > 0 || stats.volumenTotal > 0) {
       const sc = document.createElement('div'); sc.className = 'ej-stats-card';
@@ -416,8 +480,6 @@ function crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
     ['pointerdown','mousedown','touchstart','click'].forEach(ev => ta.addEventListener(ev, e => e.stopPropagation()));
     ta.addEventListener('blur', () => { ejercicio.notas = ta.value; guardarDatos(); });
     nc.append(nl, ta); inner.appendChild(nc);
-
-    body.appendChild(inner); wrapper.appendChild(body);
   }
 
   return wrapper;
