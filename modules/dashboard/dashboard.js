@@ -20,7 +20,7 @@ function crearCard(titulo, extraClass = '') {
 }
 
 // ── Exportación principal ─────────────────────────────────────
-export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton) {
+export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton, hoyStr) {
   if (tituloNivel) tituloNivel.textContent = 'Dashboard';
   if (backButton)  backButton.style.visibility = 'hidden';
   if (addButton)   addButton.style.visibility  = 'hidden';

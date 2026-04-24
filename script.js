@@ -1150,7 +1150,7 @@ function renderizar() {
     return;
   }
   if (rutaActual.length === 0) {
-    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
+    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton, hoyStr);
     return;
   }
   // Pantalla nutrición
