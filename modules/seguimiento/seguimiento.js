@@ -6,7 +6,7 @@
 import { hoyISO, formatearFechaLarga } from '../../shared/utils.js';
 
 // ── Exportación principal ─────────────────────────────────────
-export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
+export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addButton) {
   // Subheader
   subHeader.innerHTML = '';
   const h2 = document.createElement('h2');
@@ -19,14 +19,14 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
   const btnAdd = document.createElement('button');
   btnAdd.className = 'header-btn seg-btn-add';
   btnAdd.textContent = '+ Añadir';
-  btnAdd.onclick = () => mostrarModalMedidas(nivel, contenido);
+  btnAdd.onclick = () => mostrarModalMedidas(seguidoNivel, contenido);
   botonesContainer.appendChild(btnAdd);
   subHeader.appendChild(botonesContainer);
 
   // Contenido
   contenido.innerHTML = '';
   contenido.className = (contenido.className || '') + ' seg-contenido';
-  const medidas = nivel.hijos || [];
+  const medidas = seguidoNivel.hijos || [];
 
   if (medidas.length > 0) {
     contenido.appendChild(crearCardUltimaMedicion(medidas[medidas.length - 1]));
@@ -55,7 +55,7 @@ export function renderizarSeguimiento(nivel, contenido, subHeader, addButton) {
   graficosContainer.appendChild(medidasGrid);
   contenido.appendChild(graficosContainer);
 
-  contenido.appendChild(crearSeccionHistorial(medidas, nivel, contenido));
+  contenido.appendChild(crearSeccionHistorial(medidas, seguidoNivel, contenido));
 }
 
 // ── Card: última medición ─────────────────────────────────────

@@ -494,7 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (backButton) backButton.addEventListener("click", () => {
     if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
-  if (homeButton) homeButton.addEventListener("click", () => { rutaActual = []; ejercicioExpandido = null; renderizar(); });
+  if (homeButton) homeButton.addEventListener("click", () => { rutaActual.length = 0; ejercicioExpandido = null; renderizar(); });
   if (logoutButton) logoutButton.addEventListener("click", () => salir());
   if (menuButton) menuButton.addEventListener("click", () => {
     sideMenu.style.left = "0"; menuOverlay.classList.remove("hidden");
@@ -506,11 +506,12 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll(".sideMenu-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       const seccion = btn.dataset.seccion;
-      if (seccion === "entrenamiento") { rutaActual = [0]; ultimoMenuSeleccionado = 'Entrenamiento'; }
-      if (seccion === "seguimiento") { rutaActual = [1]; ultimoMenuSeleccionado = 'Seguimiento'; }
-      if (seccion === "calendario") { rutaActual = [2]; ultimoMenuSeleccionado = 'Calendario'; }
-      if (seccion === "nutricion") { rutaActual = [3]; ultimoMenuSeleccionado = 'Nutrición'; }
-      if (seccion === "dashboard") { rutaActual = []; ultimoMenuSeleccionado = 'Dashboard'; }
+      rutaActual.length = 0;
+      if (seccion === "entrenamiento") { rutaActual.push(0); ultimoMenuSeleccionado = 'Entrenamiento'; }
+      if (seccion === "seguimiento") { rutaActual.push(1); ultimoMenuSeleccionado = 'Seguimiento'; }
+      if (seccion === "calendario") { rutaActual.push(2); ultimoMenuSeleccionado = 'Calendario'; }
+      if (seccion === "nutricion") { rutaActual.push(3); ultimoMenuSeleccionado = 'Nutrición'; }
+      if (seccion === "dashboard") { ultimoMenuSeleccionado = 'Dashboard'; }
       ejercicioExpandido = null;
       renderizar();
       sideMenu.style.left = "-70%";
@@ -1149,7 +1150,8 @@ function renderizar() {
     return;
   }
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
-    renderizarSeguimiento(nivel, contenido, subHeader, addButton);
+    if (!datos[1]) datos[1] = { nombre: 'Seguimiento', hijos: [] };
+    renderizarSeguimiento(datos[1], contenido, subHeader, addButton);
     return;
   }
   if (rutaActual.length === 0) {

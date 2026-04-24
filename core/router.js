@@ -89,7 +89,8 @@ export function renderizar() {
     return;
   }
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
-    renderizarSeguimiento(nivel, contenido, subHeader, addButton);
+    if (!datos[1]) datos[1] = { nombre: 'Seguimiento', hijos: [] };
+    renderizarSeguimiento(datos[1], contenido, subHeader, addButton);
     return;
   }
   if (rutaActual.length === 1 && rutaActual[0] === 2) {
@@ -257,7 +258,7 @@ export function init() {
     if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
   if (homeButton) homeButton.addEventListener('click', () => {
-    rutaActual = []; ejercicioExpandido = null; renderizar();
+    rutaActual.length = 0; ejercicioExpandido = null; renderizar();
   });
   if (logoutButton) logoutButton.addEventListener('click', () => window.salir?.());
 
@@ -277,7 +278,8 @@ export function init() {
       const mapa = { dashboard: [], entrenamiento: [0], seguimiento: [1], calendario: [2], nutricion: [3] };
       const nombreMapa = { dashboard: 'Dashboard', entrenamiento: 'Entrenamiento', seguimiento: 'Seguimiento', calendario: 'Calendario', nutricion: 'Nutrición' };
       if (s in mapa) {
-        rutaActual = mapa[s];
+        rutaActual.length = 0;
+        rutaActual.push(...mapa[s]);
         ultimoMenuSeleccionado = nombreMapa[s];
       }
       ejercicioExpandido = null;
