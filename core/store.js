@@ -91,7 +91,10 @@ window.restaurarDesdeJSON = restaurarDesdeJSON;
 // ── Navegación: devuelve el nodo en la ruta actual ────────────
 export function nivelActual(rutaActual) {
   let nivel = { hijos: datos };
-  for (const i of rutaActual) nivel = nivel.hijos[i];
+  for (const i of rutaActual) {
+    if (!nivel.hijos || !nivel.hijos[i]) return { hijos: [] };
+    nivel = nivel.hijos[i];
+  }
   return nivel;
 }
 

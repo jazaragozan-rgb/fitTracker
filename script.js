@@ -635,7 +635,10 @@ function guardarDatos() {
 // ==================== UTILITY: nivelActual ====================
 function nivelActual() {
   let nivel = { hijos: datos };
-  for (let i of rutaActual) nivel = nivel.hijos[i];
+  for (let i of rutaActual) {
+    if (!nivel.hijos || !nivel.hijos[i]) return { hijos: [] };
+    nivel = nivel.hijos[i];
+  }
   return nivel;
 }
 
@@ -1150,7 +1153,7 @@ function renderizar() {
     return;
   }
   if (rutaActual.length === 0) {
-    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton, hoyStr);
+    renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton);
     return;
   }
   // Pantalla nutrición

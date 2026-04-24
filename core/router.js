@@ -85,7 +85,7 @@ export function renderizar() {
   // ── Despacho a módulos ───────────────────────────────────────
   if (rutaActual.length === 0) {
     renderizarDashboard(datos, rutaActual, _crearIndice, contenido,
-      $('tituloNivel'), backButton, addButton, hoyStr);
+      $('tituloNivel'), backButton, addButton);
     return;
   }
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
