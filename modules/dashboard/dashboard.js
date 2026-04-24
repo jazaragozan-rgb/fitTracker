@@ -257,7 +257,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   // ══════════════════════════════════════════════════════════
   // 8. PROGRESO DE EJERCICIO
   // ══════════════════════════════════════════════════════════
-  _renderCardProgreso(dashboard, ejerciciosTodos, crearCard);
+  _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr);
 }
 
 // ── Card: Calendario semanal ──────────────────────────────────
@@ -304,9 +304,11 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
       btn.className = 'btn-sesion';
       btn.style.cssText = 'margin-bottom:8px;width:100%;';
       btn.addEventListener('click', () => {
-        rutaActual.length = 0;
-        rutaActual.push(0, ...sesionDia.ruta);
-        window.renderizar?.();
+          if (window.rutaActual) {
+              window.rutaActual.length = 0;
+              window.rutaActual.push(0, ...sesionDia.ruta);
+          }
+          window.renderizar?.();
       });
       detalleDiv.appendChild(btn);
 
@@ -473,7 +475,7 @@ function _renderCardMuscular(dashboard, ejerciciosTodos, hace30Dias, crearCard) 
 }
 
 // ── Card: Progreso de ejercicio ───────────────────────────────
-function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard) {
+function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr) {
   const cardProgreso = crearCard('Progreso de Ejercicio', '');
   const selectorEjercicio = document.createElement('select');
   selectorEjercicio.className = 'selector-ejercicio';
