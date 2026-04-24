@@ -4,6 +4,14 @@
 // Importar funciones del timer
 import { iniciarTimer } from '../../shared/timer.js';
 
+// Promesa que se resuelve cuando `window.datos` está disponible
+let datosReady = (window.datos && Array.isArray(window.datos) && window.datos.length > 0)
+  ? Promise.resolve()
+  : new Promise(res => {
+    const handler = () => { window.removeEventListener('datosLoaded', handler); res(); };
+    window.addEventListener('datosLoaded', handler);
+  });
+
 // ==================== FUNCIONES DE ESTADÍSTICAS ====================
 
 // Función para calcular estadísticas de un ejercicio
@@ -37,7 +45,8 @@ function calcularEstadisticasEjercicio(ejercicio) {
 }
 
 // Función para buscar la sesión anterior del mismo ejercicio
-function buscarSesionAnteriorEjercicio(nombreEjercicio) {
+async function buscarSesionAnteriorEjercicio(nombreEjercicio) {
+  await datosReady;
   const datos = window.datos || [];
   const todasLasSesiones = [];
 
@@ -442,7 +451,7 @@ function updateTimerDisplay(display) {
 }
 
 // Renderiza los ejercicios (estilo nivel 4 con acordeón)
-function renderizarEjerciciosLive() {
+async function renderizarEjerciciosLive() {
   const zona = document.getElementById("zonaEjercicios");
   if (!zona) return;
   
@@ -910,7 +919,7 @@ function renderizarEjerciciosLive() {
       }
 
       // ==================== COMPARACIÓN CON SESIÓN ANTERIOR ====================
-      const sesionAnterior = buscarSesionAnteriorEjercicio(ejercicio.nombre);
+      const sesionAnterior = await buscarSesionAnteriorEjercicio(ejercicio.nombre);
       if (sesionAnterior) {
         const statsAnterior = calcularEstadisticasEjercicio(sesionAnterior.ejercicio);
         

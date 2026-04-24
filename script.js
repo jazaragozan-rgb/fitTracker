@@ -9,6 +9,7 @@ import { mostrarConfirmacion, mostrarSelectorMarca, mostrarMenuOpciones } from "
 import { iniciarTimer, restaurarTimer } from "./shared/timer.js";
 import { fetchAllExercises, searchExercisesByName } from "./modules/exercises/exercises.js";
 import { renderizarNutricion } from "./modules/nutricion/nutricion.js";
+import { onDatosLoaded } from './core/store.js';
 
 // ==================== HELPERS DOM / UTIL ====================
 const $ = id => document.getElementById(id);
@@ -596,39 +597,13 @@ async function guardarDatosUsuario(uid, datosActuales) {
 }
 
 // ==================== SINCRONIZACIÓN - SOLO FIRESTORE ====================
-onAuthStateChanged(auth, async (user) => {
-  console.log('[onAuthStateChanged] Estado de autenticación cambió');
-  console.log('[onAuthStateChanged] Usuario:', user ? user.uid : 'null');
-  
-  if (user) {
-    console.log('[onAuthStateChanged] ✓ Usuario autenticado, cargando datos de Firestore...');
-    
-    try {
-      const datosRemoto = await cargarDatosUsuario(user.uid);
-      
-      if (datosRemoto && Array.isArray(datosRemoto)) {
-        console.log('[onAuthStateChanged] ✓ Datos cargados de Firestore');
-        datos = structuredClone(datosRemoto);
-        window.datos = datos; // ✅ Actualizar referencia global
-      } else {
-        console.log('[onAuthStateChanged] No hay datos en Firestore, usando datos por defecto');
-        datos = structuredClone(DATOS_POR_DEFECTO);
-        window.datos = datos; // ✅ Actualizar referencia global
-      }
-      
-      renderizar();
-      
-    } catch (error) {
-      console.error('[onAuthStateChanged] Error al cargar datos:', error);
-      datos = structuredClone(DATOS_POR_DEFECTO);
-      window.datos = datos; // ✅ Actualizar referencia global
-      renderizar();
-    }
-  } else {
-    console.log('[onAuthStateChanged] ⚠️ No hay usuario autenticado');
-    datos = structuredClone(DATOS_POR_DEFECTO);
-    window.datos = datos; // ✅ Actualizar referencia global
-    if (isAppPage()) renderizar();
+onDatosLoaded(() => {
+  // store.js ya actualizó window.datos
+  datos = window.datos;
+  if (isAppPage()) {
+    renderizar();
+    if (sessionTimerGetRuta()) restaurarTimerSesion();
+    restaurarTimer();
   }
 });
 

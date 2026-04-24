@@ -81,6 +81,7 @@ export async function restaurarDesdeJSON(jsonString) {
     window.datos = datos;
     alert('✅ Datos restaurados correctamente');
     if (_onDatosLoaded) _onDatosLoaded();
+    try { window.dispatchEvent(new Event('datosLoaded')); } catch (e) { console.warn('[store] dispatch datosLoaded error', e); }
   } catch (e) {
     alert('Error al restaurar: ' + e.message);
   }
@@ -104,4 +105,6 @@ onAuthStateChanged(auth, async (user) => {
   }
   window.datos = datos;
   if (_onDatosLoaded) _onDatosLoaded();
+  // Notificar a otros módulos que los datos ya están cargados
+  try { window.dispatchEvent(new Event('datosLoaded')); } catch (e) { console.warn('[store] dispatch datosLoaded error', e); }
 });

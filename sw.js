@@ -4,17 +4,11 @@ const CACHE_NAME = 'fittracker-1774033669898';
 
 // Solo cacheamos assets estáticos (JS, CSS, imágenes) — NUNCA HTML
 const STATIC_ASSETS = [
+  '/styles/base.css',
+  '/styles/layout.css',
+  '/styles/app.css',
   '/style.css',
   '/script.js',
-  '/auth.js',
-  '/dashboard.js',
-  '/seguimiento.js',
-  '/calendario.js',
-  '/nutricion.js',
-  '/exercises.js',
-  '/live.js',
-  '/modals.js',
-  '/timer.js',
   '/manifest.json',
   '/imagenes/logo.png',
   '/iconos/Home.png',

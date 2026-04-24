@@ -183,7 +183,7 @@ function _buildSubheaderNivel(nivel) {
   cont.appendChild(addBtn);
 
   // Botón buscar ejercicio (niveles 1–4)
-  if (rutaActual.length = 4) {
+  if (rutaActual.length === 4) {
     const searchBtn = document.createElement('button');
     searchBtn.textContent = '🔍';
     searchBtn.className   = 'btn-search';
