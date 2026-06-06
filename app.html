@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>fitTracker</title>
 
-  <!-- ✅ 3 archivos CSS en lugar de 8 -->
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/layout.css">
   <link rel="stylesheet" href="styles/app.css">
@@ -15,7 +14,6 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="apple-touch-icon" href="/icon-192.png">
 
-  <!-- Chart.js para gráficos del dashboard y seguimiento -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation"></script>
@@ -83,15 +81,6 @@
 </footer>
 
 <!-- ══════════════ SCRIPTS ══════════════ -->
-<!--
-  ORDEN DE CARGA:
-  1. core/firebase.js  — config Firebase
-  2. core/auth.js      — login/logout (verifica sesión)
-  3. core/store.js     — estado global + Firestore
-  4. core/router.js    — navegación
-  5. script.js         — lógica de entrenamiento (nivel 4, drag&drop...)
-                         Se mantiene mientras se migra completamente.
--->
 <script type="module">
   import { init as initRouter, renderizar } from './core/router.js';
   import { onDatosLoaded }                  from './core/store.js';
@@ -115,10 +104,6 @@
     }
   });
 </script>
-
-<!-- script.js legacy: maneja nivel 4, drag&drop, buscador de ejercicios -->
-<!-- Se puede eliminar una vez esos bloques se migren a modules/entrenamiento/ -->
-<script type="module" src="script.js"></script>
 
 </body>
 </html>

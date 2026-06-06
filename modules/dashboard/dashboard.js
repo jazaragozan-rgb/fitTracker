@@ -1,12 +1,10 @@
 // ============================================================
 // modules/dashboard/dashboard.js
 // Renderizado del Dashboard (nivel 0).
-// Importa utilidades desde shared/ — no duplica código.
 // ============================================================
 
 import { hoyISO, formatearFechaCorta, calcularVolumen, calcular1RM, redondear } from '../../shared/utils.js';
 
-// ── Helper interno: crea una card con título ──────────────────
 function crearCard(titulo, extraClass = '') {
   const card = document.createElement('div');
   card.className = `dashboard-card${extraClass ? ' ' + extraClass : ''}`;
@@ -20,11 +18,15 @@ function crearCard(titulo, extraClass = '') {
 }
 
 // ── Exportación principal ─────────────────────────────────────
-export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton) {
+// Recibe renderizarFn para que los botones del calendario puedan navegar
+export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton, renderizarFn) {
   if (tituloNivel) tituloNivel.textContent = 'Dashboard';
   if (backButton)  backButton.style.visibility = 'hidden';
   if (addButton)   addButton.style.visibility  = 'hidden';
   contenido.innerHTML = '';
+
+  // Usar renderizarFn recibido, o window.renderizar como fallback
+  const renderizar = renderizarFn || window.renderizar;
 
   const dashboard = document.createElement('div');
   dashboard.className = 'dashboard-container-grid';
@@ -41,7 +43,6 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   const volumenPorSemana = [];
   const volumenPorFecha  = {};
 
-  // Función recursiva para extraer ejercicios y volumen
   const extraerEjercicios = (nodo, fecha) => {
     if (!nodo) return 0;
     let vol = 0;
@@ -94,7 +95,6 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     .filter(e => new Date(e.fecha) >= hace30Dias)
     .reduce((sum, e) => sum + calcularVolumen(e.series || []), 0);
 
-  // Racha actual
   let racha = 0, fechaRef = new Date(); fechaRef.setHours(0, 0, 0, 0);
   for (const s of [...sesiones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha))) {
     const fs = new Date(s.fecha); fs.setHours(0, 0, 0, 0);
@@ -102,7 +102,6 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     if (diff === racha || (racha === 0 && diff <= 1)) { racha++; fechaRef = fs; } else break;
   }
 
-  // Mejor racha
   let mejorRacha = 0, rt = 0, fa = null;
   [...sesiones].sort((a, b) => new Date(a.fecha) - new Date(b.fecha)).forEach(s => {
     const f = new Date(s.fecha); f.setHours(0, 0, 0, 0);
@@ -115,9 +114,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     ? Math.min(120, Math.max(30, Math.round((ejerciciosTodos.length / Math.max(sesiones.length, 1)) * 8)))
     : 0;
 
-  // ══════════════════════════════════════════════════════════
-  // 1. RESUMEN GENERAL
-  // ══════════════════════════════════════════════════════════
+  // ── 1. RESUMEN GENERAL ──────────────────────────────────────
   const cardResumen = crearCard('Resumen General', 'full-width');
   const statsScroll = document.createElement('div');
   statsScroll.className = 'stats-scroll-row';
@@ -138,14 +135,10 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   cardResumen.appendChild(statsScroll);
   dashboard.appendChild(cardResumen);
 
-  // ══════════════════════════════════════════════════════════
-  // 2. CALENDARIO SEMANAL
-  // ══════════════════════════════════════════════════════════
-  _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual);
+  // ── 2. CALENDARIO SEMANAL ───────────────────────────────────
+  _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, renderizar);
 
-  // ══════════════════════════════════════════════════════════
-  // 3. FRECUENCIA MENSUAL
-  // ══════════════════════════════════════════════════════════
+  // ── 3. FRECUENCIA MENSUAL ───────────────────────────────────
   const cardFrecuencia = crearCard('Frecuencia Mensual', '');
   const chartFrecuencia = document.createElement('canvas');
   chartFrecuencia.className = 'dashboard-chart';
@@ -171,9 +164,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   }
   dashboard.appendChild(cardFrecuencia);
 
-  // ══════════════════════════════════════════════════════════
-  // 4. VOLUMEN SEMANAL
-  // ══════════════════════════════════════════════════════════
+  // ── 4. VOLUMEN SEMANAL ──────────────────────────────────────
   const cardVolumen = crearCard('Volumen Semanal', '');
   const chartVolumen = document.createElement('canvas');
   chartVolumen.className = 'dashboard-chart';
@@ -201,9 +192,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   }
   dashboard.appendChild(cardVolumen);
 
-  // ══════════════════════════════════════════════════════════
-  // 5. TOP EJERCICIOS
-  // ══════════════════════════════════════════════════════════
+  // ── 5. TOP EJERCICIOS ───────────────────────────────────────
   const cardTop  = crearCard('Ejercicios Más Realizados', '');
   const listaTop = document.createElement('div');
   listaTop.className = 'top-ejercicios-lista';
@@ -223,14 +212,10 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   cardTop.appendChild(listaTop);
   dashboard.appendChild(cardTop);
 
-  // ══════════════════════════════════════════════════════════
-  // 6. DISTRIBUCIÓN MUSCULAR
-  // ══════════════════════════════════════════════════════════
+  // ── 6. DISTRIBUCIÓN MUSCULAR ────────────────────────────────
   _renderCardMuscular(dashboard, ejerciciosTodos, hace30Dias, crearCard);
 
-  // ══════════════════════════════════════════════════════════
-  // 7. RÉCORDS PERSONALES
-  // ══════════════════════════════════════════════════════════
+  // ── 7. RÉCORDS PERSONALES ───────────────────────────────────
   const cardRecords = crearCard('🏆 Récords Personales', '');
   const prList      = document.createElement('div');
   prList.className  = 'pr-list';
@@ -254,14 +239,12 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   cardRecords.appendChild(prList);
   dashboard.appendChild(cardRecords);
 
-  // ══════════════════════════════════════════════════════════
-  // 8. PROGRESO DE EJERCICIO
-  // ══════════════════════════════════════════════════════════
-  _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr);
+  // ── 8. PROGRESO DE EJERCICIO ────────────────────────────────
+  _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr, datos);
 }
 
 // ── Card: Calendario semanal ──────────────────────────────────
-function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
+function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, renderizar) {
   const cardCalendario = crearCard('Esta Semana', '');
   const DIAS_LETRA = ['L','M','X','J','V','S','D'];
   const MESES_UP   = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
@@ -286,8 +269,8 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
   const btnNext     = document.createElement('button'); btnNext.className='cal-nav-btn'; btnNext.textContent='›';
   navRow.append(btnPrev, mesEl, btnNext);
 
-  const daysRow   = document.createElement('div'); daysRow.className='cal-days-row';
-  const detalleDiv= document.createElement('div'); detalleDiv.className='cal-detalle';
+  const daysRow    = document.createElement('div'); daysRow.className='cal-days-row';
+  const detalleDiv = document.createElement('div'); detalleDiv.className='cal-detalle';
 
   calWrapper.append(navRow, daysRow, detalleDiv);
 
@@ -298,36 +281,28 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
     detalleDiv.appendChild(titulo);
 
     if (sesionDia) {
-      // Botón con nombre de la sesión para navegar a ella
       const btn = document.createElement('button');
       btn.textContent = sesionDia.nombre || 'Ver sesión';
       btn.className = 'btn-sesion';
       btn.style.cssText = 'margin-bottom:8px;width:100%;';
       btn.addEventListener('click', () => {
-          if (window.rutaActual) {
-              window.rutaActual.length = 0;
-              window.rutaActual.push(0, ...sesionDia.ruta);
-          }
-          window.renderizar?.();
+        // Usar la referencia correcta de rutaActual y renderizar pasados como parámetro
+        rutaActual.length = 0;
+        rutaActual.push(0, ...sesionDia.ruta);
+        renderizar();
       });
       detalleDiv.appendChild(btn);
 
-      // Extraer ejercicios (pueden estar en hijos directos o un nivel más abajo)
       const ejerciciosFlat = [];
       (sesionDia.ejercicios || []).forEach(bloque => {
-        if (Array.isArray(bloque.series) && bloque.series.length > 0) {
-          ejerciciosFlat.push(bloque);
-        }
+        if (Array.isArray(bloque.series) && bloque.series.length > 0) ejerciciosFlat.push(bloque);
         (bloque.hijos || []).forEach(ej => {
-          if (Array.isArray(ej.series) && ej.series.length > 0) {
-            ejerciciosFlat.push(ej);
-          }
+          if (Array.isArray(ej.series) && ej.series.length > 0) ejerciciosFlat.push(ej);
         });
       });
 
       if (ejerciciosFlat.length === 0) {
-        const v = document.createElement('div');
-        v.className = 'detalle-empty';
+        const v = document.createElement('div'); v.className = 'detalle-empty';
         v.textContent = 'Sesión sin ejercicios registrados.';
         detalleDiv.appendChild(v);
       } else {
@@ -347,8 +322,7 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
         });
       }
     } else {
-      const v = document.createElement('div');
-      v.className = 'detalle-empty';
+      const v = document.createElement('div'); v.className = 'detalle-empty';
       v.textContent = 'Sin entreno este día.';
       detalleDiv.appendChild(v);
     }
@@ -368,7 +342,7 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual) {
       const btn = document.createElement('button'); btn.className='day-btn';
       if (sesionDia)        btn.classList.add('done');
       if (fs === diaSelStr) btn.classList.add('selected');
-      if (fs === hoyLocalStr){ btn.classList.add('today'); datosBtnHoy = { fs, fd, sesionDia }; }
+      if (fs === hoyLocalStr) { btn.classList.add('today'); datosBtnHoy = { fs, fd, sesionDia }; }
 
       btn.innerHTML = `<span class="day-letter">${DIAS_LETRA[i]}</span><span class="day-number">${fd.getDate()}</span><span class="day-dot"></span>`;
       btn.addEventListener('click', ((fs,fd,sesionDia) => () => { diaSelStr=fs; renderDias(); renderDetalle(fs,fd,sesionDia); })(fs,fd,sesionDia));
@@ -441,21 +415,6 @@ function _renderCardMuscular(dashboard, ejerciciosTodos, hace30Dias, crearCard) 
     path.setAttribute('stroke', musculoCounts[grupo]>0?'rgba(61,213,152,0.6)':'none');
     path.setAttribute('stroke-width','1.5');
     path.style.cssText='cursor:pointer;transition:fill 0.2s;';
-    const pct = musclePct(grupo);
-    if (pct) {
-      path.addEventListener('mouseenter', () => {
-        path.setAttribute('fill', mintAlpha(grupo).replace(/[\d.]+\)$/, v => (parseFloat(v)+0.2).toFixed(2)+')'));
-        let tip = svg.querySelector('.muscle-tip');
-        if (!tip) { tip=document.createElementNS(svgNS,'text'); tip.setAttribute('class','muscle-tip'); tip.style.cssText='font-size:28px;font-weight:700;fill:rgba(61,213,152,1);pointer-events:none;'; svg.appendChild(tip); }
-        const bb = path.getBBox();
-        tip.setAttribute('x', bb.x+bb.width/2); tip.setAttribute('y', bb.y+bb.height/2+10);
-        tip.setAttribute('text-anchor','middle'); tip.textContent=`${grupo} ${pct}`;
-      });
-      path.addEventListener('mouseleave', () => {
-        path.setAttribute('fill',mintAlpha(grupo));
-        const tip=svg.querySelector('.muscle-tip'); if(tip) tip.textContent='';
-      });
-    }
     svg.appendChild(path);
   });
   muscleWrapper.appendChild(svg);
@@ -475,7 +434,7 @@ function _renderCardMuscular(dashboard, ejerciciosTodos, hace30Dias, crearCard) 
 }
 
 // ── Card: Progreso de ejercicio ───────────────────────────────
-function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr) {
+function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr, datos) {
   const cardProgreso = crearCard('Progreso de Ejercicio', '');
   const selectorEjercicio = document.createElement('select');
   selectorEjercicio.className = 'selector-ejercicio';
@@ -518,37 +477,32 @@ function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr) {
   }
   dashboard.appendChild(cardProgreso);
 
-  // ══════════════════════════════════════════════════════════
-  // 9. NUTRICIÓN (COMPACTO)
-  // ══════════════════════════════════════════════════════════
-  const nivelNutricion = datos[3]; // Nutrición está en índice 3
+  // ── 9. NUTRICIÓN COMPACTA ───────────────────────────────────
+  const nivelNutricion = datos[3];
   _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
 }
 
 // ── Card: Nutrición compacta ──────────────────────────────────
 function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyStr) {
   const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
-  
   const registrosHoy = (nivelNutricion.hijos || []).filter(r => r.fecha === hoyStr);
   const totales = _calcularTotalNutricion(registrosHoy);
-  
-  // Card resumen calorías compacto
+
   const cardCalories = crearCard('Nutrición de Hoy', '');
-  cardCalories.style.cssText = (cardCalories.style.cssText || '') + 'padding: 12px;';
-  
   const caloriesSummary = document.createElement('div');
   caloriesSummary.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:12px;';
-  
-  const caloriesCircle = document.createElement('div');
-  caloriesCircle.style.cssText = 'width:80px;min-width:80px;height:80px;border-radius:50%;background:var(--bg-secondary);display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--primary-mint);';
+
   const meta = METAS_DIARIAS.calorias;
   const consumidas = totales.calorias;
   const pct = Math.min(100, (consumidas / meta) * 100);
+  const restantes = Math.max(0, meta - consumidas);
+
+  const caloriesCircle = document.createElement('div');
+  caloriesCircle.style.cssText = 'width:80px;min-width:80px;height:80px;border-radius:50%;background:var(--bg-secondary);display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--primary-mint);';
   caloriesCircle.innerHTML = `<div style="font-size:1.2rem;font-weight:900;color:var(--text-primary);">${Math.round(consumidas)}</div><div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);">kcal</div>`;
-  
+
   const caloriesInfo = document.createElement('div');
   caloriesInfo.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;';
-  const restantes = Math.max(0, meta - consumidas);
   caloriesInfo.innerHTML = `
     <div style="display:flex;justify-content:space-between;font-size:0.75rem;">
       <span style="color:var(--text-secondary);">Meta</span>
@@ -560,26 +514,21 @@ function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyS
     </div>
     <div style="width:100%;height:6px;background:var(--border-color);border-radius:3px;overflow:hidden;">
       <div style="width:${pct}%;height:100%;background:var(--primary-mint);transition:width 0.3s ease;"></div>
-    </div>
-  `;
-  
+    </div>`;
+
   caloriesSummary.append(caloriesCircle, caloriesInfo);
   cardCalories.appendChild(caloriesSummary);
-  
-  // Macros compactas
+
   const macrosGrid = document.createElement('div');
   macrosGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;';
-  
-  const macros = [
+  [
     { nombre: 'Proteínas', valor: totales.proteinas, meta: METAS_DIARIAS.proteinas, unidad: 'g', color: '#FF6B6B', icono: '💪' },
     { nombre: 'Carbs', valor: totales.carbohidratos, meta: METAS_DIARIAS.carbohidratos, unidad: 'g', color: '#4FC3F7', icono: '🍞' },
     { nombre: 'Grasas', valor: totales.grasas, meta: METAS_DIARIAS.grasas, unidad: 'g', color: '#FFB74D', icono: '🥑' }
-  ];
-  
-  macros.forEach(macro => {
+  ].forEach(macro => {
+    const pctMacro = Math.min(100, (macro.valor / macro.meta) * 100);
     const macroBox = document.createElement('div');
     macroBox.style.cssText = 'background:var(--bg-secondary);border-radius:8px;padding:8px;text-align:center;';
-    const pctMacro = Math.min(100, (macro.valor / macro.meta) * 100);
     macroBox.innerHTML = `
       <div style="font-size:0.85rem;margin-bottom:4px;">${macro.icono}</div>
       <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">${macro.nombre}</div>
@@ -587,16 +536,13 @@ function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyS
       <div style="font-size:0.65rem;color:var(--text-light);">de ${macro.meta}${macro.unidad}</div>
       <div style="width:100%;height:4px;background:rgba(0,0,0,0.05);border-radius:2px;overflow:hidden;margin-top:4px;">
         <div style="width:${pctMacro}%;height:100%;background:${macro.color};"></div>
-      </div>
-    `;
+      </div>`;
     macrosGrid.appendChild(macroBox);
   });
-  
   cardCalories.appendChild(macrosGrid);
   dashboard.appendChild(cardCalories);
 }
 
-// ── Helper: calcular totales de nutrición ──────────────────────
 function _calcularTotalNutricion(registros) {
   return (registros || []).reduce((acc, r) => {
     acc.calorias      += r.calorias      || 0;

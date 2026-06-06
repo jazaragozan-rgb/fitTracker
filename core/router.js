@@ -75,56 +75,55 @@ export function renderizar() {
   subHeader.style.display = 'flex';
 
   if (rutaActual.length === 0) {
-    // Dashboard: botón "Empezar entrenamiento"
     _buildSubheaderDashboard();
   } else {
-    // Niveles 1–4: título + botones volver / añadir / buscar
     _buildSubheaderNivel(nivel);
   }
 
   // ── Despacho a módulos ───────────────────────────────────────
   if (rutaActual.length === 0) {
-    renderizarDashboard(datos, rutaActual, _crearIndice, contenido,
-      $('tituloNivel'), backButton, addButton);
+    renderizarDashboard(
+      datos, rutaActual, _crearIndice, contenido,
+      $('tituloNivel'), backButton, addButton, renderizar
+    );
     return;
   }
+
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
     if (!datos[1]) datos[1] = { nombre: 'Seguimiento', hijos: [] };
     renderizarSeguimiento(datos[1], contenido, subHeader, addButton);
     return;
   }
+
   if (rutaActual.length === 1 && rutaActual[0] === 2) {
     renderizarCalendario(datos, contenido, subHeader, rutaActual, renderizar);
     return;
   }
+
   if (rutaActual.length === 1 && rutaActual[0] === 3) {
     if (!datos[3]) datos[3] = { nombre: 'Nutrición', hijos: [] };
     renderizarNutricion(datos[3], contenido, subHeader, addButton, rutaActual);
     return;
   }
 
-  // Niveles de entrenamiento 1–4
+  // ── Niveles de entrenamiento 1–4 ─────────────────────────────
   contenido.style.padding  = '';
   contenido.style.marginTop = '0';
   ajustarPaddingContenido();
 
+  // NIVEL 4: acordeón de ejercicios
   if (rutaActual.length === 4) {
-    _renderNivel4(nivel);
+    renderizarNivel4(nivel, contenido, rutaActual);
     return;
   }
 
   // Niveles 1, 2, 3: lista de hijos
-  backButton.style.visibility = 'visible';
-  addButton.style.visibility  = 'visible';
   ajustarPaddingContenido();
 
   if (nivel.hijos && nivel.hijos.length) {
-    // renderizarLista usa el módulo de entrenamiento y expone window.crearIndice
     renderizarLista(nivel, contenido, rutaActual);
   }
 }
-
-
 
 // ── Subheader: Dashboard ──────────────────────────────────────
 function _buildSubheaderDashboard() {
@@ -183,12 +182,12 @@ function _buildSubheaderNivel(nivel) {
   addBtn.onclick = () => _onAnadir(nivel);
   cont.appendChild(addBtn);
 
-  // Botón buscar ejercicio (niveles 1–4)
+  // Botón buscar ejercicio (solo nivel 4)
   if (rutaActual.length === 4) {
     const searchBtn = document.createElement('button');
     searchBtn.textContent = '🔍';
     searchBtn.className   = 'btn-search';
-    searchBtn.onclick     = () => window.abrirBuscadorEjercicios?.();
+    searchBtn.onclick     = () => abrirBuscadorEjercicios();
     cont.appendChild(searchBtn);
   }
 
@@ -224,15 +223,11 @@ function _onAnadir(nivel) {
 }
 
 // ── Crear tarjeta de índice (niveles 1–3) ─────────────────────
-// Delegamos al módulo de entrenamiento que tiene la implementación completa.
 function _crearIndice(item, index, nivel) {
-  // renderizarLista expone window.crearIndice al llamarse,
-  // pero aquí creamos el elemento directamente via la función importada.
-  // Como crearIndice no es export directo, usamos window como puente.
   if (typeof window.crearIndice === 'function') {
     return window.crearIndice(item, index, nivel);
   }
-  // Fallback si el módulo aún no ha cargado
+  // Fallback simple
   const div = document.createElement('div');
   div.textContent = item.nombre || '(sin nombre)';
   div.style.cssText = 'padding:14px 16px;margin:8px 12px;border-radius:14px;cursor:pointer;background:var(--bg-card);box-shadow:var(--neu-out-sm);';
@@ -289,8 +284,11 @@ export function init() {
     });
   });
 
-  // Exponer globalmente para compatibilidad con módulos legacy
-  window.renderizar   = renderizar;
-  window.rutaActual   = rutaActual;
+  // Exponer globalmente para compatibilidad con módulos
+  window.renderizar              = renderizar;
+  window.rutaActual              = rutaActual;
+  window.guardarDatos            = guardarDatos;
+  window.datos                   = datos;
+  window.nivelActual             = nivelActual;
   window.abrirBuscadorEjercicios = abrirBuscadorEjercicios;
 }
