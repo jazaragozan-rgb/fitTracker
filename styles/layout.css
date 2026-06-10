@@ -143,47 +143,53 @@ header {
   align-items: center;
   justify-content: center;
   font-weight: 600;
-  font-size: 0.72rem;
+  font-size: 0.6rem;
   z-index: 20;
   transition: background var(--transition), transform var(--transition);
   letter-spacing: 0.2px;
-  height: 30px;
-  padding: 0 14px;
+  height: 26px;
+  padding: 0 8px;
+  min-width: 200px;
+  max-width: 200px;
   text-transform: none;
   box-shadow: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .header-btn:hover  { background: var(--primary-hover); }
 .header-btn:active { transform: scale(0.97); }
 
 .btn-back-subheader {
   position: absolute;
-  left: 0;
+  left: 16px;
   background: transparent;
-  border: none;
+  border: 0.5px solid var(--border-color);
   font-size: 1rem;
   cursor: pointer;
-  width: 30px;
-  height: 30px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 0;
   color: var(--text-secondary);
   border-radius: var(--radius-md);
-  transition: background var(--transition), color var(--transition);
+  transition: background var(--transition), color var(--transition), border-color var(--transition);
   box-shadow: none;
+  flex-shrink: 0;
 }
-.btn-back-subheader:hover { background: var(--bg-secondary); color: var(--text-primary); }
+.btn-back-subheader:hover { background: var(--bg-secondary); color: var(--text-primary); border-color: var(--border-hover); }
 
 .btn-search {
   position: absolute;
-  right: 0;
-  width: 30px;
-  height: 30px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
   border: 0.5px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-main);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -192,6 +198,7 @@ header {
   transition: background var(--transition), border-color var(--transition);
   box-shadow: none;
   padding: 0;
+  flex-shrink: 0;
 }
 .btn-search:hover { background: var(--bg-secondary); border-color: var(--border-hover); }
 
@@ -245,14 +252,24 @@ main#contenido {
 #timerContainer {
   position: fixed;
   bottom: 64px;
-  left: 0;
-  width: 100%;
-  z-index: 150;
+  left: 0px;
+  right: 0;
+  width: 93%;
+  max-width: 100%;
+  padding: 0 16px;
+  z-index: 200;
   display: flex;
   justify-content: center;
   pointer-events: none;
+  background: transparent;
 }
 #timerContainer.timer-active { pointer-events: all; }
+#timerContainer > div {
+  width: 100%;
+  max-width: 720px;
+  margin: 0 !important;
+  box-shadow: none !important;
+}
 
 
 /* ═══════════════════════════════════════

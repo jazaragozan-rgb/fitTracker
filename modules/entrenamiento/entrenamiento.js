@@ -30,6 +30,7 @@ let dragEjercicioTimer = null, hasMovedEjercicio = false;
 // Se asignan al llamar a renderizarNivel4 / renderizarLista
 let _renderizar = null;
 let _rutaActual = null;
+let _sessionTimerInterval = null;
 
 const MOVEMENT_THRESHOLD  = 10;
 const LONG_PRESS_DURATION = 500;
@@ -75,7 +76,8 @@ export function renderizarNivel4(nivel, contenido, rutaActual) {
   wrapper.style.paddingTop = `${offsetTop}px`;
 
   // Banda del timer de sesión
-  wrapper.appendChild(_crearTimerSesionBanda(rutaActual.slice(0, 4)));
+  const rutaSesionPadre = rutaActual.slice(0, -1);
+  wrapper.appendChild(_crearTimerSesionBanda(rutaSesionPadre));
 
   // Zona scrolleable
   const zonaScroll = document.createElement('div');
@@ -392,73 +394,122 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
 
   // Cabeceras
   const encabezados = document.createElement('div');
-  encabezados.className = 'series-header-compact';
-  ['', 'REPS', 'PESO', 'RIR', 'DESC', '', ''].forEach(txt => {
+  encabezados.style.cssText = `
+    display:grid;grid-template-columns:40px repeat(4,1fr) 80px;
+    gap:4px;margin-bottom:8px;font-size:0.7rem;font-weight:700;
+    color:var(--text-secondary);text-transform:uppercase;text-align:center;
+  `;
+  ['', 'REPS', 'PESO', 'RIR', 'DESC', ''].forEach(txt => {
     const c = document.createElement('div'); c.textContent = txt; encabezados.appendChild(c);
   });
   inner.appendChild(encabezados);
 
   // Filas de series
   ejercicio.series.forEach((serie, idx) => {
-    const serieDiv = document.createElement('div');
-    serieDiv.className = 'serie-row-compact';
-    if (serie.completada) serieDiv.style.background = 'rgba(61,213,152,0.08)';
+  const serieDiv = document.createElement('div');
+  serieDiv.style.cssText = `
+    display:grid;grid-template-columns:40px repeat(4,1fr) 80px;
+    gap:4px;margin:2px;padding:1px 4px;align-items:center;
+    border-radius:8px;transition:all 0.2s;min-height:45px;height:45px;
+    background:${serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent'};
+  `;
+  serieDiv.addEventListener('mouseenter', () => {
+    if (!serie.completada) serieDiv.style.background = 'rgba(255,255,255,0.3)';
+  });
+  serieDiv.addEventListener('mouseleave', () => {
+    serieDiv.style.background = serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent';
+  });
 
-    const numBtn = document.createElement('button');
-    numBtn.className = 'serie-num';
-    numBtn.textContent = serie.marca || (idx + 1);
-    numBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      mostrarSelectorMarca(serie, idx, () => {
-        guardarDatos();
-        numBtn.textContent = serie.marca || (idx + 1);
-      });
+  const numBtn = document.createElement('button');
+  numBtn.style.cssText = `
+    width:26px;height:26px;padding:2px 4px;margin:2px;
+    font-size:1.2rem;font-weight:700;border:none;
+    border-radius:6px;background:transparent;cursor:pointer;
+    transition:all 0.2s;color:var(--text-primary);
+    display:flex;align-items:center;justify-content:center;box-shadow:none;
+  `;
+  numBtn.textContent = serie.marca || (idx + 1);
+  numBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    mostrarSelectorMarca(serie, idx, () => {
+      guardarDatos();
+      numBtn.textContent = serie.marca || (idx + 1);
     });
+  });
 
-    const mkInput = (placeholder, value, key) => {
-      const inp = document.createElement('input');
-      inp.placeholder = placeholder;
-      inp.value = value || '';
-      inp.className = 'serie-input';
-      inp.addEventListener('click', e => e.stopPropagation());
-      inp.addEventListener('blur', e => { serie[key] = e.target.value; guardarDatos(); });
-      return inp;
-    };
-
-    const reps     = mkInput('R', serie.reps,     'reps');
-    const peso     = mkInput('P', serie.peso,     'peso');
-    const rir      = mkInput('R', serie.rir,      'rir');
-    const descanso = mkInput('D', serie.descanso, 'descanso');
-
-    const checkBtn = document.createElement('button');
-    checkBtn.className = 'serie-button';
-    checkBtn.textContent = serie.completada ? '✔️' : '🕔';
-    checkBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      serie.completada = !serie.completada;
-      if (serie.completada) {
-        serieDiv.style.background = 'rgba(61,213,152,0.08)';
-        if (serie.descanso) iniciarTimer(serie.descanso);
-      } else {
-        serieDiv.style.background = '';
-      }
-      checkBtn.textContent = serie.completada ? '✔️' : '🕔';
+  const mkInput = (placeholder, value, key) => {
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.value = value || '';
+    inp.placeholder = placeholder;
+    inp.style.cssText = `
+      margin:2px;padding:2px 4px;font-size:1.2rem;font-weight:300;
+      background:transparent;border:none;transition:all 0.2s;
+      box-shadow:none;min-height:26px;height:26px;text-align:center;
+    `;
+    inp.addEventListener('focus', () => {
+      inp.style.border = '1px solid var(--primary-mint)';
+      inp.style.background = 'rgba(255,255,255,0.5)';
+      inp.style.outline = 'none';
+      inp.style.boxShadow = '0 0 0 2px rgba(61,213,152,0.1)';
+    });
+    inp.addEventListener('blur', e => {
+      inp.style.border = 'none';
+      inp.style.background = 'transparent';
+      inp.style.boxShadow = 'none';
+      serie[key] = e.target.value;
       guardarDatos();
     });
+    inp.addEventListener('click', e => e.stopPropagation());
+    return inp;
+  };
 
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'serie-button btn-del-serie';
-    deleteBtn.textContent = '✕';
-    deleteBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      mostrarConfirmacion('¿Desea borrar esta serie?', () => {
-        ejercicio.series.splice(idx, 1);
-        guardarDatos();
-        getRenderizar()?.();
-      });
+  const reps     = mkInput('R', serie.reps,     'reps');
+  const peso     = mkInput('P', serie.peso,     'peso');
+  const rir      = mkInput('R', serie.rir,      'rir');
+  const descanso = mkInput('D', serie.descanso, 'descanso');
+
+  const botonesContainer = document.createElement('div');
+  botonesContainer.style.cssText = 'display:flex;gap:2px;justify-content:center;align-items:center;';
+
+  const checkBtn = document.createElement('button');
+  checkBtn.textContent = serie.completada ? '✔️' : '🕔';
+  checkBtn.style.cssText = `
+    border:none;font-size:1.1rem;cursor:pointer;padding:0;
+    border-radius:6px;transition:all 0.2s;background:transparent;
+    width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  `;
+  checkBtn.onmouseover = () => checkBtn.style.background = 'rgba(0,0,0,0.05)';
+  checkBtn.onmouseout  = () => checkBtn.style.background = 'transparent';
+  checkBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    serie.completada = !serie.completada;
+    serieDiv.style.background = serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent';
+    checkBtn.textContent = serie.completada ? '✔️' : '🕔';
+    if (serie.completada && serie.descanso) iniciarTimer(serie.descanso);
+    guardarDatos();
+  });
+
+  const deleteBtn = document.createElement('button');
+  deleteBtn.textContent = '❌';
+  deleteBtn.style.cssText = `
+    background:transparent;border:none;font-size:1.1rem;cursor:pointer;
+    padding:0;border-radius:6px;transition:all 0.2s;opacity:0.4;
+    width:26px;height:26px;display:flex;align-items:center;justify-content:center;
+  `;
+  deleteBtn.onmouseover = () => { deleteBtn.style.background = 'rgba(0,0,0,0.05)'; deleteBtn.style.opacity = '1'; };
+  deleteBtn.onmouseout  = () => { deleteBtn.style.background = 'transparent'; deleteBtn.style.opacity = '0.4'; };
+  deleteBtn.addEventListener('click', e => {
+    e.stopPropagation();
+    mostrarConfirmacion('¿Desea borrar esta serie?', () => {
+      ejercicio.series.splice(idx, 1);
+      guardarDatos();
+      getRenderizar()?.();
     });
+  });
 
-    [numBtn, reps, peso, rir, descanso, checkBtn, deleteBtn].forEach(el => serieDiv.appendChild(el));
+  botonesContainer.append(checkBtn, deleteBtn);
+  [numBtn, reps, peso, rir, descanso, botonesContainer].forEach(el => serieDiv.appendChild(el));
     inner.appendChild(serieDiv);
   });
 
@@ -524,62 +575,105 @@ function _crearTimerSesionBanda(rutaSesion) {
   const banda = document.createElement('div');
   banda.id = 'sessionTimerBanda';
   banda.className = 'session-timer-banda';
+  banda.style.cssText = `
+    display:flex;align-items:center;justify-content:space-between;
+    flex-wrap:wrap;gap:10px;width:100%;max-width:720px;margin:0 auto;
+    background:var(--bg-card);border-bottom:1px solid var(--border-color);
+    padding:8px 12px;
+  `;
 
   const getSegs  = ()  => parseInt(localStorage.getItem('sessionTimerSegundos') || '0');
   const setSegs  = (s) => localStorage.setItem('sessionTimerSegundos', s);
   const getRuta  = ()  => { const v = localStorage.getItem('sessionTimerRuta'); return v ? JSON.parse(v) : null; };
   const setRuta  = (r) => r ? localStorage.setItem('sessionTimerRuta', JSON.stringify(r)) : localStorage.removeItem('sessionTimerRuta');
+  const getPause = () => localStorage.getItem('sessionTimerPausado') === '1';
+  const setPause = (isPaused) => isPaused ? localStorage.setItem('sessionTimerPausado', '1') : localStorage.removeItem('sessionTimerPausado');
 
   const display = document.createElement('div');
   display.id = 'sessionTimerDisplay';
   display.textContent = formatearSegundos(getSegs());
-  display.style.cssText = 'font-size:1.6rem;font-weight:700;color:var(--primary-mint);font-family:monospace;min-width:80px;text-align:center;';
+  display.style.cssText = `
+    font-size:1.6rem;font-weight:700;color:var(--primary-mint);
+    font-family:monospace;min-width:80px;text-align:center;
+  `;
 
-  let corriendo = !!getRuta();
-  let interval  = null;
+  let corriendo = !!getRuta() && !getPause();
   const tick = () => { setSegs(getSegs() + 1); display.textContent = formatearSegundos(getSegs()); };
-  if (corriendo) interval = setInterval(tick, 1000);
+  if (corriendo && !_sessionTimerInterval) {
+    _sessionTimerInterval = setInterval(tick, 1000);
+  }
 
-  const btnPlay = document.createElement('button');
-  btnPlay.style.cssText = 'width:auto;margin:0;padding:6px 14px;font-size:0.8rem;font-weight:700;';
-  btnPlay.textContent = corriendo ? '⏸ Pausar' : '▶ Iniciar';
+  const timerControls = document.createElement('div');
+  timerControls.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;';
+
+  const mkCircleBtn = (text, bg, color) => {
+    const btn = document.createElement('button');
+    btn.textContent = text;
+    btn.style.cssText = `
+      width:36px;height:36px;border:none;border-radius:50%;
+      background:${bg};color:${color};font-size:1rem;
+      cursor:pointer;display:flex;align-items:center;justify-content:center;
+      transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.08);
+    `;
+    return btn;
+  };
+
+  const btnPlay = mkCircleBtn(corriendo ? '⏸' : '▶', 'var(--primary-mint)', '#fff');
+  const btnSave = mkCircleBtn('💾', '#FF6B6B', '#fff');
+  const btnReset = mkCircleBtn('↻', 'var(--bg-main)', 'var(--text-secondary)');
+
   btnPlay.onclick = () => {
     if (corriendo) {
-      clearInterval(interval); interval = null; corriendo = false;
-      btnPlay.textContent = '▶ Reanudar';
+      clearInterval(_sessionTimerInterval); _sessionTimerInterval = null;
+      setPause(true);
+      corriendo = false;
+      btnPlay.textContent = '▶';
     } else {
-      setRuta(rutaSesion); corriendo = true;
-      interval = setInterval(tick, 1000);
-      btnPlay.textContent = '⏸ Pausar';
+      setRuta(rutaSesion);
+      setPause(false);
+      corriendo = true;
+      if (!_sessionTimerInterval) {
+        _sessionTimerInterval = setInterval(tick, 1000);
+      }
+      btnPlay.textContent = '⏸';
     }
   };
 
-  const btnStop = document.createElement('button');
-  btnStop.style.cssText = 'width:auto;margin:0;padding:6px 14px;font-size:0.8rem;font-weight:700;background:#FF6B6B;color:#fff;border:none;border-radius:8px;';
-  btnStop.textContent = '⏹ Guardar';
-  btnStop.onclick = () => {
-    clearInterval(interval); interval = null; corriendo = false;
+  btnSave.onclick = () => {
     const segundos = getSegs();
     const minutos = Math.round(segundos / 60);
-    if (minutos > 0) {
-      _guardarDuracionSesion(rutaSesion, minutos);
-    }
-    setSegs(0); setRuta(null);
-    btnPlay.textContent = '▶ Iniciar';
-    display.textContent = '00:00';
+    const tiempoTexto = formatearSegundos(segundos);
+
+    mostrarConfirmacion(
+      `¿Deseas guardar el tiempo de la sesión?\nTiempo actual: ${tiempoTexto}`,
+      () => {
+        clearInterval(_sessionTimerInterval); _sessionTimerInterval = null;
+        setPause(false);
+        corriendo = false;
+        if (minutos > 0) {
+          _guardarDuracionSesion(rutaSesion, minutos);
+        }
+        setSegs(0); setRuta(null);
+        btnPlay.textContent = '▶';
+        display.textContent = '00:00';
+      },
+      null,
+      'Guardar',
+      'Cancelar'
+    );
   };
 
-  const btnReset = document.createElement('button');
-  btnReset.style.cssText = 'width:auto;margin:0;padding:6px 14px;font-size:0.8rem;font-weight:700;background:var(--bg-main);color:var(--text-secondary);';
-  btnReset.textContent = '↺ Reset';
   btnReset.onclick = () => {
-    clearInterval(interval); interval = null; corriendo = false;
+    clearInterval(_sessionTimerInterval); _sessionTimerInterval = null;
+    setPause(false);
+    corriendo = false;
     setSegs(0); setRuta(null);
     display.textContent = '00:00';
-    btnPlay.textContent = '▶ Iniciar';
+    btnPlay.textContent = '▶';
   };
 
-  banda.append(display, btnPlay, btnStop, btnReset);
+  timerControls.append(btnPlay, btnSave, btnReset);
+  banda.append(display, timerControls);
   return banda;
 }
 
@@ -869,15 +963,65 @@ function _calcularEstadisticas(ejercicio) {
 function _buscarSesionAnterior(nombreEjercicio, rutaActual) {
   const datos = window.datos || [];
   const sesiones = [];
-  datos[0]?.hijos?.forEach((meso, mi) => meso.hijos?.forEach((micro, mci) => micro.hijos?.forEach((sesion, si) => {
-    let fecha = sesion.fecha;
-    if (!fecha && sesion.hijos?.length) for (const s of sesion.hijos) { if (s.fecha) { fecha = s.fecha; break; } }
-    sesion.hijos?.forEach(bloque => {
-      (bloque.hijos || [bloque]).forEach(ej => {
-        if (ej.nombre === nombreEjercicio && fecha) sesiones.push({ fecha, ejercicio: ej, ruta: [0, mi, mci, si] });
+
+  const buscarEjercicioEnNivel = (nodo) => {
+    if (nodo.nombre === nombreEjercicio && nodo.series) return nodo;
+    for (const hijo of (nodo.hijos || [])) {
+      const encontrado = buscarEjercicioEnNivel(hijo);
+      if (encontrado) return encontrado;
+    }
+    return null;
+  };
+
+  const toDia = (raw) => {
+    if (!raw) return null;
+    const d = new Date(raw);
+    if (isNaN(d)) return null;
+    return d.toISOString().slice(0, 10);
+  };
+
+  datos[0]?.hijos?.forEach((meso, mi) => {
+    meso.hijos?.forEach((micro, mci) => {
+      micro.hijos?.forEach((sesion, si) => {
+        let fecha = sesion.fecha;
+        if (!fecha && sesion.hijos?.length) {
+          for (const sub of sesion.hijos) { if (sub.fecha) { fecha = sub.fecha; break; } }
+        }
+        if (!fecha) return;
+        const ejercicioEncontrado = buscarEjercicioEnNivel(sesion);
+        if (ejercicioEncontrado) {
+          sesiones.push({ fecha, ejercicio: ejercicioEncontrado, ruta: [0, mi, mci, si] });
+        }
       });
     });
-  })));
+  });
+
   sesiones.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
-  return sesiones.find(s => s.ruta.join('-') !== rutaActual.join('-')) || null;
+
+  // Obtener la fecha de la sesión actual desde rutaActual
+  let fechaActual = null;
+  if (rutaActual.length >= 4) {
+    try {
+      let nodo = { hijos: datos };
+      for (const i of rutaActual.slice(0, 4)) nodo = nodo.hijos[i];
+      fechaActual = nodo?.fecha;
+      if (!fechaActual && nodo?.hijos?.length) {
+        for (const sub of nodo.hijos) { if (sub.fecha) { fechaActual = sub.fecha; break; } }
+      }
+    } catch (_) {}
+  }
+
+  const fechaActualDia = toDia(fechaActual);
+
+  for (const sesion of sesiones) {
+    const sesionDia = toDia(sesion.fecha);
+    if (fechaActualDia) {
+      if (sesionDia && sesionDia < fechaActualDia) return sesion;
+    } else {
+      // Sin fecha en sesión actual: devolver la más reciente que no sea la sesión misma
+      const rutaActualStr = rutaActual.slice(0, 4).join(',');
+      if (sesion.ruta.join(',') !== rutaActualStr) return sesion;
+    }
+  }
+  return null;
 }

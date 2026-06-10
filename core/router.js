@@ -18,6 +18,7 @@ import {
   renderizarLista,
   abrirBuscadorEjercicios
 } from '../modules/entrenamiento/entrenamiento.js';
+import { restaurarTimer } from '../shared/timer.js';
 
 // ── Estado de navegación ──────────────────────────────────────
 export let rutaActual        = [];
@@ -59,6 +60,7 @@ function asignarSesionIds(datosArray) {
 export function renderizar() {
   if (!contenido) return;
   contenido.innerHTML = '';
+  restaurarTimer();
 
   const nivel = nivelActual(rutaActual);
   asignarSesionIds(datos);
@@ -161,8 +163,8 @@ function _buildSubheaderNivel(nivel) {
   const cont = document.createElement('div');
   cont.id = 'subHeaderButtons';
 
-  // Botón volver (niveles 1–4)
-  if (rutaActual.length >= 1 && rutaActual.length <= 4) {
+  // Botón volver (niveles 2–4)
+  if (rutaActual.length >= 2 && rutaActual.length <= 4) {
     const backBtn = document.createElement('button');
     backBtn.className = 'btn-back-subheader';
     backBtn.innerHTML = '⬅';

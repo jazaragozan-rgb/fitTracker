@@ -47,11 +47,16 @@ async function cargarDatosUsuario(uid) {
 
 // ── Guardar datos en Firestore (con debounce 300 ms) ──────────
 let _saveTimer = null;
-export function guardarDatos() {
+export function guardarDatos(options = {}) {
+  if (typeof options === 'boolean') options = { immediate: options };
   const user = auth.currentUser;
-  if (!user) return;
-  if (_saveTimer) clearTimeout(_saveTimer);
-  _saveTimer = setTimeout(async () => {
+  if (!user) return options.immediate ? Promise.resolve() : undefined;
+  if (_saveTimer) {
+    clearTimeout(_saveTimer);
+    _saveTimer = null;
+  }
+
+  const save = async () => {
     try {
       await setDoc(
         doc(db, 'usuarios', user.uid),
@@ -62,7 +67,13 @@ export function guardarDatos() {
     } catch (e) {
       console.error('[store] Error al guardar:', e);
     }
-  }, 300);
+  };
+
+  if (options.immediate) {
+    return save();
+  }
+
+  _saveTimer = setTimeout(save, 300);
 }
 
 // ── Restaurar datos desde JSON (herramienta de recuperación) ──

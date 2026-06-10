@@ -391,14 +391,16 @@
 ════════════════════════════════════════════════════════════ */
 
 .session-timer-banda {
-  display: flex; align-items: center; justify-content: center;
-  padding: 8px 16px; background: var(--bg-card);
-  border-bottom: 0.5px solid var(--border-color); flex-shrink: 0; gap: 12px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 10px;
+  width: 100%; max-width: 720px; margin: 0 auto;
+  padding: 8px 12px; background: var(--bg-card);
+  border-bottom: 1px solid var(--border-color); flex-shrink: 0;
 }
 #sessionTimerDisplay {
-  font-size: 1.5rem; font-weight: 600; color: var(--text-primary);
-  font-variant-numeric: tabular-nums; letter-spacing: 1px;
-  min-width: 80px; text-align: center;
+  font-size: 1.6rem; font-weight: 700; color: var(--primary-mint);
+  font-family: monospace; font-variant-numeric: tabular-nums;
+  letter-spacing: 1px; min-width: 80px; text-align: center;
 }
 
 
