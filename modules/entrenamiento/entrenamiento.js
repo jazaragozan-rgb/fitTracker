@@ -75,10 +75,6 @@ export function renderizarNivel4(nivel, contenido, rutaActual) {
   wrapper.style.cssText = `position:fixed;top:0;left:0;width:100%;height:100%;display:flex;flex-direction:column;z-index:1;`;
   wrapper.style.paddingTop = `${offsetTop}px`;
 
-  // Banda del timer de sesión
-  const rutaSesionPadre = rutaActual.slice(0, -1);
-  wrapper.appendChild(_crearTimerSesionBanda(rutaSesionPadre));
-
   // Zona scrolleable
   const zonaScroll = document.createElement('div');
   zonaScroll.style.cssText = `flex:1;overflow-y:auto;padding:12px;padding-bottom:80px;background:var(--bg-main);`;
@@ -380,18 +376,6 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
 function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
   ejercicio.series = ejercicio.series || [];
 
-  // Botón + Serie
-  const addSerieBtn = document.createElement('button');
-  addSerieBtn.textContent = '+ Serie';
-  addSerieBtn.className = 'add-serie';
-  addSerieBtn.onclick = e => {
-    e.stopPropagation();
-    ejercicio.series.push({});
-    guardarDatos();
-    getRenderizar()?.();
-  };
-  inner.appendChild(addSerieBtn);
-
   // Cabeceras
   const encabezados = document.createElement('div');
   encabezados.style.cssText = `
@@ -405,113 +389,56 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
   inner.appendChild(encabezados);
 
   // Filas de series
-  ejercicio.series.forEach((serie, idx) => {
-  const serieDiv = document.createElement('div');
-  serieDiv.style.cssText = `
-    display:grid;grid-template-columns:40px repeat(4,1fr) 80px;
-    gap:4px;margin:2px;padding:1px 4px;align-items:center;
-    border-radius:8px;transition:all 0.2s;min-height:45px;height:45px;
-    background:${serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent'};
-  `;
-  serieDiv.addEventListener('mouseenter', () => {
-    if (!serie.completada) serieDiv.style.background = 'rgba(255,255,255,0.3)';
-  });
-  serieDiv.addEventListener('mouseleave', () => {
-    serieDiv.style.background = serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent';
-  });
+    ejercicio.series.forEach((serie, idx) => {
+      const serieDiv = document.createElement('div');
+      serieDiv.style.cssText = `
+        display:grid;grid-template-columns:40px repeat(4,1fr) 40px;
+        gap:4px;margin:2px;padding:1px 4px;align-items:center;
+        border-radius:8px;min-height:45px;height:45px;
+        background:${serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent'};
+      `;
 
-  const numBtn = document.createElement('button');
-  numBtn.style.cssText = `
-    width:26px;height:26px;padding:2px 4px;margin:2px;
-    font-size:1.2rem;font-weight:700;border:none;
-    border-radius:6px;background:transparent;cursor:pointer;
-    transition:all 0.2s;color:var(--text-primary);
-    display:flex;align-items:center;justify-content:center;box-shadow:none;
-  `;
-  numBtn.textContent = serie.marca || (idx + 1);
-  numBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    mostrarSelectorMarca(serie, idx, () => {
-      guardarDatos();
+      const numBtn = document.createElement('div');
+      numBtn.style.cssText = `
+        width:26px;height:26px;
+        font-size:1.2rem;font-weight:700;
+        border-radius:6px;background:transparent;
+        color:var(--text-primary);
+        display:flex;align-items:center;justify-content:center;
+      `;
       numBtn.textContent = serie.marca || (idx + 1);
+
+      const mkInput = (value, placeholder) => {
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = value || '';
+        inp.placeholder = placeholder;
+        inp.readOnly = true;
+        inp.style.cssText = `
+          margin:2px;padding:2px 4px;font-size:1.2rem;font-weight:300;
+          background:transparent;border:none;
+          box-shadow:none;min-height:26px;height:26px;text-align:center;
+          color:var(--text-primary);cursor:default;
+        `;
+        return inp;
+      };
+
+      const reps     = mkInput(serie.reps,     'R');
+      const peso     = mkInput(serie.peso,     'P');
+      const rir      = mkInput(serie.rir,      'R');
+      const descanso = mkInput(serie.descanso, 'D');
+
+      // Check visible pero no clickeable (solo informativo)
+      const checkIcon = document.createElement('div');
+      checkIcon.style.cssText = `
+        font-size:1.1rem;display:flex;align-items:center;justify-content:center;
+        width:26px;height:26px;opacity:${serie.completada ? '1' : '0.3'};
+      `;
+      checkIcon.textContent = serie.completada ? '✔️' : '🕔';
+
+      [numBtn, reps, peso, rir, descanso, checkIcon].forEach(el => serieDiv.appendChild(el));
+      inner.appendChild(serieDiv);
     });
-  });
-
-  const mkInput = (placeholder, value, key) => {
-    const inp = document.createElement('input');
-    inp.type = 'text';
-    inp.value = value || '';
-    inp.placeholder = placeholder;
-    inp.style.cssText = `
-      margin:2px;padding:2px 4px;font-size:1.2rem;font-weight:300;
-      background:transparent;border:none;transition:all 0.2s;
-      box-shadow:none;min-height:26px;height:26px;text-align:center;
-    `;
-    inp.addEventListener('focus', () => {
-      inp.style.border = '1px solid var(--primary-mint)';
-      inp.style.background = 'rgba(255,255,255,0.5)';
-      inp.style.outline = 'none';
-      inp.style.boxShadow = '0 0 0 2px rgba(61,213,152,0.1)';
-    });
-    inp.addEventListener('blur', e => {
-      inp.style.border = 'none';
-      inp.style.background = 'transparent';
-      inp.style.boxShadow = 'none';
-      serie[key] = e.target.value;
-      guardarDatos();
-    });
-    inp.addEventListener('click', e => e.stopPropagation());
-    return inp;
-  };
-
-  const reps     = mkInput('R', serie.reps,     'reps');
-  const peso     = mkInput('P', serie.peso,     'peso');
-  const rir      = mkInput('R', serie.rir,      'rir');
-  const descanso = mkInput('D', serie.descanso, 'descanso');
-
-  const botonesContainer = document.createElement('div');
-  botonesContainer.style.cssText = 'display:flex;gap:2px;justify-content:center;align-items:center;';
-
-  const checkBtn = document.createElement('button');
-  checkBtn.textContent = serie.completada ? '✔️' : '🕔';
-  checkBtn.style.cssText = `
-    border:none;font-size:1.1rem;cursor:pointer;padding:0;
-    border-radius:6px;transition:all 0.2s;background:transparent;
-    width:26px;height:26px;display:flex;align-items:center;justify-content:center;
-  `;
-  checkBtn.onmouseover = () => checkBtn.style.background = 'rgba(0,0,0,0.05)';
-  checkBtn.onmouseout  = () => checkBtn.style.background = 'transparent';
-  checkBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    serie.completada = !serie.completada;
-    serieDiv.style.background = serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent';
-    checkBtn.textContent = serie.completada ? '✔️' : '🕔';
-    if (serie.completada && serie.descanso) iniciarTimer(serie.descanso);
-    guardarDatos();
-  });
-
-  const deleteBtn = document.createElement('button');
-  deleteBtn.textContent = '❌';
-  deleteBtn.style.cssText = `
-    background:transparent;border:none;font-size:1.1rem;cursor:pointer;
-    padding:0;border-radius:6px;transition:all 0.2s;opacity:0.4;
-    width:26px;height:26px;display:flex;align-items:center;justify-content:center;
-  `;
-  deleteBtn.onmouseover = () => { deleteBtn.style.background = 'rgba(0,0,0,0.05)'; deleteBtn.style.opacity = '1'; };
-  deleteBtn.onmouseout  = () => { deleteBtn.style.background = 'transparent'; deleteBtn.style.opacity = '0.4'; };
-  deleteBtn.addEventListener('click', e => {
-    e.stopPropagation();
-    mostrarConfirmacion('¿Desea borrar esta serie?', () => {
-      ejercicio.series.splice(idx, 1);
-      guardarDatos();
-      getRenderizar()?.();
-    });
-  });
-
-  botonesContainer.append(checkBtn, deleteBtn);
-  [numBtn, reps, peso, rir, descanso, botonesContainer].forEach(el => serieDiv.appendChild(el));
-    inner.appendChild(serieDiv);
-  });
 
   // Stats sesión actual
   const stats = _calcularEstadisticas(ejercicio);
@@ -553,128 +480,20 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
   }
 
   // Notas
-  const nc = document.createElement('div');
-  nc.className = 'ej-notas-container';
-  const nl = document.createElement('label');
-  nl.className = 'ej-notas-label';
-  nl.textContent = '📝 Notas';
-  const ta = document.createElement('textarea');
-  ta.className = 'ej-notas-textarea';
-  ta.value = ejercicio.notas || '';
-  ta.placeholder = 'Notas del ejercicio...';
-  ['pointerdown','mousedown','touchstart','click'].forEach(ev => ta.addEventListener(ev, e => e.stopPropagation()));
-  ta.addEventListener('blur', () => { ejercicio.notas = ta.value; guardarDatos(); });
-  nc.append(nl, ta);
-  inner.appendChild(nc);
-}
-
-// ============================================================
-// TIMER DE SESIÓN
-// ============================================================
-function _crearTimerSesionBanda(rutaSesion) {
-  const banda = document.createElement('div');
-  banda.id = 'sessionTimerBanda';
-  banda.className = 'session-timer-banda';
-  banda.style.cssText = `
-    display:flex;align-items:center;justify-content:space-between;
-    flex-wrap:wrap;gap:10px;width:100%;max-width:720px;margin:0 auto;
-    background:var(--bg-card);border-bottom:1px solid var(--border-color);
-    padding:8px 12px;
-  `;
-
-  const getSegs  = ()  => parseInt(localStorage.getItem('sessionTimerSegundos') || '0');
-  const setSegs  = (s) => localStorage.setItem('sessionTimerSegundos', s);
-  const getRuta  = ()  => { const v = localStorage.getItem('sessionTimerRuta'); return v ? JSON.parse(v) : null; };
-  const setRuta  = (r) => r ? localStorage.setItem('sessionTimerRuta', JSON.stringify(r)) : localStorage.removeItem('sessionTimerRuta');
-  const getPause = () => localStorage.getItem('sessionTimerPausado') === '1';
-  const setPause = (isPaused) => isPaused ? localStorage.setItem('sessionTimerPausado', '1') : localStorage.removeItem('sessionTimerPausado');
-
-  const display = document.createElement('div');
-  display.id = 'sessionTimerDisplay';
-  display.textContent = formatearSegundos(getSegs());
-  display.style.cssText = `
-    font-size:1.6rem;font-weight:700;color:var(--primary-mint);
-    font-family:monospace;min-width:80px;text-align:center;
-  `;
-
-  let corriendo = !!getRuta() && !getPause();
-  const tick = () => { setSegs(getSegs() + 1); display.textContent = formatearSegundos(getSegs()); };
-  if (corriendo && !_sessionTimerInterval) {
-    _sessionTimerInterval = setInterval(tick, 1000);
-  }
-
-  const timerControls = document.createElement('div');
-  timerControls.style.cssText = 'display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap;';
-
-  const mkCircleBtn = (text, bg, color) => {
-    const btn = document.createElement('button');
-    btn.textContent = text;
-    btn.style.cssText = `
-      width:36px;height:36px;border:none;border-radius:50%;
-      background:${bg};color:${color};font-size:1rem;
-      cursor:pointer;display:flex;align-items:center;justify-content:center;
-      transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.08);
-    `;
-    return btn;
-  };
-
-  const btnPlay = mkCircleBtn(corriendo ? '⏸' : '▶', 'var(--primary-mint)', '#fff');
-  const btnSave = mkCircleBtn('💾', '#FF6B6B', '#fff');
-  const btnReset = mkCircleBtn('↻', 'var(--bg-main)', 'var(--text-secondary)');
-
-  btnPlay.onclick = () => {
-    if (corriendo) {
-      clearInterval(_sessionTimerInterval); _sessionTimerInterval = null;
-      setPause(true);
-      corriendo = false;
-      btnPlay.textContent = '▶';
-    } else {
-      setRuta(rutaSesion);
-      setPause(false);
-      corriendo = true;
-      if (!_sessionTimerInterval) {
-        _sessionTimerInterval = setInterval(tick, 1000);
-      }
-      btnPlay.textContent = '⏸';
-    }
-  };
-
-  btnSave.onclick = () => {
-    const segundos = getSegs();
-    const minutos = Math.round(segundos / 60);
-    const tiempoTexto = formatearSegundos(segundos);
-
-    mostrarConfirmacion(
-      `¿Deseas guardar el tiempo de la sesión?\nTiempo actual: ${tiempoTexto}`,
-      () => {
-        clearInterval(_sessionTimerInterval); _sessionTimerInterval = null;
-        setPause(false);
-        corriendo = false;
-        if (minutos > 0) {
-          _guardarDuracionSesion(rutaSesion, minutos);
-        }
-        setSegs(0); setRuta(null);
-        btnPlay.textContent = '▶';
-        display.textContent = '00:00';
-      },
-      null,
-      'Guardar',
-      'Cancelar'
-    );
-  };
-
-  btnReset.onclick = () => {
-    clearInterval(_sessionTimerInterval); _sessionTimerInterval = null;
-    setPause(false);
-    corriendo = false;
-    setSegs(0); setRuta(null);
-    display.textContent = '00:00';
-    btnPlay.textContent = '▶';
-  };
-
-  timerControls.append(btnPlay, btnSave, btnReset);
-  banda.append(display, timerControls);
-  return banda;
+    const nc = document.createElement('div');
+    nc.className = 'ej-notas-container';
+    const nl = document.createElement('label');
+    nl.className = 'ej-notas-label';
+    nl.textContent = '📝 Notas';
+    const ta = document.createElement('textarea');
+    ta.className = 'ej-notas-textarea';
+    ta.value = ejercicio.notas || '';
+    ta.placeholder = 'Notas del ejercicio...';
+    ta.readOnly = true;
+    ta.style.cursor = 'default';
+    ta.style.color = 'var(--text-secondary)';
+    nc.append(nl, ta);
+    inner.appendChild(nc);
 }
 
 // Guarda la duración en el nodo de sesión y persiste en Firestore

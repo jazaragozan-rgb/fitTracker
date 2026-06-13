@@ -113,9 +113,23 @@ let timerPaused = false;
 let ejercicioExpandidoLive = null;
 
 // Inicia el flujo de entrenamiento en vivo
-export function iniciarEntrenamiento() {
+export function iniciarEntrenamiento(ejerciciosPrecargados = []) {
   entrenamientoActual = {
-    ejercicios: [],
+    ejercicios: ejerciciosPrecargados.length > 0
+      ? ejerciciosPrecargados.map(ej => ({
+          nombre: ej.nombre,
+          imagen: ej.imagen || '',
+          notas:  ej.notas  || '',
+          series: (ej.series || []).map(s => ({
+            reps:       s.reps       || '',
+            peso:       s.peso       || '',
+            rir:        s.rir        || '',
+            descanso:   s.descanso   || '',
+            marca:      s.marca      || '',
+            completada: false
+          }))
+        }))
+      : [],
     fecha: new Date().toISOString().slice(0, 10)
   };
   timerSeconds = 0;
@@ -150,28 +164,56 @@ function abrirEntrenamientoEnVivo() {
     display: flex; align-items: center; justify-content: space-between;
   `;
 
-  const headerLeft = document.createElement("div");
-  headerLeft.style.cssText = `width: 36px;`;
-  header.appendChild(headerLeft);
+    const headerLeft = document.createElement("div");
+    headerLeft.style.cssText = `display: flex; gap: 6px; align-items: center;`;
+    header.appendChild(headerLeft);
 
-  const btnCerrar = document.createElement("button");
-  btnCerrar.textContent = "✖";
-  btnCerrar.style.cssText = `
-    background: transparent; border: none;
-    font-size: 1.3rem; color: var(--text-secondary);
-    cursor: pointer; width: 32px; height: 32px; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    border-radius: 6px; transition: all 0.2s;
-  `;
-  btnCerrar.onmouseover = () => btnCerrar.style.background = "var(--bg-main)";
-  btnCerrar.onmouseout  = () => btnCerrar.style.background = "transparent";
-  btnCerrar.onclick = () => {
-    if (confirm("¿Cerrar sin guardar?")) {
-      clearInterval(timerInterval);
-      overlay.remove();
-    }
-  };
-  headerLeft.appendChild(btnCerrar);
+    const btnCerrar = document.createElement("button");
+    btnCerrar.textContent = "✖";
+    btnCerrar.style.cssText = `
+      background: transparent; border: none;
+      font-size: 1.3rem; color: var(--text-secondary);
+      cursor: pointer; width: 32px; height: 32px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; transition: all 0.2s;
+    `;
+    btnCerrar.onmouseover = () => btnCerrar.style.background = "var(--bg-main)";
+    btnCerrar.onmouseout  = () => btnCerrar.style.background = "transparent";
+    btnCerrar.onclick = () => {
+      if (confirm("¿Cerrar sin guardar?")) {
+        clearInterval(timerInterval);
+        overlay.remove();
+      }
+    };
+    headerLeft.appendChild(btnCerrar);
+
+    const btnMinimizar = document.createElement("button");
+    btnMinimizar.textContent = "—";
+    btnMinimizar.title = "Minimizar";
+    btnMinimizar.style.cssText = `
+      background: transparent; border: none;
+      font-size: 1.1rem; color: var(--text-secondary);
+      cursor: pointer; width: 32px; height: 32px; padding: 0;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 6px; transition: all 0.2s;
+    `;
+    btnMinimizar.onmouseover = () => btnMinimizar.style.background = "var(--bg-main)";
+    btnMinimizar.onmouseout  = () => btnMinimizar.style.background = "transparent";
+    btnMinimizar.onclick = () => {
+      const minimizado = overlay.style.transform === "translateY(calc(100% - 56px))";
+      if (minimizado) {
+        overlay.style.transform = "translateY(0)";
+        overlay.style.transition = "transform 0.3s ease";
+        btnMinimizar.textContent = "—";
+        btnMinimizar.title = "Minimizar";
+      } else {
+        overlay.style.transform = "translateY(calc(100% - 56px))";
+        overlay.style.transition = "transform 0.3s ease";
+        btnMinimizar.textContent = "▲";
+        btnMinimizar.title = "Restaurar";
+      }
+    };
+    headerLeft.appendChild(btnMinimizar);
 
   const titulo = document.createElement("h2");
   titulo.textContent = "Entrenamiento en vivo";
@@ -515,7 +557,7 @@ async function renderizarEjerciciosLive() {
         btnCheck.onclick = (e) => {
           e.stopPropagation();
           serie.completada = !serie.completada;
-          if (serie.completada && serie.descanso) iniciarTimer(serie.descanso);
+          if (serie.completada && serie.descanso) iniciarTimer(parseInt(serie.descanso));
           renderizarEjerciciosLive();
         };
         botonesContainer.appendChild(btnCheck);

@@ -257,7 +257,7 @@ main#contenido {
   width: 93%;
   max-width: 100%;
   padding: 0 16px;
-  z-index: 200;
+  z-index: 10001;
   display: flex;
   justify-content: center;
   pointer-events: none;

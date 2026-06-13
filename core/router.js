@@ -177,23 +177,58 @@ function _buildSubheaderNivel(nivel) {
     cont.appendChild(backBtn);
   }
 
-  // Botón añadir
-  const addBtn = document.createElement('button');
-  addBtn.className   = 'header-btn';
-  addBtn.textContent = '+ Añadir';
-  addBtn.onclick = () => _onAnadir(nivel);
-  cont.appendChild(addBtn);
-
-  // Botón buscar ejercicio (solo nivel 4)
+  // En nivel 4: solo botón "Iniciar sesión", sin añadir ni buscar
   if (rutaActual.length === 4) {
-    const searchBtn = document.createElement('button');
-    searchBtn.textContent = '🔍';
-    searchBtn.className   = 'btn-search';
-    searchBtn.onclick     = () => abrirBuscadorEjercicios();
-    cont.appendChild(searchBtn);
+    const btnIniciar = document.createElement('button');
+    btnIniciar.className = 'header-btn';
+    btnIniciar.textContent = '▶ Iniciar sesión';
+    btnIniciar.style.cssText = 'background:var(--accent-green);min-width:160px;max-width:200px;';
+    btnIniciar.addEventListener('click', () => _iniciarSesionDesdeNivel4(nivel));
+    cont.appendChild(btnIniciar);
+  } else {
+    // Niveles 1-3: botón añadir normal
+    const addBtn = document.createElement('button');
+    addBtn.className   = 'header-btn';
+    addBtn.textContent = '+ Añadir';
+    addBtn.onclick = () => _onAnadir(nivel);
+    cont.appendChild(addBtn);
   }
 
   subHeader.appendChild(cont);
+}
+
+function _iniciarSesionDesdeNivel4(nivel) {
+  const ejercicios = [];
+
+  const recogerEjercicios = (nodo) => {
+    if (nodo.series !== undefined && nodo.nombre) {
+      ejercicios.push({
+        nombre: nodo.nombre,
+        imagen: nodo.imagen || '',
+        // Copiar series del plan pero resetear completada a false
+        series: (nodo.series || []).map(s => ({
+          reps:     s.reps     || '',
+          peso:     s.peso     || '',
+          rir:      s.rir      || '',
+          descanso: s.descanso || '',
+          marca:    s.marca    || '',
+          completada: false
+        }))
+      });
+    }
+    (nodo.hijos || []).forEach(recogerEjercicios);
+  };
+
+  (nivel.hijos || []).forEach(recogerEjercicios);
+
+  if (ejercicios.length === 0) {
+    alert('Esta sesión no tiene ejercicios. Añade ejercicios primero desde el editor.');
+    return;
+  }
+
+  import('../modules/live/live.js').then(({ iniciarEntrenamiento }) => {
+    iniciarEntrenamiento(ejercicios);
+  });
 }
 
 // ── Lógica del botón Añadir ───────────────────────────────────
