@@ -817,15 +817,10 @@ function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
     sesion.fecha = entrenamientoActual.fecha;
     if (!sesion.hijos) sesion.hijos = [];
 
-    const bloqueNuevo = {
-      nombre: `Entrenamiento ${new Date(entrenamientoActual.fecha).toLocaleDateString()}`,
-      fecha: entrenamientoActual.fecha,
-      hijos: []
-    };
+    // Guardar cada ejercicio directamente como hijo de la sesión (nivel 4)
     entrenamientoActual.ejercicios.forEach(ej => {
-      bloqueNuevo.hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({...s})), hijos: [] });
+      sesion.hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({ ...s })), hijos: [] });
     });
-    sesion.hijos.push(bloqueNuevo);
 
     if (typeof window.guardarDatos === 'function') window.guardarDatos();
     clearInterval(timerInterval);
@@ -985,17 +980,14 @@ function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntren
     const micro = datos[0].hijos[mesoIndex].hijos[microIndex];
     if (!micro.hijos) micro.hijos = [];
 
+    // Crear la nueva sesión con los ejercicios como hijos directos (nivel 4)
     const nuevaSesion = {
       nombre: nombreSesion,
       fecha: entrenamientoActual.fecha,
-      hijos: [{
-        nombre: `Entrenamiento ${new Date(entrenamientoActual.fecha).toLocaleDateString()}`,
-        fecha: entrenamientoActual.fecha,
-        hijos: []
-      }]
+      hijos: []
     };
     entrenamientoActual.ejercicios.forEach(ej => {
-      nuevaSesion.hijos[0].hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({...s})), hijos: [] });
+      nuevaSesion.hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({ ...s })), hijos: [] });
     });
 
     micro.hijos.push(nuevaSesion);
