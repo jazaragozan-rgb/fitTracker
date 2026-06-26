@@ -138,7 +138,11 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   // ── 2. CALENDARIO SEMANAL ───────────────────────────────────
   _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, renderizar);
 
-  // ── 3. FRECUENCIA MENSUAL ───────────────────────────────────
+  // ── 3. NUTRICIÓN COMPACTA ───────────────────────────────────
+  const nivelNutricion = datos[3];
+  _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
+
+  // ── 4. FRECUENCIA MENSUAL ───────────────────────────────────
   const cardFrecuencia = crearCard('Frecuencia Mensual', '');
   const chartFrecuencia = document.createElement('canvas');
   chartFrecuencia.className = 'dashboard-chart';
@@ -476,10 +480,6 @@ function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr, dato
     cardProgreso.innerHTML += '<p class="empty-state">Añade ejercicios con series para ver su progreso</p>';
   }
   dashboard.appendChild(cardProgreso);
-
-  // ── 9. NUTRICIÓN COMPACTA ───────────────────────────────────
-  const nivelNutricion = datos[3];
-  _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
 }
 
 // ── Card: Nutrición compacta ──────────────────────────────────

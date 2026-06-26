@@ -112,6 +112,17 @@ let timerPaused = false;
 // Variable para controlar qué ejercicio está expandido
 let ejercicioExpandidoLive = null;
 
+// Drag & drop en live
+const MOVEMENT_THRESHOLD = 10;
+const LONG_PRESS_DURATION = 500;
+let dragEjercicio = null;
+let dragEjercicioStartX = 0;
+let dragEjercicioStartY = 0;
+let draggingEjercicio = false;
+let dragEjercicioStartIndex = null;
+let dragEjercicioTimer = null;
+let hasMovedEjercicio = false;
+
 // Inicia el flujo de entrenamiento en vivo
 export function iniciarEntrenamiento(ejerciciosPrecargados = []) {
   entrenamientoActual = {
@@ -364,6 +375,101 @@ function updateTimerDisplay(display) {
   display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
 }
 
+function startDragEjercicio(e) {
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  dragEjercicio = e.currentTarget.closest('.ejercicio-live-item');
+  if (!dragEjercicio) return;
+  draggingEjercicio = false;
+  hasMovedEjercicio = false;
+  dragEjercicioStartIndex = [...(dragEjercicio.parentElement?.children || [])].indexOf(dragEjercicio);
+  const touch = e.touches?.[0] || e;
+  dragEjercicioStartX = touch.clientX;
+  dragEjercicioStartY = touch.clientY;
+
+  const checkMovement = (me) => {
+    const mt = me.touches?.[0] || me;
+    if (Math.abs(mt.clientX - dragEjercicioStartX) > MOVEMENT_THRESHOLD || Math.abs(mt.clientY - dragEjercicioStartY) > MOVEMENT_THRESHOLD) {
+      hasMovedEjercicio = true;
+      clearTimeout(dragEjercicioTimer);
+      dragEjercicioTimer = null;
+      cleanup();
+    }
+  };
+
+  const cleanup = () => {
+    document.removeEventListener('mousemove', checkMovement);
+    document.removeEventListener('touchmove', checkMovement);
+  };
+
+  document.addEventListener('mousemove', checkMovement, { passive: true });
+  document.addEventListener('touchmove', checkMovement, { passive: true });
+
+  dragEjercicioTimer = setTimeout(() => {
+    cleanup();
+    if (!hasMovedEjercicio) {
+      draggingEjercicio = true;
+      dragEjercicio.classList.add('dragging');
+      dragEjercicio.style.opacity = '0.7';
+      dragEjercicio.style.transform = 'scale(1.02)';
+      document.body.style.userSelect = 'none';
+      navigator.vibrate?.(50);
+    }
+  }, LONG_PRESS_DURATION);
+}
+
+function dragMoveEjercicio(e) {
+  if (!draggingEjercicio || !dragEjercicio) return;
+  e.preventDefault();
+  const y = (e.touches?.[0] || e).clientY;
+  const items = [...document.querySelectorAll('.ejercicio-live-item:not(.dragging)')];
+  const target = items.find(item => y < item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2);
+  if (target) dragEjercicio.parentElement?.insertBefore(dragEjercicio, target);
+  else if (items.length > 0) items[0].parentElement?.appendChild(dragEjercicio);
+}
+
+function dragEndEjercicio() {
+  clearTimeout(dragEjercicioTimer);
+  dragEjercicioTimer = null;
+  document.body.style.userSelect = '';
+  if (!draggingEjercicio || !dragEjercicio) {
+    dragEjercicio = null;
+    dragEjercicioStartIndex = null;
+    hasMovedEjercicio = false;
+    return;
+  }
+
+  dragEjercicio.style.opacity = '';
+  dragEjercicio.style.transform = '';
+  draggingEjercicio = false;
+  dragEjercicio.classList.remove('dragging');
+
+  const newIndex = [...(dragEjercicio.parentElement?.children || [])].indexOf(dragEjercicio);
+  if (dragEjercicioStartIndex !== null && newIndex !== dragEjercicioStartIndex) {
+    const movedItem = entrenamientoActual.ejercicios.splice(dragEjercicioStartIndex, 1)[0];
+    entrenamientoActual.ejercicios.splice(newIndex, 0, movedItem);
+
+    if (ejercicioExpandidoLive !== null) {
+      if (ejercicioExpandidoLive === dragEjercicioStartIndex) {
+        ejercicioExpandidoLive = newIndex;
+      } else if (dragEjercicioStartIndex < ejercicioExpandidoLive && newIndex >= ejercicioExpandidoLive) {
+        ejercicioExpandidoLive -= 1;
+      } else if (dragEjercicioStartIndex > ejercicioExpandidoLive && newIndex <= ejercicioExpandidoLive) {
+        ejercicioExpandidoLive += 1;
+      }
+    }
+  }
+
+  dragEjercicio = null;
+  dragEjercicioStartIndex = null;
+  hasMovedEjercicio = false;
+  renderizarEjerciciosLive();
+}
+
+document.addEventListener('mousemove', dragMoveEjercicio);
+document.addEventListener('touchmove', dragMoveEjercicio, { passive: false });
+document.addEventListener('mouseup', dragEndEjercicio);
+document.addEventListener('touchend', dragEndEjercicio);
+
 // ✅ FIX: async + for...of en lugar de forEach para poder usar await
 async function renderizarEjerciciosLive() {
   const zona = document.getElementById("zonaEjercicios");
@@ -383,11 +489,15 @@ async function renderizarEjerciciosLive() {
   for (const [ejIdx, ejercicio] of entrenamientoActual.ejercicios.entries()) {
 
     const ejercicioDiv = document.createElement("div");
+    ejercicioDiv.className = 'ejercicio-live-item';
+    ejercicioDiv.dataset.index = ejIdx;
     ejercicioDiv.style.cssText = `
       background: var(--bg-card); border-radius: 12px; margin-bottom: 8px;
       box-shadow: var(--shadow-sm); transition: all 0.2s ease;
       border: 1px solid transparent;
     `;
+    ejercicioDiv.addEventListener('mousedown', startDragEjercicio, { passive: false, capture: true });
+    ejercicioDiv.addEventListener('touchstart', startDragEjercicio, { passive: false, capture: true });
 
     // Header del ejercicio
     const headerEj = document.createElement("div");
@@ -439,6 +549,7 @@ async function renderizarEjerciciosLive() {
     headerEj.appendChild(btnEliminar);
 
     headerEj.addEventListener('click', (e) => {
+      if (draggingEjercicio) return;
       if (e.target === btnEliminar || btnEliminar.contains(e.target)) return;
       ejercicioExpandidoLive = ejercicioExpandidoLive === ejIdx ? null : ejIdx;
       renderizarEjerciciosLive();

@@ -21,11 +21,6 @@ let ejercicioExpandido = null;
 let dragItem = null, dragStartX = 0, dragStartY = 0, dragging = false;
 let dragStartIndex = null, dragTimer = null, hasMoved = false;
 
-// ── Estado drag & drop: ejercicios (nivel 4) ─────────────────
-let dragEjercicio = null, dragEjercicioStartX = 0, dragEjercicioStartY = 0;
-let draggingEjercicio = false, dragEjercicioStartIndex = null;
-let dragEjercicioTimer = null, hasMovedEjercicio = false;
-
 // ── Referencias al renderizador y ruta actuales ───────────────
 // Se asignan al llamar a renderizarNivel4 / renderizarLista
 let _renderizar = null;
@@ -248,9 +243,6 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
   wrapper.dataset.index = index;
-
-  wrapper.addEventListener('mousedown', startDragEjercicio, { passive: false, capture: true });
-  wrapper.addEventListener('touchstart', startDragEjercicio, { passive: false, capture: true });
 
   // ── Header ────────────────────────────────────────────────
   const header = document.createElement('div');
@@ -695,75 +687,11 @@ function dragEnd() {
   dragItem = null; dragStartIndex = null; hasMoved = false;
 }
 
-// ============================================================
-// DRAG & DROP — EJERCICIOS (nivel 4)
-// ============================================================
-function startDragEjercicio(e) {
-  if (e.type === 'mousedown' && e.button !== 0) return;
-  dragEjercicio = e.currentTarget.closest('.ejercicio-acordeon');
-  if (!dragEjercicio) return;
-  draggingEjercicio = false; hasMovedEjercicio = false;
-  dragEjercicioStartIndex = [...(dragEjercicio.parentElement?.children || [])].indexOf(dragEjercicio);
-  const touch = e.touches?.[0] || e;
-  dragEjercicioStartX = touch.clientX; dragEjercicioStartY = touch.clientY;
-
-  const check = (me) => {
-    const mt = me.touches?.[0] || me;
-    if (Math.abs(mt.clientX - dragEjercicioStartX) > MOVEMENT_THRESHOLD || Math.abs(mt.clientY - dragEjercicioStartY) > MOVEMENT_THRESHOLD) {
-      hasMovedEjercicio = true; clearTimeout(dragEjercicioTimer); dragEjercicioTimer = null; cleanup();
-    }
-  };
-  const cleanup = () => { document.removeEventListener('mousemove', check); document.removeEventListener('touchmove', check); };
-  document.addEventListener('mousemove', check, { passive: true });
-  document.addEventListener('touchmove', check, { passive: true });
-
-  dragEjercicioTimer = setTimeout(() => {
-    cleanup();
-    if (!hasMovedEjercicio) {
-      draggingEjercicio = true;
-      dragEjercicio.classList.add('dragging');
-      dragEjercicio.style.opacity = '0.7';
-      dragEjercicio.style.transform = 'scale(1.02)';
-      document.body.style.userSelect = 'none';
-      navigator.vibrate?.(50);
-    }
-  }, LONG_PRESS_DURATION);
-}
-
-function dragMoveEjercicio(e) {
-  if (!draggingEjercicio || !dragEjercicio) return;
-  e.preventDefault();
-  const y = (e.touches?.[0] || e).clientY;
-  const items = [...document.querySelectorAll('.ejercicio-acordeon:not(.dragging)')];
-  const target = items.find(item => y < item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2);
-  if (target) dragEjercicio.parentElement?.insertBefore(dragEjercicio, target);
-  else if (items.length > 0) dragEjercicio.parentElement?.appendChild(dragEjercicio);
-}
-
-function dragEndEjercicio() {
-  clearTimeout(dragEjercicioTimer); dragEjercicioTimer = null;
-  document.body.style.userSelect = '';
-  if (!draggingEjercicio || !dragEjercicio) { dragEjercicio = null; dragEjercicioStartIndex = null; hasMovedEjercicio = false; return; }
-  dragEjercicio.style.opacity = ''; dragEjercicio.style.transform = '';
-  draggingEjercicio = false; dragEjercicio.classList.remove('dragging');
-  const newIndex = [...(dragEjercicio.parentElement?.children || [])].indexOf(dragEjercicio);
-  if (dragEjercicioStartIndex !== null && newIndex !== dragEjercicioStartIndex) {
-    const ruta = getRutaActual();
-    const nivel = getNivelActual(ruta);
-    if (nivel) { const moved = nivel.hijos.splice(dragEjercicioStartIndex, 1)[0]; nivel.hijos.splice(newIndex, 0, moved); guardarDatos(); }
-  }
-  dragEjercicio = null; dragEjercicioStartIndex = null; hasMovedEjercicio = false;
-}
-
 // Registrar listeners globales de drag
 document.addEventListener('mousemove', dragMove);
 document.addEventListener('touchmove', dragMove, { passive: false });
 document.addEventListener('mouseup',   dragEnd);
 document.addEventListener('touchend',  dragEnd);
-document.addEventListener('mousemove', dragMoveEjercicio);
-document.addEventListener('touchmove', dragMoveEjercicio, { passive: false });
-document.addEventListener('mouseup',   dragEndEjercicio);
-document.addEventListener('touchend',  dragEndEjercicio);
 
 // ============================================================
 // HELPERS INTERNOS
