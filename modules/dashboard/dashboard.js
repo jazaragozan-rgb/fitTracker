@@ -374,64 +374,77 @@ function _renderCardMuscular(dashboard, ejerciciosTodos, hace30Dias, crearCard) 
     'Tríceps': ['tríceps','tricep','extensión','dips'],
     'Core':    ['abdomen','core','plancha','crunch','oblicuo','abs'],
   };
-  const musculoCounts = {};
-  Object.keys(grupoKeywords).forEach(g => musculoCounts[g] = 0);
+
+  const musculoCounts = Object.keys(grupoKeywords).reduce((acc, g) => ({ ...acc, [g]: 0 }), {});
   ejerciciosTodos.filter(e => new Date(e.fecha) >= hace30Dias).forEach(e => {
     const nl = (e.nombre || '').toLowerCase();
     for (const [g, kws] of Object.entries(grupoKeywords)) {
       if (kws.some(k => nl.includes(k))) { musculoCounts[g]++; break; }
     }
   });
-  const maxM = Math.max(...Object.values(musculoCounts), 1);
-  const mintAlpha = g => { const p=(musculoCounts[g]||0)/maxM; return p===0?'rgba(61,213,152,0)':`rgba(61,213,152,${(0.25+p*0.45).toFixed(2)})`; };
-  const musclePct  = g => { const c=musculoCounts[g]||0; return c>0?Math.round((c/maxM)*100)+'%':null; };
+
+  const maxCount = Math.max(...Object.values(musculoCounts), 1);
+  const calcOpacity = count => count === 0 ? 0.08 : 0.25 + (count / maxCount) * 0.45;
+  const calcShadow = count => count === 0 ? 'rgba(0,0,0,0.04)' : `rgba(0,0,0,${0.1 + (count / maxCount) * 0.15})`;
+  const mintAlpha = g => `rgba(61,213,152,${calcOpacity(musculoCounts[g] || 0)})`;
+  const musclePct = g => {
+    const count = musculoCounts[g] || 0;
+    return count > 0 ? `${Math.round((count / maxCount) * 100)}%` : null;
+  };
 
   const muscleWrapper = document.createElement('div');
-  muscleWrapper.style.cssText = 'position:relative;width:100%;max-width:320px;margin:0 auto;';
-  const muscleImg = document.createElement('img');
-  muscleImg.src = 'muscle-map.png'; muscleImg.style.cssText='width:100%;display:block;';
-  muscleWrapper.appendChild(muscleImg);
+  muscleWrapper.style.cssText = 'display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;width:100%;max-width:720px;margin:0 auto;';
 
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS,'svg');
-  svg.setAttribute('viewBox','0 0 507 960');
-  svg.style.cssText='position:absolute;top:0;left:0;width:100%;height:100%;';
+  const slugify = str => str.normalize('NFD').replace(/[ -]/g, s => s).replace(/\p{Diacritic}/gu, '').toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g,'');
+  const overlayName = (base, grupo) => `${base}-${slugify(grupo)}.png`;
+  const getOpacity = count => count === 0 ? 0 : 0.25 + (count / maxCount) * 0.55;
 
-  const musclePaths = [
-    {grupo:'Pecho',   d:'M175,168 Q215,148 253,158 L250,235 Q212,252 175,235 Z'},
-    {grupo:'Pecho',   d:'M330,168 Q290,148 253,158 L256,235 Q294,252 330,235 Z'},
-    {grupo:'Hombros', d:'M118,148 Q142,135 168,150 Q162,200 148,218 Q124,205 110,180 Z'},
-    {grupo:'Hombros', d:'M388,148 Q364,135 338,150 Q344,200 358,218 Q382,205 396,180 Z'},
-    {grupo:'Bíceps',  d:'M95,220 Q72,272 80,325 Q104,338 128,325 Q124,272 115,220 Z'},
-    {grupo:'Bíceps',  d:'M410,220 Q433,272 424,325 Q400,338 376,325 Q380,272 390,220 Z'},
-    {grupo:'Tríceps', d:'M78,222 Q58,275 65,325 Q82,335 100,325 Q96,272 100,220 Z'},
-    {grupo:'Tríceps', d:'M428,222 Q448,275 441,325 Q424,335 406,325 Q410,272 406,220 Z'},
-    {grupo:'Core',    d:'M196,238 Q253,224 310,238 L305,388 Q253,400 200,388 Z'},
-    {grupo:'Core',    d:'M176,242 Q196,238 200,388 Q166,372 150,338 Q135,295 155,262 Z'},
-    {grupo:'Core',    d:'M330,242 Q310,238 306,388 Q340,372 356,338 Q371,295 351,262 Z'},
-    {grupo:'Piernas', d:'M175,455 Q150,525 155,608 Q185,622 215,610 Q228,528 222,455 Z'},
-    {grupo:'Piernas', d:'M330,455 Q355,525 350,608 Q320,622 290,610 Q277,528 283,455 Z'},
-  ];
-  musclePaths.forEach(({grupo,d}) => {
-    const path = document.createElementNS(svgNS,'path');
-    path.setAttribute('d',d);
-    path.setAttribute('fill',mintAlpha(grupo));
-    path.setAttribute('stroke', musculoCounts[grupo]>0?'rgba(61,213,152,0.6)':'none');
-    path.setAttribute('stroke-width','1.5');
-    path.style.cssText='cursor:pointer;transition:fill 0.2s;';
-    svg.appendChild(path);
-  });
-  muscleWrapper.appendChild(svg);
+  const createPanel = (titulo, imageSrc, grupoList) => {
+    const panel = document.createElement('div');
+    panel.style.cssText = 'background:var(--bg-secondary);border-radius:16px;padding:12px;display:flex;flex-direction:column;gap:10px;box-shadow:0 8px 18px rgba(0,0,0,0.06);';
+    const heading = document.createElement('div');
+    heading.textContent = titulo;
+    heading.style.cssText = 'font-weight:700;color:var(--text-primary);font-size:0.95rem;text-align:center;';
+
+    const frame = document.createElement('div');
+    frame.style.cssText = 'position:relative;width:100%;overflow:hidden;border-radius:14px;background:var(--bg-secondary);';
+
+    const img = document.createElement('img');
+    img.src = imageSrc;
+    img.alt = titulo;
+    img.style.cssText = 'width:100%;height:auto;display:block;';
+    frame.appendChild(img);
+
+    grupoList.forEach(grupo => {
+      const overlay = document.createElement('img');
+      overlay.src = overlayName(imageSrc.replace(/\.png$/, ''), grupo);
+      overlay.alt = `${titulo} ${grupo}`;
+      overlay.style.cssText = `position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;opacity:${getOpacity(musculoCounts[grupo] || 0)};transition:opacity 0.25s ease;pointer-events:none;`;
+      overlay.addEventListener('error', () => { overlay.style.display = 'none'; });
+      frame.appendChild(overlay);
+    });
+
+    panel.appendChild(heading);
+    panel.appendChild(frame);
+    return panel;
+  };
+
+  const muscleFrontGroups = ['Hombros','Pecho','Bíceps','Tríceps','Core','Piernas'];
+  const muscleBackGroups  = ['Hombros','Espalda','Bíceps','Tríceps','Core','Piernas'];
+
+  muscleWrapper.appendChild(createPanel('Frontal', 'muscle-map-front.png', muscleFrontGroups));
+  muscleWrapper.appendChild(createPanel('Posterior', 'muscle-map-back.png', muscleBackGroups));
 
   const leyenda = document.createElement('div');
-  leyenda.style.cssText='display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center;';
+  leyenda.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;justify-content:center;';
   Object.entries(musculoCounts).forEach(([grupo,count]) => {
     if (!count) return;
-    const item=document.createElement('div');
-    item.style.cssText='display:flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;color:var(--text-secondary);';
-    item.innerHTML=`<span style="width:10px;height:10px;border-radius:50%;background:${mintAlpha(grupo).replace('0)','1)')};display:inline-block;"></span>${grupo} <span style="color:var(--primary-mint)">${musclePct(grupo)}</span>`;
+    const item = document.createElement('div');
+    item.style.cssText = 'display:flex;align-items:center;gap:5px;font-size:0.72rem;font-weight:600;color:var(--text-secondary);';
+    item.innerHTML = `<span style="width:10px;height:10px;border-radius:50%;background:${mintAlpha(grupo)};display:inline-block;"></span>${grupo} <span style="color:var(--primary-mint)">${musclePct(grupo)}</span>`;
     leyenda.appendChild(item);
   });
+
   cardMuscular.appendChild(muscleWrapper);
   cardMuscular.appendChild(leyenda);
   dashboard.appendChild(cardMuscular);
