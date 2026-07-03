@@ -20,6 +20,8 @@ let ejercicioExpandido = null;
 // ── Estado drag & drop: lista (niveles 1-3) ───────────────────
 let dragItem = null, dragStartX = 0, dragStartY = 0, dragging = false;
 let dragStartIndex = null, dragTimer = null, hasMoved = false;
+// Estado drag específico para ejercicios (nivel 4)
+let draggingEjercicio = false;
 
 // ── Referencias al renderizador y ruta actuales ───────────────
 // Se asignan al llamar a renderizarNivel4 / renderizarLista
@@ -316,9 +318,8 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
     opcionesBtn.appendChild(document.createElement('span'));
     opcionesBtn.addEventListener('click', e => {
       e.stopPropagation();
-      mostrarMenuOpciones({
+      const menuOpts = {
         anchorElement: opcionesBtn,
-        onEditar: () => { ejercicio.editando = true; guardarDatos(); getRenderizar()?.(); },
         onEliminar: () => mostrarConfirmacion(`¿Desea borrar "${ejercicio.nombre}"?`, () => {
           nivel.hijos.splice(index, 1);
           ejercicioExpandido = null;
@@ -326,7 +327,11 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
           getRenderizar()?.();
         }),
         onCopiar: () => ({ nivel: rutaActual.length, datos: structuredClone(ejercicio) })
-      });
+      };
+      if (ejercicioExpandido !== index) {
+        menuOpts.onEditar = () => { ejercicio.editando = true; guardarDatos(); getRenderizar()?.(); };
+      }
+      mostrarMenuOpciones(menuOpts);
     });
     header.appendChild(opcionesBtn);
 
@@ -368,6 +373,14 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
 function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
   ejercicio.series = ejercicio.series || [];
 
+  // Construir listado combinado de series: propias + series de hijos (si existen)
+  const seriesToShow = [];
+  const _collectSeries = (nodo) => {
+    (nodo.series || []).forEach(s => seriesToShow.push(Object.assign({ _origen: nodo.nombre }, s)));
+    (nodo.hijos || []).forEach(h => _collectSeries(h));
+  };
+  _collectSeries(ejercicio);
+
   // Cabeceras
   const encabezados = document.createElement('div');
   encabezados.style.cssText = `
@@ -381,7 +394,7 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
   inner.appendChild(encabezados);
 
   // Filas de series
-    ejercicio.series.forEach((serie, idx) => {
+    seriesToShow.forEach((serie, idx) => {
       const serieDiv = document.createElement('div');
       serieDiv.style.cssText = `
         display:grid;grid-template-columns:40px repeat(4,1fr) 40px;
@@ -399,6 +412,9 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
         display:flex;align-items:center;justify-content:center;
       `;
       numBtn.textContent = serie.marca || (idx + 1);
+      if (serie._origen && serie._origen !== ejercicio.nombre) {
+        numBtn.title = serie._origen;
+      }
 
       const mkInput = (value, placeholder) => {
         const inp = document.createElement('input');
@@ -432,41 +448,46 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
       inner.appendChild(serieDiv);
     });
 
-  // Stats sesión actual
+  // Stats sesión actual + comparación con sesión anterior (si existe)
   const stats = _calcularEstadisticas(ejercicio);
+  const sesionAnterior = _buscarSesionAnterior(ejercicio.nombre, rutaActual);
+  let statsAnt = null;
+  if (sesionAnterior) statsAnt = _calcularEstadisticas(sesionAnterior.ejercicio);
+
+  const badge = (actual, prev) => {
+    if (!prev && prev !== 0) return '';
+    if (prev === 0) return '';
+    const pct = ((actual - prev) / prev * 100).toFixed(1);
+    const cl = pct > 0 ? 'up' : pct < 0 ? 'down' : 'eq';
+    const ic = pct > 0 ? '▲' : pct < 0 ? '▼' : '—';
+    return `<span class="prog-badge prog-${cl}">${ic} ${Math.abs(pct)}%</span>`;
+  };
+
   if (stats.pesoMax > 0 || stats.volumenTotal > 0) {
     const sc = document.createElement('div');
     sc.className = 'ej-stats-card';
     sc.innerHTML = `
       <div class="ej-card-label">📊 Esta sesión</div>
       <div class="ej-stats-grid">
-        <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--primary-mint)">${stats.pesoMax}<span>kg</span></div><div class="ej-stat-lbl">Peso máx</div></div>
-        <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--secondary-cyan)">${stats.volumenTotal}<span>kg</span></div><div class="ej-stat-lbl">Volumen</div></div>
-        <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--primary-coral)">${stats.oneRM}<span>kg</span></div><div class="ej-stat-lbl">1RM est.</div></div>
+        <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--primary-mint)">${stats.pesoMax}<span>kg</span></div><div class="ej-stat-lbl">Peso máx ${statsAnt ? badge(stats.pesoMax, statsAnt.pesoMax) : ''}</div></div>
+        <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--secondary-cyan)">${stats.volumenTotal}<span>kg</span></div><div class="ej-stat-lbl">Volumen ${statsAnt ? badge(stats.volumenTotal, statsAnt.volumenTotal) : ''}</div></div>
+        <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--primary-coral)">${stats.oneRM}<span>kg</span></div><div class="ej-stat-lbl">1RM est. ${statsAnt ? badge(stats.oneRM, statsAnt.oneRM) : ''}</div></div>
       </div>`;
     inner.appendChild(sc);
   }
 
-  // Comparación sesión anterior
-  const sesionAnterior = _buscarSesionAnterior(ejercicio.nombre, rutaActual);
+  // Comparación: mostrar bloque de la sesión anterior SIN badges (solo valores)
   if (sesionAnterior) {
-    const statsAnt = _calcularEstadisticas(sesionAnterior.ejercicio);
+    const statsPrev = statsAnt || _calcularEstadisticas(sesionAnterior.ejercicio);
     const fechaStr = new Date(sesionAnterior.fecha).toLocaleDateString('es-ES', { day:'2-digit', month:'short' });
-    const badge = (actual, prev) => {
-      if (!prev) return '';
-      const pct = ((actual - prev) / prev * 100).toFixed(1);
-      const cl = pct > 0 ? 'up' : pct < 0 ? 'down' : 'eq';
-      const ic = pct > 0 ? '▲' : pct < 0 ? '▼' : '—';
-      return `<span class="prog-badge prog-${cl}">${ic} ${Math.abs(pct)}%</span>`;
-    };
     const sc2 = document.createElement('div');
     sc2.className = 'ej-stats-card ej-stats-card--prev';
     sc2.innerHTML = `
       <div class="ej-card-label">📅 Anterior (${fechaStr})</div>
       <div class="ej-stats-grid">
-        <div class="ej-stat-cell"><div class="ej-stat-val">${statsAnt.pesoMax}<span>kg</span></div><div class="ej-stat-lbl">Peso ${badge(stats.pesoMax, statsAnt.pesoMax)}</div></div>
-        <div class="ej-stat-cell"><div class="ej-stat-val">${statsAnt.volumenTotal}<span>kg</span></div><div class="ej-stat-lbl">Vol ${badge(stats.volumenTotal, statsAnt.volumenTotal)}</div></div>
-        <div class="ej-stat-cell"><div class="ej-stat-val">${statsAnt.oneRM}<span>kg</span></div><div class="ej-stat-lbl">1RM ${badge(stats.oneRM, statsAnt.oneRM)}</div></div>
+        <div class="ej-stat-cell"><div class="ej-stat-val">${statsPrev.pesoMax}<span>kg</span></div><div class="ej-stat-lbl">Peso</div></div>
+        <div class="ej-stat-cell"><div class="ej-stat-val">${statsPrev.volumenTotal}<span>kg</span></div><div class="ej-stat-lbl">Vol</div></div>
+        <div class="ej-stat-cell"><div class="ej-stat-val">${statsPrev.oneRM}<span>kg</span></div><div class="ej-stat-lbl">1RM</div></div>
       </div>`;
     inner.appendChild(sc2);
   }
