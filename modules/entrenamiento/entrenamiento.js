@@ -8,7 +8,7 @@
 //   - Buscador de ejercicios (API ExerciseDB + backup)
 // ============================================================
 
-import { guardarDatos }          from '../../core/store.js';
+import { datos as datosStore, guardarDatos } from '../../core/store.js';
 import { mostrarConfirmacion, mostrarMenuOpciones, mostrarSelectorMarca } from '../../shared/ui.js';
 import { iniciarTimer }          from '../../shared/timer.js';
 import { calcularVolumen, calcular1RM, redondear, formatearSegundos } from '../../shared/utils.js';
@@ -39,7 +39,7 @@ const NIVEL_EMOJIS = { 1:'🗂️', 2:'📋', 3:'📅', 4:'💪' };
 function getRenderizar() { return _renderizar || window.renderizar; }
 function getRutaActual() { return _rutaActual || window.rutaActual || []; }
 function getNivelActual(ruta) {
-  const datosRef = window.datos || [];
+  const datosRef = datosStore || [];
   let nivel = { hijos: datosRef };
   for (const i of ruta) {
     if (!nivel.hijos || nivel.hijos[i] === undefined) return { hijos: [] };
@@ -510,20 +510,23 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
 }
 
 // Guarda la duración en el nodo de sesión y persiste en Firestore
-function _guardarDuracionSesion(rutaSesion, minutos) {
+export function guardarDuracionSesion(rutaSesion, minutos) {
   try {
-    const datosRef = window.datos;
-    if (!datosRef) return;
+    const datosRef = datosStore || [];
+    if (!Array.isArray(datosRef)) return false;
+    window.datos = datosRef;
     let nodo = { hijos: datosRef };
     for (const i of rutaSesion) {
-      if (!nodo.hijos || nodo.hijos[i] === undefined) return;
+      if (!nodo.hijos || nodo.hijos[i] === undefined) return false;
       nodo = nodo.hijos[i];
     }
-    nodo.duracionMinutos = minutos;
-    guardarDatos();
-    console.log(`[Timer Sesión] ✓ ${minutos} min guardados en sesión`);
+    nodo.duracionMinutos = Math.max(0, Number(minutos) || 0);
+    guardarDatos({ immediate: true });
+    console.log(`[Timer Sesión] ✓ ${nodo.duracionMinutos} min guardados en sesión`);
+    return true;
   } catch (e) {
     console.error('[Timer Sesión] Error al guardar duración:', e);
+    return false;
   }
 }
 

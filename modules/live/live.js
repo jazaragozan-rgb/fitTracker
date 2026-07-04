@@ -3,6 +3,8 @@
 
 // Importar funciones del timer
 import { iniciarTimer } from '../../shared/timer.js';
+import { datos as datosStore, guardarDatos as guardarDatosStore } from '../../core/store.js';
+import { guardarDuracionSesion } from '../entrenamiento/entrenamiento.js';
 
 // Promesa que se resuelve cuando `window.datos` está disponible
 let datosReady = (window.datos && Array.isArray(window.datos) && window.datos.length > 0)
@@ -373,6 +375,14 @@ function updateTimerDisplay(display) {
   const mins = Math.floor(timerSeconds / 60);
   const secs = timerSeconds % 60;
   display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function obtenerDuracionMinutosActual() {
+  return Math.max(0, Math.floor(timerSeconds / 60));
+}
+
+function obtenerDatosGlobal() {
+  return (datosStore && Array.isArray(datosStore)) ? datosStore : (window.datos || []);
 }
 
 function startDragEjercicio(e) {
@@ -858,7 +868,7 @@ function mostrarOpcionesGuardado(overlayEntrenamiento) {
 
 // Selector de sesiones
 function mostrarSelectorSesion(overlayEntrenamiento) {
-  const datos = window.datos || [];
+  const datos = obtenerDatosGlobal();
   const modal = document.createElement("div");
   modal.className = "modal-overlay";
   const contenido = document.createElement("div");
@@ -921,11 +931,14 @@ function mostrarSelectorSesion(overlayEntrenamiento) {
 
 // Guardar en sesión existente
 function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
-  const datos = window.datos || [];
+  const datos = obtenerDatosGlobal();
+  window.datos = datos;
   const { mesoIdx, microIdx, sesionIdx } = sesionInfo;
   try {
     const sesion = datos[0].hijos[mesoIdx].hijos[microIdx].hijos[sesionIdx];
     sesion.fecha = entrenamientoActual.fecha;
+    sesion.duracionMinutos = obtenerDuracionMinutosActual();
+    guardarDuracionSesion([0, mesoIdx, microIdx, sesionIdx], sesion.duracionMinutos);
     if (!sesion.hijos) sesion.hijos = [];
 
     // Guardar cada ejercicio directamente como hijo de la sesión (nivel 4)
@@ -933,7 +946,7 @@ function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
       sesion.hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({ ...s })), hijos: [] });
     });
 
-    if (typeof window.guardarDatos === 'function') window.guardarDatos();
+    guardarDatosStore();
     clearInterval(timerInterval);
     overlayEntrenamiento.remove();
     alert(`✅ Entrenamiento guardado en "${sesionInfo.sesionNombre}"`);
@@ -951,7 +964,7 @@ function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
 
 // Formulario nueva sesión
 function mostrarFormularioNuevaSesion(overlayEntrenamiento) {
-  const datos = window.datos || [];
+  const datos = obtenerDatosGlobal();
   const modal = document.createElement("div");
   modal.className = "modal-overlay";
   const contenido = document.createElement("div");
@@ -1075,7 +1088,8 @@ function mostrarFormularioNuevaSesion(overlayEntrenamiento) {
 
 // Crear y guardar nueva sesión
 function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntrenamiento, nuevoMesoNombre = null, nuevoMicroNombre = null) {
-  const datos = window.datos || [];
+  const datos = obtenerDatosGlobal();
+  window.datos = datos;
   try {
     let mesoIndex = mesoIdx, microIndex = microIdx;
 
@@ -1095,6 +1109,7 @@ function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntren
     const nuevaSesion = {
       nombre: nombreSesion,
       fecha: entrenamientoActual.fecha,
+      duracionMinutos: obtenerDuracionMinutosActual(),
       hijos: []
     };
     entrenamientoActual.ejercicios.forEach(ej => {
@@ -1103,8 +1118,9 @@ function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntren
 
     micro.hijos.push(nuevaSesion);
     const sesionIdx = micro.hijos.length - 1;
+    guardarDuracionSesion([0, mesoIndex, microIndex, sesionIdx], nuevaSesion.duracionMinutos);
 
-    if (typeof window.guardarDatos === 'function') window.guardarDatos();
+    guardarDatosStore();
     clearInterval(timerInterval);
     overlayEntrenamiento.remove();
     alert(`✅ Nueva sesión "${nombreSesion}" creada`);
