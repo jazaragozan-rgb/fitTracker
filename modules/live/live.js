@@ -705,94 +705,42 @@ async function renderizarEjerciciosLive() {
 
       // Estadísticas sesión actual
       const statsActual = calcularEstadisticasEjercicio(ejercicio);
+      const sesionAnterior = await buscarSesionAnteriorEjercicio(ejercicio.nombre);
+      let statsAnterior = null;
+      if (sesionAnterior) statsAnterior = calcularEstadisticasEjercicio(sesionAnterior.ejercicio);
+
+      const badge = (actual, prev) => {
+        if (prev === undefined || prev === null || prev === 0) return '';
+        const pct = ((actual - prev) / prev * 100).toFixed(1);
+        const cl = pct > 0 ? 'up' : pct < 0 ? 'down' : 'eq';
+        const ic = pct > 0 ? '▲' : pct < 0 ? '▼' : '—';
+        return `<span class="prog-badge prog-${cl}">${ic} ${Math.abs(pct)}%</span>`;
+      };
+
       if (statsActual.pesoMax > 0 || statsActual.volumenTotal > 0) {
         const statsContainer = document.createElement('div');
-        statsContainer.style.cssText = `
-          margin-top: 16px; padding: 12px;
-          background: linear-gradient(135deg, rgba(61,213,152,0.1) 0%, rgba(0,212,212,0.1) 100%);
-          border-radius: 10px; border: 1px solid var(--border-color);
-        `;
-        const statsTitulo = document.createElement('div');
-        statsTitulo.textContent = '📊 Estadísticas de esta sesión';
-        statsTitulo.style.cssText = `
-          font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);
-          margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
-        `;
-        statsContainer.appendChild(statsTitulo);
-
-        const statsGrid = document.createElement('div');
-        statsGrid.style.cssText = `display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;`;
-
-        const crearStatBox = (valor, unidad, label, color) => {
-          const div = document.createElement('div');
-          div.style.cssText = `text-align: center; padding: 8px; background: var(--bg-card); border-radius: 8px;`;
-          div.innerHTML = `
-            <div style="font-size:1.3rem;font-weight:700;color:${color};">${valor}<span style="font-size:0.8rem;font-weight:500;">${unidad}</span></div>
-            <div style="font-size:0.65rem;color:var(--text-secondary);font-weight:600;margin-top:2px;">${label}</div>
-          `;
-          return div;
-        };
-        statsGrid.appendChild(crearStatBox(statsActual.pesoMax,     'kg', 'PESO MÁX',  'var(--primary-mint)'));
-        statsGrid.appendChild(crearStatBox(statsActual.volumenTotal, 'kg', 'VOLUMEN',   'var(--secondary-cyan)'));
-        statsGrid.appendChild(crearStatBox(statsActual.oneRM,        'kg', '1RM EST.',  'var(--primary-coral)'));
-        statsContainer.appendChild(statsGrid);
+        statsContainer.className = 'ej-stats-card';
+        statsContainer.innerHTML = `
+          <div class="ej-card-label">📊 Esta sesión</div>
+          <div class="ej-stats-grid">
+            <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--primary-mint)">${statsActual.pesoMax}<span>kg</span></div><div class="ej-stat-lbl">Peso máx ${statsAnterior ? badge(statsActual.pesoMax, statsAnterior.pesoMax) : ''}</div></div>
+            <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--secondary-cyan)">${statsActual.volumenTotal}<span>kg</span></div><div class="ej-stat-lbl">Volumen ${statsAnterior ? badge(statsActual.volumenTotal, statsAnterior.volumenTotal) : ''}</div></div>
+            <div class="ej-stat-cell"><div class="ej-stat-val" style="color:var(--primary-coral)">${statsActual.oneRM}<span>kg</span></div><div class="ej-stat-lbl">1RM est. ${statsAnterior ? badge(statsActual.oneRM, statsAnterior.oneRM) : ''}</div></div>
+          </div>`;
         contenidoExpandible.appendChild(statsContainer);
       }
 
-      // ✅ await funciona aquí porque estamos dentro de async function + for...of
-      const sesionAnterior = await buscarSesionAnteriorEjercicio(ejercicio.nombre);
       if (sesionAnterior) {
-        const statsAnterior = calcularEstadisticasEjercicio(sesionAnterior.ejercicio);
-
+        const fechaStr = new Date(sesionAnterior.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
         const comparacionContainer = document.createElement('div');
-        comparacionContainer.style.cssText = `
-          margin-top: 12px; padding: 12px;
-          background: linear-gradient(135deg, rgba(255,107,107,0.1) 0%, rgba(255,152,0,0.1) 100%);
-          border-radius: 10px; border: 1px solid var(--border-color);
-        `;
-
-        const comparacionTitulo = document.createElement('div');
-        comparacionTitulo.style.cssText = `
-          font-size: 0.8rem; font-weight: 700; color: var(--text-secondary);
-          margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;
-          display: flex; justify-content: space-between; align-items: center;
-        `;
-        const tituloTexto = document.createElement('span');
-        tituloTexto.textContent = '📈 Última vez';
-        const fechaTexto = document.createElement('span');
-        fechaTexto.textContent = new Date(sesionAnterior.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-        fechaTexto.style.cssText = `font-size: 0.75rem; font-weight: 600; color: var(--text-light);`;
-        comparacionTitulo.appendChild(tituloTexto);
-        comparacionTitulo.appendChild(fechaTexto);
-        comparacionContainer.appendChild(comparacionTitulo);
-
-        const comparacionGrid = document.createElement('div');
-        comparacionGrid.style.cssText = `display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;`;
-
-        const progresoPesoMax = statsActual.pesoMax > 0 && statsAnterior.pesoMax > 0
-          ? ((statsActual.pesoMax - statsAnterior.pesoMax) / statsAnterior.pesoMax * 100) : 0;
-        const progresoVolumen = statsActual.volumenTotal > 0 && statsAnterior.volumenTotal > 0
-          ? ((statsActual.volumenTotal - statsAnterior.volumenTotal) / statsAnterior.volumenTotal * 100) : 0;
-        const progreso1RM = statsActual.oneRM > 0 && statsAnterior.oneRM > 0
-          ? ((statsActual.oneRM - statsAnterior.oneRM) / statsAnterior.oneRM * 100) : 0;
-
-        const crearStatProgreso = (valor, progresoPercent, label) => {
-          const div = document.createElement('div');
-          div.style.cssText = `text-align: center; padding: 8px; background: var(--bg-card); border-radius: 8px;`;
-          const colorProgreso = progresoPercent > 0 ? 'var(--success)' : progresoPercent < 0 ? 'var(--danger)' : 'var(--text-secondary)';
-          const iconoProgreso = progresoPercent > 0 ? '↗' : progresoPercent < 0 ? '↘' : '━';
-          div.innerHTML = `
-            <div style="font-size:1.1rem;font-weight:700;color:var(--text-primary);">${valor}<span style="font-size:0.7rem;font-weight:500;">kg</span></div>
-            <div style="font-size:0.7rem;color:${colorProgreso};font-weight:700;margin-top:2px;">${iconoProgreso} ${Math.abs(progresoPercent).toFixed(1)}%</div>
-            <div style="font-size:0.6rem;color:var(--text-secondary);font-weight:600;margin-top:2px;">${label}</div>
-          `;
-          return div;
-        };
-
-        comparacionGrid.appendChild(crearStatProgreso(statsAnterior.pesoMax,     progresoPesoMax,  'PESO MÁX'));
-        comparacionGrid.appendChild(crearStatProgreso(statsAnterior.volumenTotal, progresoVolumen,  'VOLUMEN'));
-        comparacionGrid.appendChild(crearStatProgreso(statsAnterior.oneRM,        progreso1RM,      '1RM EST.'));
-        comparacionContainer.appendChild(comparacionGrid);
+        comparacionContainer.className = 'ej-stats-card ej-stats-card--prev';
+        comparacionContainer.innerHTML = `
+          <div class="ej-card-label">📅 Anterior (${fechaStr})</div>
+          <div class="ej-stats-grid">
+            <div class="ej-stat-cell"><div class="ej-stat-val">${statsAnterior.pesoMax}<span>kg</span></div><div class="ej-stat-lbl">Peso</div></div>
+            <div class="ej-stat-cell"><div class="ej-stat-val">${statsAnterior.volumenTotal}<span>kg</span></div><div class="ej-stat-lbl">Volumen</div></div>
+            <div class="ej-stat-cell"><div class="ej-stat-val">${statsAnterior.oneRM}<span>kg</span></div><div class="ej-stat-lbl">1RM</div></div>
+          </div>`;
         contenidoExpandible.appendChild(comparacionContainer);
       }
 
