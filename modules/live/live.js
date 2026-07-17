@@ -1085,12 +1085,13 @@ function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
     sesion.fecha = entrenamientoActual.fecha;
     sesion.duracionMinutos = obtenerDuracionMinutosActual();
     guardarDuracionSesion([0, mesoIdx, microIdx, sesionIdx], sesion.duracionMinutos);
-    if (!sesion.hijos) sesion.hijos = [];
 
-    // Guardar cada ejercicio directamente como hijo de la sesión (nivel 4)
-    entrenamientoActual.ejercicios.forEach(ej => {
-      sesion.hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({ ...s })), hijos: [] });
-    });
+    // Reemplazar completamente el contenido previo de la sesión con el entrenamiento actual
+    sesion.hijos = entrenamientoActual.ejercicios.map(ej => ({
+      nombre: ej.nombre,
+      series: ej.series.map(s => ({ ...s })),
+      hijos: []
+    }));
 
     guardarDatosStore();
     clearInterval(timerInterval);
