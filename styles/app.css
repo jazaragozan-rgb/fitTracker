@@ -609,21 +609,300 @@
 ════════════════════════════════════════════════════════════ */
 
 .dashboard-container-grid {
-  display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px;
-  padding: 14px; width: 100%; box-sizing: border-box; overflow: hidden;
+  display: grid;
+  grid-template-columns: repeat(1, minmax(0, 1fr));
+  gap: 14px;
+  padding: 16px 16px 90px;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
-@media (min-width: 900px)  { .dashboard-container-grid { gap: 16px; padding: 16px; } }
-@media (min-width: 1100px) { .dashboard-container-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 768px) { .dashboard-container-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; } }
+@media (min-width: 1100px) { .dashboard-container-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 768px)  { .dashboard-chart { height: 180px !important; } }
 
 .dashboard-card {
-  background: var(--bg-card); padding: 16px; border-radius: var(--radius-lg);
-  border: 0.5px solid var(--border-color); transition: border-color var(--transition);
-  animation: fadeInUp 0.3s ease both; box-sizing: border-box; min-width: 0; overflow: hidden; width: 100%;
-  box-shadow: none;
+  background: var(--bg-card);
+  padding: 18px;
+  border-radius: var(--radius-xl);
+  border: 1px solid transparent;
+  transition: border-color var(--transition), transform var(--transition), box-shadow var(--transition);
+  animation: fadeInUp 0.28s ease both;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow: hidden;
+  width: 100%;
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.04);
 }
-.dashboard-card:hover     { border-color: var(--border-hover); }
+.dashboard-card:hover {
+  border-color: rgba(26, 115, 232, 0.18);
+  transform: translateY(-1px);
+}
 .dashboard-card.full-width { grid-column: 1 / -1; }
+
+.dashboard-card.dark {
+  background: #1d2b45;
+  color: #ffffff;
+  border-color: rgba(255,255,255,0.08);
+}
+.dashboard-card.dark .card-titulo {
+  color: rgba(255,255,255,0.65);
+}
+
+.dashboard-card.hero {
+  grid-column: 1 / -1;
+  padding: 22px;
+}
+
+.card-titulo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.9px;
+  margin-bottom: 16px;
+  text-align: left;
+}
+
+.dashboard-hero-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.1;
+}
+
+.dashboard-hero-subtitle {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 18px;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.dashboard-stat-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  border: 0.5px solid var(--border-color);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-stat-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(26, 115, 232, 0.12);
+  color: var(--primary);
+  font-size: 1rem;
+}
+
+.dashboard-stat-value {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.dashboard-stat-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.stats-scroll-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stat-item {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  padding: 14px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.stat-icon-emoji {
+  font-size: 1.2rem;
+}
+
+.stat-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.dashboard-chart {
+  height: 220px !important;
+  width: 100%;
+}
+
+/* Tarjeta de rutina activa */
+.rutina-activa {
+  background: #15203c;
+  color: #ffffff;
+  border-radius: var(--radius-xl);
+  padding: 20px;
+}
+
+.rutina-activa .card-titulo {
+  color: rgba(255,255,255,0.6);
+}
+
+.rutina-activa .rutina-activa-title {
+  font-size: 1.2rem;
+  font-weight: 800;
+  margin-top: 6px;
+  margin-bottom: 12px;
+}
+
+.rutina-activa .rutina-activa-meta {
+  font-size: 0.85rem;
+  color: rgba(255,255,255,0.75);
+}
+
+/* Ejercicios con checkbox azul */
+.ejercicio-checklist {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.ejercicio-checklist li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--radius-xl);
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+}
+
+.ejercicio-checklist input[type="checkbox"] {
+  accent-color: var(--primary);
+  width: 18px;
+  height: 18px;
+}
+
+.ejercicio-checklist label {
+  font-size: 0.94rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  flex: 1;
+}
+
+.nutricion-ring-card {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 16px;
+  align-items: center;
+}
+
+.nutricion-ring {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent-blue) 0deg, var(--accent-blue) 180deg, var(--bg-secondary) 180deg 360deg);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+
+.nutricion-ring::after {
+  content: '';
+  position: absolute;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  background: var(--bg-card);
+}
+
+.nutricion-ring-text {
+  position: relative;
+  text-align: center;
+}
+
+.nutricion-ring-text strong {
+  display: block;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.nutricion-ring-text small {
+  display: block;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.nutricion-meals-list {
+  display: grid;
+  gap: 10px;
+}
+
+.nutricion-meal-card {
+  background: var(--bg-secondary);
+  border-radius: var(--radius-xl);
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nutricion-meal-name {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.nutricion-meal-detail {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+}
+
+.ultima-medicion-card {
+  background: #15203c;
+  padding: 18px;
+  margin: 0 0 12px 0;
+  border-radius: var(--radius-xl);
+  color: #fff;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+}
+
+.ultima-medicion-card .seg-ultima-label,
+.ultima-medicion-card .seg-ultima-fecha {
+  color: rgba(255,255,255,0.72);
+}
+
+.ultima-medicion-card .seg-ultima-icon {
+  width: 50px;
+  height: 50px;
+  background: rgba(255,255,255,0.15);
+  border-radius: 50%;
+}
 
 .dashboard-card:nth-child(1) { animation-delay: 0s; }
 .dashboard-card:nth-child(2) { animation-delay: 0.04s; }

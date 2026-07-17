@@ -3,6 +3,7 @@
 // Renderizado del Dashboard (nivel 0).
 // ============================================================
 
+import { auth } from '../../core/firebase.js';
 import { hoyISO, formatearFechaCorta, calcularVolumen, calcular1RM, redondear } from '../../shared/utils.js';
 
 function crearCard(titulo, extraClass = '') {
@@ -15,6 +16,20 @@ function crearCard(titulo, extraClass = '') {
     card.appendChild(h);
   }
   return card;
+}
+
+function _getDisplayName() {
+  const user = auth.currentUser;
+  if (!user) return 'Usuario';
+  const base = user.displayName || user.email?.split('@')[0] || 'Usuario';
+  return base.charAt(0).toUpperCase() + base.slice(1);
+}
+
+function _getRutinaActiva(datos) {
+  const meso = datos[0]?.hijos?.find(m => Array.isArray(m.hijos) && m.hijos.length > 0);
+  if (!meso) return null;
+  const micro = meso.hijos.find(m => Array.isArray(m.hijos) && m.hijos.length > 0);
+  return micro?.nombre || meso.nombre;
 }
 
 // ── Exportación principal ─────────────────────────────────────
@@ -114,7 +129,29 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     ? Math.min(120, Math.max(30, Math.round((ejerciciosTodos.length / Math.max(sesiones.length, 1)) * 8)))
     : 0;
 
-  // ── 1. RESUMEN GENERAL ──────────────────────────────────────
+  // ── 1. DASHBOARD HERO ──────────────────────────────────────
+  const cardHero = crearCard('', 'hero');
+  cardHero.innerHTML = `
+    <div class="dashboard-hero-title">Hola ${_getDisplayName()},</div>
+    <div class="dashboard-hero-subtitle">Aprovecha tu rutina y alcanza tus metas.</div>
+    <div class="dashboard-stats-grid">
+      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🔥</div><div class="dashboard-stat-value">${racha}</div><div class="dashboard-stat-label">Racha actual</div></div>
+      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">📅</div><div class="dashboard-stat-value">${sesionesEsteMes}</div><div class="dashboard-stat-label">Sesiones este mes</div></div>
+      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🏋️</div><div class="dashboard-stat-value">${ejerciciosUnicos}</div><div class="dashboard-stat-label">Ejercicios distintos</div></div>
+      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">⚖️</div><div class="dashboard-stat-value">${Math.round(volumenTotal)}<span class="stat-unit">kg</span></div><div class="dashboard-stat-label">Volumen 30 días</div></div>
+    </div>
+  `;
+  dashboard.appendChild(cardHero);
+
+  const cardRutina = crearCard('Rutina activa', 'rutina-activa');
+  const nombreRutina = _getRutinaActiva(datos) || 'Sin rutina activa';
+  cardRutina.innerHTML += `
+    <div class="rutina-activa-title">${nombreRutina}</div>
+    <div class="rutina-activa-meta">El primer mesociclo/microciclo activo se muestra aquí.</div>
+  `;
+  dashboard.appendChild(cardRutina);
+
+  // ── 2. RESUMEN GENERAL ──────────────────────────────────────
   const cardResumen = crearCard('Resumen General', 'full-width');
   const statsScroll = document.createElement('div');
   statsScroll.className = 'stats-scroll-row';

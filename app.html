@@ -22,13 +22,11 @@
 
 <!-- ══════════════ HEADER ══════════════ -->
 <header>
-  <button id="menuButton">
-    <span></span>
-    <span></span>
-  </button>
-  <div id="headerLogo">
-    <img src="imagenes/logo.png" alt="fitTracker">
+  <div id="headerGreeting">
+    <div class="dashboard-welcome">¡Hola, <span id="headerUserName">User</span>!</div>
+    <div class="dashboard-subtitle">Vamos por una nueva meta hoy.</div>
   </div>
+  <div id="headerAvatar">FT</div>
   <button id="logoutButton">
     <img src="iconos/Power.png" alt="Cerrar sesión">
   </button>
@@ -37,27 +35,8 @@
 <!-- ══════════════ SUBHEADER ══════════════ -->
 <div id="subHeader">
   <h2 id="tituloNivel">Dashboard</h2>
-  <div id="subHeaderButtons">
-    <button id="backButton" class="header-btn">←</button>
-    <button id="addButton"  class="header-btn">+ Añadir</button>
-  </div>
+  <div id="subHeaderButtons"></div>
 </div>
-
-<!-- ══════════════ SIDE MENU ══════════════ -->
-<div id="menuOverlay" class="hidden"></div>
-<nav id="sideMenu" class="sideMenu">
-  <header1 id="header1">
-    <h2 id="logomenulateral">
-      <img src="imagenes/logo.png" alt="fitTracker">
-      <span style="font-weight:lighter;">fit</span><span style="font-weight:bold;color:rgb(26,127,185);">Tracker</span>
-    </h2>
-  </header1>
-  <button class="sideMenu-btn" data-seccion="dashboard">Dashboard</button>
-  <button class="sideMenu-btn" data-seccion="entrenamiento">Entrenamiento</button>
-  <button class="sideMenu-btn" data-seccion="seguimiento">Seguimiento</button>
-  <button class="sideMenu-btn" data-seccion="calendario">Calendario</button>
-  <button class="sideMenu-btn" data-seccion="nutricion">Nutrición</button>
-</nav>
 
 <!-- ══════════════ APP ══════════════ -->
 <section id="app" class="hidden"></section>
@@ -72,11 +51,25 @@
 
 <!-- ══════════════ FOOTER ══════════════ -->
 <footer id="footerNav">
-  <button id="navHome" class="footer-btn">
-    <img src="iconos/Home.png" alt="Inicio">
+  <button class="footer-btn" data-seccion="dashboard">
+    <img src="iconos/Dashboard.svg" alt="Dashboard">
+    <span class="footer-label">Dashboard</span>
   </button>
-  <button id="navSettings" class="footer-btn">
-    <img src="iconos/Settings.png" alt="Ajustes">
+  <button class="footer-btn" data-seccion="entrenamiento">
+    <img src="iconos/Entrenamiento.svg" alt="Entrenamiento">
+    <span class="footer-label">Entrenamiento</span>
+  </button>
+  <button class="footer-btn" data-seccion="progreso">
+    <img src="iconos/Progreso.svg" alt="Progreso">
+    <span class="footer-label">Progreso</span>
+  </button>
+  <button class="footer-btn" data-seccion="nutricion">
+    <img src="iconos/Nutricion.svg" alt="Nutrición">
+    <span class="footer-label">Nutrición</span>
+  </button>
+  <button class="footer-btn" data-seccion="mas">
+    <img src="iconos/Mas.svg" alt="Más">
+    <span class="footer-label">Más</span>
   </button>
 </footer>
 

@@ -7,6 +7,7 @@
 // ============================================================
 
 import { datos, guardarDatos, nivelActual } from './store.js';
+import { auth } from './firebase.js';
 import { renderizarDashboard }   from '../modules/dashboard/dashboard.js';
 import { renderizarSeguimiento } from '../modules/seguimiento/seguimiento.js';
 import { renderizarCalendario }  from '../modules/calendario/calendario.js';
@@ -26,8 +27,8 @@ let ultimoMenuSeleccionado   = 'Dashboard';
 
 // ── Referencias al DOM (se inicializan en init()) ─────────────
 let contenido, subHeader, menuTitulo;
-let backButton, addButton, menuButton, sideMenu, menuOverlay;
-let homeButton, logoutButton;
+let backButton, addButton, logoutButton;
+let footerButtons, headerUserName, headerAvatar;
 
 // ── Helpers ───────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -61,6 +62,7 @@ export function renderizar() {
   contenido.innerHTML = '';
   restaurarTimer();
 
+  _updateHeaderUser();
   const nivel = nivelActual(rutaActual);
   asignarSesionIds(datos);
 
@@ -74,6 +76,7 @@ export function renderizar() {
   // ── Subheader ────────────────────────────────────────────────
   subHeader.innerHTML = '';
   subHeader.style.display = 'flex';
+  _highlightFooterButton();
 
   if (rutaActual.length === 0) {
     _buildSubheaderDashboard();
@@ -93,6 +96,11 @@ export function renderizar() {
   if (rutaActual.length === 1 && rutaActual[0] === 1) {
     if (!datos[1]) datos[1] = { nombre: 'Seguimiento', hijos: [] };
     renderizarSeguimiento(datos[1], contenido, subHeader, addButton);
+    return;
+  }
+
+  if (rutaActual.length === 1 && rutaActual[0] === 4) {
+    _renderizarMas(contenido);
     return;
   }
 
@@ -278,36 +286,22 @@ export function init() {
   menuTitulo   = $('menuTitulo');
   backButton   = $('backButton');
   addButton    = $('addButton');
-  menuButton   = $('menuButton');
-  sideMenu     = $('sideMenu');
-  menuOverlay  = $('menuOverlay');
-  homeButton   = $('navHome');
   logoutButton = $('logoutButton');
+  headerUserName = $('headerUserName');
+  headerAvatar   = $('headerAvatar');
 
   // Botones fijos del header
   if (backButton) backButton.addEventListener('click', () => {
     if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
-  if (homeButton) homeButton.addEventListener('click', () => {
-    rutaActual.length = 0; ejercicioExpandido = null; renderizar();
-  });
   if (logoutButton) logoutButton.addEventListener('click', () => window.salir?.());
 
-  // Menú lateral
-  if (menuButton) menuButton.addEventListener('click', () => {
-    sideMenu.style.left = '0';
-    menuOverlay.classList.remove('hidden');
-  });
-  if (menuOverlay) menuOverlay.addEventListener('click', () => {
-    sideMenu.style.left = '-70%';
-    menuOverlay.classList.add('hidden');
-  });
-
-  document.querySelectorAll('.sideMenu-btn').forEach(btn => {
+  footerButtons = document.querySelectorAll('.footer-btn');
+  footerButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const s = btn.dataset.seccion;
-      const mapa = { dashboard: [], entrenamiento: [0], seguimiento: [1], calendario: [2], nutricion: [3] };
-      const nombreMapa = { dashboard: 'Dashboard', entrenamiento: 'Entrenamiento', seguimiento: 'Seguimiento', calendario: 'Calendario', nutricion: 'Nutrición' };
+      const mapa = { dashboard: [], entrenamiento: [0], progreso: [1], nutricion: [3], mas: [4] };
+      const nombreMapa = { dashboard: 'Dashboard', entrenamiento: 'Entrenamiento', progreso: 'Progreso', nutricion: 'Nutrición', mas: 'Más' };
       if (s in mapa) {
         rutaActual.length = 0;
         rutaActual.push(...mapa[s]);
@@ -315,8 +309,6 @@ export function init() {
       }
       ejercicioExpandido = null;
       renderizar();
-      sideMenu.style.left = '-70%';
-      menuOverlay.classList.add('hidden');
     });
   });
 
@@ -327,4 +319,36 @@ export function init() {
   window.datos                   = datos;
   window.nivelActual             = nivelActual;
   window.abrirBuscadorEjercicios = abrirBuscadorEjercicios;
+}
+
+function _getAvatarText(user) {
+  const source = user?.email ? user.email.split('@')[0] : user?.displayName || 'FT';
+  const clean = source.replace(/[^A-Za-z0-9]/g, '');
+  return clean.slice(0, 2).toUpperCase() || 'FT';
+}
+
+function _updateHeaderUser() {
+  if (!headerUserName || !headerAvatar) return;
+  const user = auth.currentUser;
+  const name = user?.displayName || user?.email?.split('@')[0] || 'Usuario';
+  headerUserName.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  headerAvatar.textContent = _getAvatarText(user);
+}
+
+function _highlightFooterButton() {
+  if (!footerButtons?.length) return;
+  const section = rutaActual.length === 0 ? 'dashboard' :
+    rutaActual.length === 1 && rutaActual[0] === 0 ? 'entrenamiento' :
+    rutaActual.length === 1 && rutaActual[0] === 1 ? 'progreso' :
+    rutaActual.length === 1 && rutaActual[0] === 3 ? 'nutricion' :
+    rutaActual.length === 1 && rutaActual[0] === 4 ? 'mas' :
+    'dashboard';
+  footerButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.seccion === section));
+}
+
+function _renderizarMas(contenido) {
+  const card = document.createElement('div');
+  card.className = 'dashboard-card';
+  card.innerHTML = `<div class="card-titulo">Más</div><div style="font-size:1rem;font-weight:600;color:var(--text-primary);">Próximas funciones</div><p style="margin-top:10px;color:var(--text-secondary);font-size:0.92rem;line-height:1.5;">Aquí podrás agregar accesos rápidos, ajustes y más opciones personalizadas.</p>`;
+  contenido.appendChild(card);
 }

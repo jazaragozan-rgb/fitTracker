@@ -9,8 +9,11 @@
 ═══════════════════════════════════════ */
 :root {
   /* Colores principales */
-  --primary:          #111111;
-  --primary-hover:    #333333;
+  --primary:          #1a73e8;
+  --primary-hover:    #185abc;
+  --accent-blue:      #1a73e8;
+  --accent-blue-light:#e8f0fe;
+  --accent-blue-dark: #174bb5;
   --accent-green:     #22a06b;
   --accent-amber:     #e0a800;
   --accent-slate:     #64748b;
@@ -18,30 +21,30 @@
   --success:          #22a06b;
 
   /* Alias de compatibilidad con código existente */
-  --primary-mint:     #111111;
-  --mint-dark:        #333333;
-  --mint-light:       #555555;
+  --primary-mint:     #1a73e8;
+  --mint-dark:        #185abc;
+  --mint-light:       #3a78d8;
   --primary-coral:    #e74c3c;
   --secondary-cyan:   #378add;
   --coral-light:      #e74c3c;
   --coral-dark:       #c0392b;
 
   /* Fondos */
-  --bg-main:          #fafafa;
-  --bg-card:          #ffffff;
-  --bg-secondary:     #f5f5f5;
-  --bg-tertiary:      #f0f0f0;
+  --bg-main:          #ffffff;
+  --bg-card:          #f8fbff;
+  --bg-secondary:     #eef5ff;
+  --bg-tertiary:      #f1f5fb;
 
   /* Texto */
-  --text-primary:     #111111;
-  --text-secondary:   #555555;
-  --text-light:       #999999;
-  --text-placeholder: #cccccc;
+  --text-primary:     #111827;
+  --text-secondary:   #475569;
+  --text-light:       #64748b;
+  --text-placeholder: #94a3b8;
 
   /* Bordes */
-  --border-color:     #ebebeb;
-  --border-hover:     #cccccc;
-  --border-focus:     #111111;
+  --border-color:     #e2e8f0;
+  --border-hover:     #cbd5e1;
+  --border-focus:     #1a73e8;
 
   /* Semánticos */
   --color-success:    #22a06b;
