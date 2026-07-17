@@ -629,6 +629,64 @@ async function apiFetch(endpoint) {
 }
 
 // =====================
+// Helpers de mapeo de ejercicios
+// =====================
+function mapApiExercise(ex) {
+  let equip = 'sin_equipo';
+  if (ex.equipments && Array.isArray(ex.equipments) && ex.equipments.length > 0) {
+    equip = EQUIPMENT_MAP[ex.equipments[0].toLowerCase()] || ex.equipments[0];
+  } else if (ex.equipment) {
+    equip = EQUIPMENT_MAP[ex.equipment.toLowerCase()] || ex.equipment;
+  }
+
+  let bodyPart = 'general';
+  if (ex.bodyParts && Array.isArray(ex.bodyParts) && ex.bodyParts.length > 0) {
+    bodyPart = ex.bodyParts[0];
+  } else if (ex.bodyPart) {
+    bodyPart = ex.bodyPart;
+  }
+
+  const targetMuscle = ex.target || ex.targetMuscle || 'general';
+  const targetTranslated = TRANSLATIONS[targetMuscle.toLowerCase()] || targetMuscle;
+
+  return {
+    id: ex.exerciseId,
+    nombre: translateExerciseName(ex.name),
+    nombreOriginal: ex.name,
+    grupo_muscular: [
+      BODY_PART_MAP[bodyPart.toLowerCase()] || translateText(bodyPart),
+      targetTranslated
+    ],
+    equipamiento: equip,
+    tipo_movimiento: 'compuesto',
+    imagen: ex.imageUrl || '',
+    video: ex.videoUrl || '',
+    instrucciones: translateArray(ex.instructions || []),
+    musculosSecundarios: translateArray(ex.secondaryMuscles || []),
+    descripcion: translateText(ex.description || ''),
+    dificultad: TRANSLATIONS[ex.difficulty?.toLowerCase()] || ex.difficulty || '',
+    fuente: 'api'
+  };
+}
+
+function mapBackupExercise(ex) {
+  return {
+    ...ex,
+    fuente: 'backup'
+  };
+}
+
+function filterBackupExercises(query) {
+  const queryLower = query.toLowerCase().trim();
+  const matched = exercisesBackup.filter(ex => {
+    const nombre = ex.nombre.toLowerCase();
+    const id = ex.id.toLowerCase();
+    return nombre.includes(queryLower) || id.includes(queryLower);
+  });
+  return matched.map(mapBackupExercise);
+}
+
+// =====================
 // Obtener TODOS los ejercicios de la API
 // =====================
 async function fetchAllExercisesFromAPI() {
@@ -716,46 +774,7 @@ async function fetchAllExercisesFromAPI() {
       console.log(`⚠️ Se encontraron ${duplicateCount} duplicados (filtrados)`);
     }
 
-    // Mapear y traducir ejercicios de la API
-    exercisesCache = allExercises.map(ex => {
-      let equip = 'sin_equipo';
-      if (ex.equipments && Array.isArray(ex.equipments) && ex.equipments.length > 0) {
-        equip = EQUIPMENT_MAP[ex.equipments[0].toLowerCase()] || ex.equipments[0];
-      } else if (ex.equipment) {
-        equip = EQUIPMENT_MAP[ex.equipment.toLowerCase()] || ex.equipment;
-      }
-      
-      let bodyPart = 'general';
-      if (ex.bodyParts && Array.isArray(ex.bodyParts) && ex.bodyParts.length > 0) {
-        bodyPart = ex.bodyParts[0];
-      } else if (ex.bodyPart) {
-        bodyPart = ex.bodyPart;
-      }
-      
-      // Traducir el músculo objetivo
-      const targetMuscle = ex.target || ex.targetMuscle || 'general';
-      const targetTranslated = TRANSLATIONS[targetMuscle.toLowerCase()] || targetMuscle;
-      
-      return {
-        id: ex.exerciseId,
-        nombre: translateExerciseName(ex.name),
-        nombreOriginal: ex.name, // Guardar nombre original para búsquedas
-        grupo_muscular: [
-          BODY_PART_MAP[bodyPart.toLowerCase()] || translateText(bodyPart),
-          targetTranslated
-        ],
-        equipamiento: equip,
-        tipo_movimiento: 'compuesto',
-        imagen: ex.imageUrl || '',
-        video: ex.videoUrl || '',
-        instrucciones: translateArray(ex.instructions || []),
-        musculosSecundarios: translateArray(ex.secondaryMuscles || []),
-        descripcion: translateText(ex.description || ''),
-        dificultad: TRANSLATIONS[ex.difficulty?.toLowerCase()] || ex.difficulty || '',
-        fuente: 'api'
-      };
-    });
-
+    exercisesCache = allExercises.map(mapApiExercise);
     cacheTimestamp = Date.now();
     console.log(`✅ ${exercisesCache.length} ejercicios de API mapeados y traducidos`);
     
@@ -764,6 +783,37 @@ async function fetchAllExercisesFromAPI() {
     console.error('❌ [FETCH API] Error:', error);
     return [];
   }
+}
+
+async function searchExercisesFromAPI(query, limit = 25, cursor = null) {
+  const encodedQuery = encodeURIComponent(query.trim());
+  const url = cursor
+    ? `/exercises?name=${encodedQuery}&limit=${limit}&cursor=${cursor}`
+    : `/exercises?name=${encodedQuery}&limit=${limit}`;
+  const response = await apiFetch(url);
+  return response;
+}
+
+async function searchExercisesByName(query, limit = 25, cursor = null) {
+  if (!query || query.trim().length < 2) {
+    return { results: [], nextCursor: null, hasMore: false };
+  }
+
+  try {
+    const response = await searchExercisesFromAPI(query, limit, cursor);
+    const apiResults = Array.isArray(response.data) ? response.data.map(mapApiExercise) : [];
+    const nextCursor = response.meta?.nextCursor || null;
+    const hasMore = !!nextCursor;
+    return { results: apiResults, nextCursor, hasMore };
+  } catch (error) {
+    console.error('❌ [BÚSQUEDA API] Error:', error);
+    return { results: [], nextCursor: null, hasMore: false };
+  }
+}
+
+function searchExercisesBackupByName(query) {
+  if (!query || query.trim().length < 2) return [];
+  return filterBackupExercises(query);
 }
 
 // =====================
@@ -794,47 +844,6 @@ async function fetchAllExercises() {
   } catch (error) {
     console.error('❌ [FETCH ALL] Error, usando solo backup:', error);
     return exercisesBackup.map(ex => ({ ...ex, fuente: 'backup' }));
-  }
-}
-
-// =====================
-// BÚSQUEDA HÍBRIDA: Primero API, luego Backup
-// =====================
-async function searchExercisesByName(query) {
-  try {
-    console.log('🔍 [BÚSQUEDA HÍBRIDA] Buscando:', query);
-    
-    const allExercises = await fetchAllExercises();
-    
-    if (allExercises.length === 0) {
-      console.warn('⚠️ No hay ejercicios disponibles');
-      return [];
-    }
-    
-    const queryLower = query.toLowerCase().trim();
-    
-    // Buscar tanto en nombre traducido como en nombre original
-    const filtered = allExercises.filter(ex => {
-      const matchesNombre = ex.nombre.toLowerCase().includes(queryLower);
-      const matchesOriginal = ex.nombreOriginal && ex.nombreOriginal.toLowerCase().includes(queryLower);
-      return matchesNombre || matchesOriginal;
-    });
-    
-    // Ordenar: primero API, luego backup
-    filtered.sort((a, b) => {
-      if (a.fuente === 'api' && b.fuente === 'backup') return -1;
-      if (a.fuente === 'backup' && b.fuente === 'api') return 1;
-      return 0;
-    });
-    
-    console.log(`✓ ${filtered.length} resultados para "${query}"`);
-    console.log(`   ├─ API: ${filtered.filter(ex => ex.fuente === 'api').length}`);
-    console.log(`   └─ Backup: ${filtered.filter(ex => ex.fuente === 'backup').length}`);
-    
-    return filtered;
-  } catch (error) {
-    console.error('❌ [BÚSQUEDA] Error:', error);
-    return [];
   }
 }
 
@@ -877,6 +886,7 @@ async function getExercisesByBodyPart(bodyPart) {
 export {
   fetchAllExercises,
   searchExercisesByName,
+  searchExercisesBackupByName,
   getExercisesByBodyPart,
   exercisesBackup,
   BODY_PART_MAP,

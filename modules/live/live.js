@@ -5,6 +5,7 @@
 import { iniciarTimer } from '../../shared/timer.js';
 import { datos as datosStore, guardarDatos as guardarDatosStore } from '../../core/store.js';
 import { guardarDuracionSesion } from '../entrenamiento/entrenamiento.js';
+import { searchExercisesByName, searchExercisesBackupByName } from '../exercises/exercises.js';
 
 // Promesa que se resuelve cuando `window.datos` está disponible
 let datosReady = (window.datos && Array.isArray(window.datos) && window.datos.length > 0)
@@ -317,12 +318,10 @@ function abrirEntrenamientoEnVivo() {
     font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: all 0.2s;
   `;
   btnAgregar.onclick = () => {
-    if (window.abrirBuscadorEjercicios) {
-      window.abrirBuscadorEjercicios((nombre) => {
-        entrenamientoActual.ejercicios.push({ nombre, series: [] });
-        renderizarEjerciciosLive();
-      });
-    }
+    abrirBuscadorEjercicios((nombre) => {
+      entrenamientoActual.ejercicios.push({ nombre, series: [] });
+      renderizarEjerciciosLive();
+    });
   };
   footer.appendChild(btnAgregar);
 
@@ -379,6 +378,205 @@ function updateTimerDisplay(display) {
 
 function obtenerDuracionMinutosActual() {
   return Math.max(0, Math.floor(timerSeconds / 60));
+}
+
+export function abrirBuscadorEjercicios(callback) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+
+  const modal = document.createElement('div');
+  modal.className = 'modal-ejercicios';
+
+  const header = document.createElement('div');
+  header.className = 'modal-ejercicios-header';
+  const titulo = document.createElement('h3');
+  titulo.textContent = 'Buscar ejercicio';
+  titulo.style.cssText = 'margin:0;color:#414141;font-size:1.3rem;';
+  const btnC = document.createElement('button');
+  btnC.className = 'btn-cerrar-modal';
+  btnC.innerHTML = '✖';
+  btnC.onclick = () => overlay.remove();
+  header.append(titulo, btnC);
+
+  const input = document.createElement('input');
+  input.className = 'input-buscar-ejercicio';
+  input.placeholder = 'Buscar ejercicio...';
+  input.type = 'text';
+
+  const list = document.createElement('div');
+  list.className = 'exercise-list';
+  const msgInicial = document.createElement('div');
+  msgInicial.style.cssText = 'text-align:center;color:var(--text-secondary);padding:32px 16px;';
+  msgInicial.textContent = 'Escribe para buscar ejercicios...';
+  list.appendChild(msgInicial);
+
+  modal.append(header, input, list);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  setTimeout(() => input.focus(), 100);
+
+  let searchT;
+  let currentCursor = null;
+  let hasMoreResults = false;
+  let lastQuery = '';
+  let loadingMore = false;
+  let displayedIds = new Set();
+
+  const mostrarMensaje = (texto) => {
+    list.innerHTML = '';
+    const msg = document.createElement('div');
+    msg.style.cssText = 'text-align:center;color:var(--text-secondary);padding:32px 16px;';
+    msg.textContent = texto;
+    list.appendChild(msg);
+  };
+
+  const renderEjercicio = (ej) => {
+    const item = document.createElement('div');
+    item.className = 'exercise-item-card';
+    const icono = document.createElement('div');
+    icono.className = 'exercise-icon';
+    if (ej.imagen?.trim()) {
+      icono.textContent = '⏳';
+      const img = document.createElement('img');
+      img.onload  = () => { icono.textContent = ''; icono.appendChild(img); };
+      img.onerror = () => { icono.textContent = '🏋️'; };
+      img.src = ej.imagen;
+      img.alt = ej.nombre;
+      img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px;';
+    } else {
+      icono.textContent = '🏋️';
+    }
+
+    const info = document.createElement('div');
+    info.className = 'exercise-info';
+    const nom  = document.createElement('div');
+    nom.className = 'exercise-name';
+    nom.textContent = ej.nombre;
+    const detalles = document.createElement('div');
+    detalles.className = 'exercise-details';
+    const grupos = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular || ''];
+    grupos.slice(0, 2).forEach(g => {
+      if (g) { const t = document.createElement('span'); t.className = 'exercise-tag'; t.textContent = g; detalles.appendChild(t); }
+    });
+    if (ej.equipamiento) {
+      const t = document.createElement('span'); t.className = 'exercise-tag equip'; t.textContent = ej.equipamiento; detalles.appendChild(t);
+    }
+    info.append(nom, detalles);
+    item.append(icono, info);
+
+    item.addEventListener('mouseenter', () => item.style.boxShadow = 'var(--neu-in-sm)');
+    item.addEventListener('mouseleave', () => item.style.boxShadow = 'var(--neu-out-sm)');
+    item.addEventListener('click', () => {
+      overlay.remove();
+      if (callback) {
+        callback(ej.nombre, ej.imagen);
+      }
+    });
+    list.appendChild(item);
+  };
+
+  const renderResultsHeader = (count) => {
+    const contador = document.createElement('div');
+    contador.className = 'exercise-count';
+    contador.style.cssText = 'text-align:center;font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;';
+    contador.textContent = `${count} resultado${count !== 1 ? 's' : ''}`;
+    list.appendChild(contador);
+  };
+
+  const loadResults = async (query, append = false) => {
+    if (loadingMore) return;
+    loadingMore = true;
+    if (!append) {
+      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Buscando...</div>';
+      currentCursor = null;
+      hasMoreResults = false;
+      displayedIds.clear();
+    }
+
+    try {
+        const { results, nextCursor, hasMore } = await searchExercisesByName(query, 25, currentCursor);
+        currentCursor = nextCursor;
+        hasMoreResults = hasMore;
+
+        // Filtrado adicional en cliente para asegurar coincidencia con la consulta
+        const ql = (query || '').toLowerCase();
+        const filtered = results.filter(ej => {
+          if (!ql) return true;
+          const fields = [ej.nombre || '', ej.id || '', (ej.equipamiento || ''), (Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular.join(' ') : (ej.grupo_muscular || ''))];
+          return fields.join(' ').toLowerCase().includes(ql);
+        });
+
+        // Obtener resultados del backup (mapeados)
+        const backupResults = searchExercisesBackupByName(query);
+
+        // Combinar API filtrados + backup, evitando duplicados por id o nombre
+        const combined = [];
+        const addIfNew = (ej) => {
+          const id = (ej.id || '').toString();
+          const nameKey = (ej.nombre || '').toLowerCase();
+          if (id && displayedIds.has(id)) return false;
+          if (!id && displayedIds.has(nameKey)) return false;
+          if (id) displayedIds.add(id); else displayedIds.add(nameKey);
+          combined.push(ej);
+          return true;
+        };
+
+        if (append) {
+          // Al hacer append, añadimos solo los resultados de la API filtrados
+          filtered.forEach(ej => addIfNew(ej));
+          if (filtered.length === 0 && !hasMoreResults && backupResults.length > 0 && displayedIds.size === 0) {
+            // Si no hay resultados API en la primera carga, mostrar backup
+            backupResults.forEach(ej => addIfNew(ej));
+          }
+        } else {
+          // Nueva búsqueda: primero API filtrados
+          filtered.forEach(ej => addIfNew(ej));
+          // Luego añadir backups que no estén en API
+          backupResults.forEach(ej => addIfNew(ej));
+          if (combined.length === 0) {
+            mostrarMensaje('Sin resultados');
+            return;
+          }
+          list.innerHTML = '';
+          renderResultsHeader(combined.length);
+        }
+
+        // Renderizar los elementos añadidos en esta carga
+        combined.forEach(renderEjercicio);
+    } catch (err) {
+      list.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px;">Error al buscar</div>';
+      console.error('[Buscador]', err);
+    } finally {
+      loadingMore = false;
+    }
+  };
+
+  const onScroll = () => {
+    if (!hasMoreResults || loadingMore) return;
+    const scrollBottom = list.scrollTop + list.clientHeight;
+    if (scrollBottom >= list.scrollHeight - 80) {
+      loadResults(lastQuery, true);
+    }
+  };
+
+  list.addEventListener('scroll', onScroll);
+
+  input.addEventListener('input', () => {
+    clearTimeout(searchT);
+    searchT = setTimeout(() => {
+      const q = input.value.trim();
+      lastQuery = q;
+      if (q.length < 2) {
+        list.innerHTML = '';
+        list.appendChild(msgInicial);
+        currentCursor = null;
+        hasMoreResults = false;
+        return;
+      }
+      loadResults(q, false);
+    }, 300);
+  });
 }
 
 function obtenerDatosGlobal() {

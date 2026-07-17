@@ -12,7 +12,6 @@ import { datos as datosStore, guardarDatos } from '../../core/store.js';
 import { mostrarConfirmacion, mostrarMenuOpciones, mostrarSelectorMarca } from '../../shared/ui.js';
 import { iniciarTimer }          from '../../shared/timer.js';
 import { calcularVolumen, calcular1RM, redondear, formatearSegundos } from '../../shared/utils.js';
-import { searchExercisesByName } from '../exercises/exercises.js';
 
 // ── Estado del módulo ─────────────────────────────────────────
 let ejercicioExpandido = null;
@@ -533,123 +532,6 @@ export function guardarDuracionSesion(rutaSesion, minutos) {
 // ============================================================
 // BUSCADOR DE EJERCICIOS (ExerciseDB API + backup)
 // ============================================================
-export function abrirBuscadorEjercicios(callback) {
-  const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
-
-  const modal = document.createElement('div');
-  modal.className = 'modal-ejercicios';
-
-  const header = document.createElement('div');
-  header.className = 'modal-ejercicios-header';
-  const titulo = document.createElement('h3');
-  titulo.textContent = 'Buscar ejercicio';
-  titulo.style.cssText = 'margin:0;color:#414141;font-size:1.3rem;';
-  const btnC = document.createElement('button');
-  btnC.className = 'btn-cerrar-modal';
-  btnC.innerHTML = '✖';
-  btnC.onclick = () => overlay.remove();
-  header.append(titulo, btnC);
-
-  const input = document.createElement('input');
-  input.className = 'input-buscar-ejercicio';
-  input.placeholder = 'Buscar ejercicio...';
-  input.type = 'text';
-
-  const list = document.createElement('div');
-  list.className = 'exercise-list';
-  const msgInicial = document.createElement('div');
-  msgInicial.style.cssText = 'text-align:center;color:var(--text-secondary);padding:32px 16px;';
-  msgInicial.textContent = 'Escribe para buscar ejercicios...';
-  list.appendChild(msgInicial);
-
-  modal.append(header, input, list);
-  overlay.appendChild(modal);
-  document.body.appendChild(overlay);
-  setTimeout(() => input.focus(), 100);
-
-  let searchT;
-  input.addEventListener('input', () => {
-    clearTimeout(searchT);
-    searchT = setTimeout(async () => {
-      const q = input.value.trim();
-      if (q.length < 2) { list.innerHTML = ''; list.appendChild(msgInicial); return; }
-      list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">Buscando...</div>';
-      try {
-        const resultados = await searchExercisesByName(q);
-        list.innerHTML = '';
-        if (!resultados.length) {
-          list.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:20px;">Sin resultados</div>';
-          return;
-        }
-        const contador = document.createElement('div');
-        contador.style.cssText = 'text-align:center;font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;';
-        contador.textContent = `${resultados.length} resultado${resultados.length !== 1 ? 's' : ''}`;
-        list.appendChild(contador);
-
-        resultados.forEach(ej => {
-          const item = document.createElement('div');
-          item.className = 'exercise-item-card';
-          const icono = document.createElement('div');
-          icono.className = 'exercise-icon';
-          if (ej.imagen?.trim()) {
-            icono.textContent = '⏳';
-            const img = document.createElement('img');
-            img.onload  = () => { icono.textContent = ''; icono.appendChild(img); };
-            img.onerror = () => { icono.textContent = '🏋️'; };
-            img.src = ej.imagen;
-            img.alt = ej.nombre;
-            img.style.cssText = 'width:100%;height:100%;object-fit:cover;border-radius:12px;';
-          } else {
-            icono.textContent = '🏋️';
-          }
-
-          const info = document.createElement('div');
-          info.className = 'exercise-info';
-          const nom  = document.createElement('div');
-          nom.className = 'exercise-name';
-          nom.textContent = ej.nombre;
-          const detalles = document.createElement('div');
-          detalles.className = 'exercise-details';
-          const grupos = Array.isArray(ej.grupo_muscular) ? ej.grupo_muscular : [ej.grupo_muscular || ''];
-          grupos.slice(0, 2).forEach(g => {
-            if (g) { const t = document.createElement('span'); t.className = 'exercise-tag'; t.textContent = g; detalles.appendChild(t); }
-          });
-          if (ej.equipamiento) {
-            const t = document.createElement('span'); t.className = 'exercise-tag equip'; t.textContent = ej.equipamiento; detalles.appendChild(t);
-          }
-          info.append(nom, detalles);
-          item.append(icono, info);
-
-          item.addEventListener('mouseenter', () => item.style.boxShadow = 'var(--neu-in-sm)');
-          item.addEventListener('mouseleave', () => item.style.boxShadow = 'var(--neu-out-sm)');
-          item.addEventListener('click', () => {
-            overlay.remove();
-            if (callback) {
-              callback(ej.nombre, ej.imagen);
-            } else {
-              _agregarEjercicioDesdeAPI(ej.nombre, ej.imagen);
-            }
-          });
-          list.appendChild(item);
-        });
-      } catch (err) {
-        list.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px;">Error al buscar</div>';
-        console.error('[Buscador]', err);
-      }
-    }, 300);
-  });
-}
-
-function _agregarEjercicioDesdeAPI(nombre, imagenUrl) {
-  const ruta  = getRutaActual();
-  const nivel = getNivelActual(ruta);
-  if (!nivel || ruta.length < 4) return;
-  nivel.hijos.push({ nombre, hijos: [], series: [], imagen: imagenUrl || '' });
-  guardarDatos();
-  getRenderizar()?.();
-}
 
 // ============================================================
 // DRAG & DROP — LISTA (niveles 1-3)

@@ -11,12 +11,11 @@ import { renderizarDashboard }   from '../modules/dashboard/dashboard.js';
 import { renderizarSeguimiento } from '../modules/seguimiento/seguimiento.js';
 import { renderizarCalendario }  from '../modules/calendario/calendario.js';
 import { renderizarNutricion }   from '../modules/nutricion/nutricion.js';
-import { iniciarEntrenamiento }  from '../modules/live/live.js';
+import { iniciarEntrenamiento, abrirBuscadorEjercicios } from '../modules/live/live.js';
 import { mostrarConfirmacion }   from '../shared/ui.js';
 import {
   renderizarNivel4,
-  renderizarLista,
-  abrirBuscadorEjercicios
+  renderizarLista
 } from '../modules/entrenamiento/entrenamiento.js';
 import { restaurarTimer } from '../shared/timer.js';
 
