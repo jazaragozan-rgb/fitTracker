@@ -76,6 +76,13 @@ window.login = async function () {
 
 // ── Logout ────────────────────────────────────────────────────
 window.salir = async function () {
+  if (window.liveSessionActive) {
+    const confirmar = confirm(
+      'Tienes un entrenamiento en vivo en curso. Si cierras sesión, podrás recuperarlo en este dispositivo, pero no quedará asociado a tu cuenta. ¿Continuar?'
+    );
+    if (!confirmar) return;
+  }
+
   try {
     await signOut(auth);
     window.location.href = './index.html';

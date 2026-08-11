@@ -5,7 +5,7 @@
 // ============================================================
 
 import { initializeApp }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, setPersistence, browserSessionPersistence }
+import { getAuth, setPersistence, browserLocalPersistence }
                                  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore }         from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
@@ -25,8 +25,8 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-// Persistencia de sesión — no bloquea la inicialización
-setPersistence(auth, browserSessionPersistence)
+// Persistencia de sesión en el navegador: mantener login tras cerrar pestaña/navegador
+setPersistence(auth, browserLocalPersistence)
   .catch(e => console.warn('[firebase] setPersistence error:', e));
 
 // ── Exports ──────────────────────────────────────────────────

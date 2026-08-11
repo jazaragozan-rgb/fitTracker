@@ -7,6 +7,79 @@ import { datos as datosStore, guardarDatos as guardarDatosStore } from '../../co
 import { guardarDuracionSesion } from '../entrenamiento/entrenamiento.js';
 import { searchExercisesByName, searchExercisesBackupByName } from '../exercises/exercises.js';
 
+const LIVE_PERSIST_KEY = 'fitTracker_liveSession';
+
+window.liveSessionActive = false;
+
+function loadSavedLiveState() {
+  try {
+    const raw = localStorage.getItem(LIVE_PERSIST_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (e) {
+    console.warn('[live] Error leyendo estado guardado:', e);
+    return null;
+  }
+}
+
+// Si hay un live guardado, debemos tratarlo como activo para evitar logout accidental
+if (loadSavedLiveState()) {
+  window.liveSessionActive = true;
+}
+
+function persistLiveState() {
+  try {
+    const payload = {
+      entrenamientoActual,
+      timerSeconds,
+      timerPaused,
+      ejercicioExpandidoLive,
+      savedAt: new Date().toISOString()
+    };
+    localStorage.setItem(LIVE_PERSIST_KEY, JSON.stringify(payload));
+    window.liveSessionActive = true;
+  } catch (e) {
+    console.warn('[live] Error guardando estado local:', e);
+  }
+}
+
+function clearSavedLiveState() {
+  localStorage.removeItem(LIVE_PERSIST_KEY);
+  window.liveSessionActive = false;
+}
+
+function closeLiveOverlay(overlay) {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  persistLiveState();
+  overlay.remove();
+}
+
+let persistTimer = null;
+function schedulePersist() {
+  if (persistTimer) clearTimeout(persistTimer);
+  persistTimer = setTimeout(() => {
+    persistLiveState();
+    persistTimer = null;
+  }, 120);
+}
+
+export function checkLiveRestore() {
+  const saved = loadSavedLiveState();
+  if (!saved) return;
+  const continuar = confirm(
+    'Se encontró un entrenamiento en vivo guardado localmente. ¿Quieres continuar donde lo dejaste?'
+  );
+  if (!continuar) {
+    clearSavedLiveState();
+    return;
+  }
+  entrenamientoActual = saved.entrenamientoActual || { ejercicios: [], fecha: new Date().toISOString().slice(0, 10) };
+  timerSeconds = saved.timerSeconds || 0;
+  timerPaused = saved.timerPaused || false;
+  ejercicioExpandidoLive = saved.ejercicioExpandidoLive ?? null;
+  abrirEntrenamientoEnVivo();
+}
+
 // Promesa que se resuelve cuando `window.datos` está disponible
 let datosReady = (window.datos && Array.isArray(window.datos) && window.datos.length > 0)
   ? Promise.resolve()
@@ -149,7 +222,9 @@ export function iniciarEntrenamiento(ejerciciosPrecargados = []) {
   timerSeconds = 0;
   timerPaused = false;
   ejercicioExpandidoLive = null;
+  window.liveSessionActive = true;
   abrirEntrenamientoEnVivo();
+  schedulePersist();
 }
 
 // Crea la pantalla completa de entrenamiento
@@ -197,6 +272,7 @@ function abrirEntrenamientoEnVivo() {
       if (confirm("¿Cerrar sin guardar?")) {
         clearInterval(timerInterval);
         overlay.remove();
+        persistLiveState();
       }
     };
     headerLeft.appendChild(btnCerrar);
@@ -247,7 +323,7 @@ function abrirEntrenamientoEnVivo() {
     border-radius: 4px; font-size: 0.75rem; font-weight: 600;
     color: var(--primary-mint); width: 100px;
   `;
-  fechaInput.addEventListener("change", (e) => { entrenamientoActual.fecha = e.target.value; });
+  fechaInput.addEventListener("change", (e) => { entrenamientoActual.fecha = e.target.value; schedulePersist(); });
   header.appendChild(fechaInput);
   overlay.appendChild(header);
 
@@ -271,7 +347,7 @@ function abrirEntrenamientoEnVivo() {
   `;
   const btnStart = document.createElement("button");
   btnStart.id = "btnStartTimer";
-  btnStart.textContent = "▶";
+  btnStart.textContent = timerPaused ? "▶" : "⏸";
   btnStart.style.cssText = `
     width: 36px; height: 36px; border: none; border-radius: 50%;
     background: var(--primary-mint); color: white; font-size: 1rem;
@@ -294,6 +370,11 @@ function abrirEntrenamientoEnVivo() {
   timerDiv.appendChild(btnReset);
   headerTimer.appendChild(timerDiv);
   overlay.appendChild(headerTimer);
+
+  updateTimerDisplay(timerDisplay);
+  if (timerSeconds > 0 && !timerPaused) {
+    timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(timerDisplay); }, 1000);
+  }
 
   // Zona ejercicios
   const zonaEjercicios = document.createElement("div");
@@ -321,6 +402,7 @@ function abrirEntrenamientoEnVivo() {
     abrirBuscadorEjercicios((nombre) => {
       entrenamientoActual.ejercicios.push({ nombre, series: [] });
       renderizarEjerciciosLive();
+      schedulePersist();
     });
   };
   footer.appendChild(btnAgregar);
@@ -335,6 +417,7 @@ function abrirEntrenamientoEnVivo() {
   btnGuardar.onclick = () => {
     if (entrenamientoActual.ejercicios.length === 0) { alert("Añade al menos un ejercicio"); return; }
     if (!entrenamientoActual.fecha) { alert("Selecciona una fecha"); return; }
+    persistLiveState();
     mostrarOpcionesGuardado(overlay);
   };
   footer.appendChild(btnGuardar);
@@ -359,6 +442,7 @@ function startTimer(display, btn) {
     btn.textContent = "⏸";
     timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(display); }, 1000);
   }
+  schedulePersist();
 }
 
 function resetTimer(display, btn) {
@@ -368,6 +452,7 @@ function resetTimer(display, btn) {
   timerPaused = false;
   btn.textContent = "▶";
   updateTimerDisplay(display);
+  schedulePersist();
 }
 
 function updateTimerDisplay(display) {
@@ -383,7 +468,7 @@ function obtenerDuracionMinutosActual() {
 export function abrirBuscadorEjercicios(callback) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) closeLiveOverlay(overlay); });
 
   const modal = document.createElement('div');
   modal.className = 'modal-ejercicios';
@@ -752,6 +837,7 @@ async function renderizarEjerciciosLive() {
         entrenamientoActual.ejercicios.splice(ejIdx, 1);
         ejercicioExpandidoLive = null;
         renderizarEjerciciosLive();
+        schedulePersist();
       }
     };
     headerEj.appendChild(btnEliminar);
@@ -760,6 +846,7 @@ async function renderizarEjerciciosLive() {
       if (draggingEjercicio) return;
       if (e.target === btnEliminar || btnEliminar.contains(e.target)) return;
       ejercicioExpandidoLive = ejercicioExpandidoLive === ejIdx ? null : ejIdx;
+      schedulePersist();
       renderizarEjerciciosLive();
     });
     headerEj.addEventListener('mouseenter', () => { if (ejercicioExpandidoLive !== ejIdx) headerEj.style.background = 'var(--bg-main)'; });
@@ -791,6 +878,7 @@ async function renderizarEjerciciosLive() {
         e.stopPropagation();
         ejercicio.series.push({ reps: '', peso: '', rir: '', descanso: '', completada: false });
         renderizarEjerciciosLive();
+        schedulePersist();
       };
       contenidoExpandible.appendChild(btnAñadirSerie);
 
@@ -852,7 +940,7 @@ async function renderizarEjerciciosLive() {
             input.style.background = 'transparent';
             input.style.boxShadow = 'none';
           });
-          input.addEventListener("input", () => { serie[campo] = input.value; });
+          input.addEventListener("input", () => { serie[campo] = input.value; schedulePersist(); });
           return input;
         };
 
@@ -876,6 +964,7 @@ async function renderizarEjerciciosLive() {
         btnCheck.onclick = (e) => {
           e.stopPropagation();
           serie.completada = !serie.completada;
+          schedulePersist();
           if (serie.completada && serie.descanso) iniciarTimer(parseInt(serie.descanso));
           renderizarEjerciciosLive();
         };
@@ -894,6 +983,7 @@ async function renderizarEjerciciosLive() {
           e.stopPropagation();
           ejercicio.series.splice(serieIdx, 1);
           renderizarEjerciciosLive();
+          schedulePersist();
         };
         botonesContainer.appendChild(btnEliminarSerie);
 
@@ -966,8 +1056,8 @@ async function renderizarEjerciciosLive() {
         background: var(--bg-main); color: var(--text-primary); transition: all 0.2s ease;
       `;
       notasTextarea.addEventListener('focus', () => { notasTextarea.style.borderColor = 'var(--primary-mint)'; notasTextarea.style.background = 'white'; });
-      notasTextarea.addEventListener('blur',  () => { notasTextarea.style.borderColor = 'var(--border-color)'; notasTextarea.style.background = 'var(--bg-main)'; ejercicio.notas = notasTextarea.value; });
-      notasTextarea.addEventListener('input', () => { ejercicio.notas = notasTextarea.value; });
+      notasTextarea.addEventListener('blur',  () => { notasTextarea.style.borderColor = 'var(--border-color)'; notasTextarea.style.background = 'var(--bg-main)'; ejercicio.notas = notasTextarea.value; schedulePersist(); });
+      notasTextarea.addEventListener('input', () => { ejercicio.notas = notasTextarea.value; schedulePersist(); });
       notasContainer.appendChild(notasTextarea);
       contenidoExpandible.appendChild(notasContainer);
 
@@ -1094,6 +1184,7 @@ function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
     }));
 
     guardarDatosStore();
+    clearSavedLiveState();
     clearInterval(timerInterval);
     overlayEntrenamiento.remove();
     alert(`✅ Entrenamiento guardado en "${sesionInfo.sesionNombre}"`);
@@ -1268,6 +1359,7 @@ function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntren
     guardarDuracionSesion([0, mesoIndex, microIndex, sesionIdx], nuevaSesion.duracionMinutos);
 
     guardarDatosStore();
+    clearSavedLiveState();
     clearInterval(timerInterval);
     overlayEntrenamiento.remove();
     alert(`✅ Nueva sesión "${nombreSesion}" creada`);

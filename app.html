@@ -78,6 +78,14 @@
   import { init as initRouter, renderizar } from './core/router.js';
   import { onDatosLoaded }                  from './core/store.js';
   import { restaurarTimer }                 from './shared/timer.js';
+  import { checkLiveRestore }               from './modules/live/live.js';
+
+  window.addEventListener('beforeunload', (e) => {
+    if (window.liveSessionActive) {
+      e.preventDefault();
+      e.returnValue = '';
+    }
+  });
 
   document.addEventListener('DOMContentLoaded', () => {
     initRouter();
@@ -85,6 +93,7 @@
     onDatosLoaded(() => {
       renderizar();
       restaurarTimer();
+      checkLiveRestore();
     });
 
     if ('serviceWorker' in navigator) {
@@ -92,7 +101,13 @@
         .then(reg => { reg.update(); })
         .catch(err => console.error('[PWA] Error SW:', err));
       navigator.serviceWorker.addEventListener('message', e => {
-        if (e.data?.type === 'SW_UPDATED') window.location.reload();
+        if (e.data?.type === 'SW_UPDATED') {
+          if (window.liveSessionActive) {
+            console.log('[PWA] SW actualizado, evitando recarga porque hay un entrenamiento en curso');
+            return;
+          }
+          window.location.reload();
+        }
       });
     }
   });
