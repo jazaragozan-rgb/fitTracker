@@ -410,18 +410,61 @@ export function mostrarBuscadorAlimentos(nivel, contenido, tipoComida = 'desayun
   setTimeout(() => input.focus(), 100);
 
   let searchT;
+  let currentSearchId = 0;
+  let currentAbortController = null;
+
   input.addEventListener('input', () => {
+    const q = input.value.trim();
+
     clearTimeout(searchT);
+
+    if (currentAbortController) {
+      currentAbortController.abort();
+      currentAbortController = null;
+    }
+
+    currentSearchId += 1;
+    const searchId = currentSearchId;
+
+    if (q.length < 2) {
+      list.innerHTML = '';
+      list.appendChild(msg);
+      return;
+    }
+
     searchT = setTimeout(async () => {
-      const q = input.value.trim();
-      if (q.length < 2) { list.innerHTML = ''; list.appendChild(msg); return; }
+      const finalQuery = input.value.trim();
+      if (finalQuery.length < 2 || searchId !== currentSearchId) return;
+
+      const controller = new AbortController();
+      currentAbortController = controller;
       list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">🔍 Buscando...</div>';
+
       try {
-        const res  = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?search_terms=${encodeURIComponent(q)}&search_simple=1&action=process&json=1&page_size=20&fields=product_name,nutriments,brands,serving_size`);
+        const params = new URLSearchParams({
+          search_terms: finalQuery,
+          search_simple: '1',
+          action: 'process',
+          json: '1',
+          page_size: '20',
+          fields: 'product_name,nutriments,brands,serving_size'
+        });
+
+        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params.toString()}`, {
+          signal: controller.signal
+        });
+
+        if (searchId !== currentSearchId) return;
+
         const data = await res.json();
         const productos = (data.products || []).filter(p => p.product_name && p.nutriments?.['energy-kcal_100g']);
+
         list.innerHTML = '';
-        if (!productos.length) { list.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:20px;">Sin resultados</div>'; return; }
+        if (!productos.length) {
+          list.innerHTML = '<div style="text-align:center;color:var(--text-light);padding:20px;">Sin resultados</div>';
+          return;
+        }
+
         productos.slice(0,15).forEach(p => {
           const item = document.createElement('div');
           item.style.cssText = 'display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;background:var(--bg-main);box-shadow:var(--neu-out-sm);margin-bottom:6px;';
@@ -437,8 +480,16 @@ export function mostrarBuscadorAlimentos(nivel, contenido, tipoComida = 'desayun
           item.onclick = () => _mostrarModalCantidad(p, nivel, tipoComida, overlay);
           list.appendChild(item);
         });
-      } catch (err) { list.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px;">Error de conexión</div>'; }
-    }, 400);
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        if (searchId !== currentSearchId) return;
+        list.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px;">Error de conexión</div>';
+      } finally {
+        if (currentAbortController === controller) {
+          currentAbortController = null;
+        }
+      }
+    }, 2000);
   });
 }
 

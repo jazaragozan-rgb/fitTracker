@@ -28,14 +28,14 @@
       "name": "Entrenamiento",
       "short_name": "Entrena",
       "description": "Ir directamente al entrenamiento",
-      "url": "/subindex.html#entrenamiento",
+      "url": "/app.html#entrenamiento",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Nutrición",
       "short_name": "Nutrición",
       "description": "Registrar comidas del día",
-      "url": "/subindex.html#nutricion",
+      "url": "/app.html#nutricion",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]

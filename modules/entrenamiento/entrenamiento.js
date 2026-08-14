@@ -20,6 +20,8 @@ let ejercicioExpandido = null;
 let dragItem = null, dragStartX = 0, dragStartY = 0, dragging = false;
 let dragStartIndex = null, dragTimer = null, hasMoved = false;
 // Estado drag específico para ejercicios (nivel 4)
+let dragEjercicioItem = null, dragEjercicioStartX = 0, dragEjercicioStartY = 0;
+let dragEjercicioStartIndex = null, dragEjercicioTimer = null, hasMovedEjercicio = false;
 let draggingEjercicio = false;
 
 // ── Referencias al renderizador y ruta actuales ───────────────
@@ -244,6 +246,8 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
   wrapper.dataset.index = index;
+  wrapper.addEventListener('mousedown', startDragEjercicio, { passive: false, capture: true });
+  wrapper.addEventListener('touchstart', startDragEjercicio, { passive: false, capture: true });
 
   // ── Header ────────────────────────────────────────────────
   const header = document.createElement('div');
@@ -532,6 +536,101 @@ export function guardarDuracionSesion(rutaSesion, minutos) {
 // ============================================================
 // BUSCADOR DE EJERCICIOS (ExerciseDB API + backup)
 // ============================================================
+
+// ============================================================
+// DRAG & DROP — EJERCICIOS (nivel 4)
+// ============================================================
+function startDragEjercicio(e) {
+  if (e.type === 'mousedown' && e.button !== 0) return;
+  dragEjercicioItem = e.currentTarget.closest('.ejercicio-acordeon');
+  if (!dragEjercicioItem) return;
+
+  draggingEjercicio = false;
+  hasMovedEjercicio = false;
+  dragEjercicioStartIndex = [...(dragEjercicioItem.parentElement?.children || [])].indexOf(dragEjercicioItem);
+  const touch = e.touches?.[0] || e;
+  dragEjercicioStartX = touch.clientX;
+  dragEjercicioStartY = touch.clientY;
+
+  const check = (me) => {
+    const mt = me.touches?.[0] || me;
+    if (Math.abs(mt.clientX - dragEjercicioStartX) > MOVEMENT_THRESHOLD || Math.abs(mt.clientY - dragEjercicioStartY) > MOVEMENT_THRESHOLD) {
+      hasMovedEjercicio = true;
+      clearTimeout(dragEjercicioTimer);
+      dragEjercicioTimer = null;
+      cleanup();
+    }
+  };
+
+  const cleanup = () => {
+    document.removeEventListener('mousemove', check);
+    document.removeEventListener('touchmove', check);
+  };
+
+  document.addEventListener('mousemove', check, { passive: true });
+  document.addEventListener('touchmove', check, { passive: true });
+
+  dragEjercicioTimer = setTimeout(() => {
+    cleanup();
+    if (!hasMovedEjercicio) {
+      draggingEjercicio = true;
+      dragEjercicioItem.classList.add('dragging');
+      dragEjercicioItem.style.opacity = '0.7';
+      dragEjercicioItem.style.transform = 'scale(1.02)';
+      document.body.style.userSelect = 'none';
+      navigator.vibrate?.(50);
+    }
+  }, LONG_PRESS_DURATION);
+}
+
+function dragMoveEjercicio(e) {
+  if (!draggingEjercicio || !dragEjercicioItem) return;
+  e.preventDefault();
+  const y = (e.touches?.[0] || e).clientY;
+  const items = [...document.querySelectorAll('.ejercicio-acordeon:not(.dragging)')];
+  const target = items.find(item => y < item.getBoundingClientRect().top + item.getBoundingClientRect().height / 2);
+  if (target) dragEjercicioItem.parentElement?.insertBefore(dragEjercicioItem, target);
+  else if (items.length > 0) items[0].parentElement?.appendChild(dragEjercicioItem);
+}
+
+function dragEndEjercicio() {
+  clearTimeout(dragEjercicioTimer);
+  dragEjercicioTimer = null;
+  document.body.style.userSelect = '';
+
+  if (!draggingEjercicio || !dragEjercicioItem) {
+    dragEjercicioItem = null;
+    dragEjercicioStartIndex = null;
+    hasMovedEjercicio = false;
+    return;
+  }
+
+  dragEjercicioItem.style.opacity = '';
+  dragEjercicioItem.style.transform = '';
+  draggingEjercicio = false;
+  dragEjercicioItem.classList.remove('dragging');
+
+  const newIndex = [...(dragEjercicioItem.parentElement?.children || [])].indexOf(dragEjercicioItem);
+  if (dragEjercicioStartIndex !== null && newIndex !== dragEjercicioStartIndex) {
+    const ruta = getRutaActual();
+    const nivel = getNivelActual(ruta);
+    if (nivel && Array.isArray(nivel.hijos)) {
+      const moved = nivel.hijos.splice(dragEjercicioStartIndex, 1)[0];
+      nivel.hijos.splice(newIndex, 0, moved);
+      guardarDatos();
+    }
+  }
+
+  dragEjercicioItem = null;
+  dragEjercicioStartIndex = null;
+  hasMovedEjercicio = false;
+}
+
+// Registrar listeners globales de drag del nivel 4
+document.addEventListener('mousemove', dragMoveEjercicio);
+document.addEventListener('touchmove', dragMoveEjercicio, { passive: false });
+document.addEventListener('mouseup', dragEndEjercicio);
+document.addEventListener('touchend', dragEndEjercicio);
 
 // ============================================================
 // DRAG & DROP — LISTA (niveles 1-3)

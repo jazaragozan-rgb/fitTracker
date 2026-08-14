@@ -8,7 +8,6 @@ const STATIC_ASSETS = [
   '/styles/layout.css',
   '/styles/app.css',
   '/style.css',
-  '/script.js',
   '/manifest.json',
   '/imagenes/logo.png',
   '/iconos/Home.png',
