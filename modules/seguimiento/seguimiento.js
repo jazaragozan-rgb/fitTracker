@@ -7,7 +7,6 @@ import { hoyISO, formatearFechaLarga } from '../../shared/utils.js';
 
 // ── Exportación principal ─────────────────────────────────────
 export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addButton) {
-  // Subheader
   subHeader.innerHTML = '';
   const h2 = document.createElement('h2');
   h2.id = 'tituloNivel'; h2.textContent = 'Seguimiento Corporal';
@@ -21,16 +20,20 @@ export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addBut
   btnAdd.textContent = '+ Añadir';
   btnAdd.onclick = () => mostrarModalMedidas(seguidoNivel, contenido);
   botonesContainer.appendChild(btnAdd);
+  
+  const btnObjectives = document.createElement('button');
+  btnObjectives.className = 'header-btn seg-btn-add';
+  btnObjectives.textContent = '🎯 Objetivos';
+  btnObjectives.onclick = () => mostrarModalObjetivos(seguidoNivel, contenido);
+  botonesContainer.appendChild(btnObjectives);
+  
   subHeader.appendChild(botonesContainer);
 
-  // Contenido
   contenido.innerHTML = '';
-  contenido.className = (contenido.className || '') + ' seg-contenido';
+  contenido.className = (contenido.className || '') + ' seg-contenido seg-dashboard-shell';
   const medidas = seguidoNivel.hijos || [];
 
-  if (medidas.length > 0) {
-    contenido.appendChild(crearCardUltimaMedicion(medidas[medidas.length - 1]));
-  } else {
+  if (!medidas.length) {
     const sinDatos = document.createElement('div');
     sinDatos.className = 'sin-datos-card seg-sin-datos';
     sinDatos.innerHTML = `
@@ -41,21 +44,397 @@ export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addBut
     return;
   }
 
-  contenido.appendChild(crearCardResumenProgreso(medidas));
+  const primera = medidas[0];
+  const ultima = medidas[medidas.length - 1];
+  const pesoInicial = parseFloat(primera.peso) || 0;
+  const pesoActual = parseFloat(ultima.peso) || 0;
+  const cambioTotal = pesoActual - pesoInicial;
+  const objetivoPeso = parseFloat(seguidoNivel.objetivoPeso || ultima.peso || 0) || 0;
+  const progresoPorcentaje = objetivoPeso && pesoInicial ? Math.min(100, Math.max(0, ((pesoInicial - pesoActual) / (pesoInicial - objetivoPeso || 1)) * 100)) : 0;
+  const diasSeguimiento = Math.max(1, Math.ceil((new Date(ultima.fecha + 'T00:00:00') - new Date(primera.fecha + 'T00:00:00')) / 86400000));
 
-  const graficosContainer = document.createElement('div');
-  graficosContainer.className = 'seg-graficos-container';
-  graficosContainer.appendChild(crearGraficoMetrica(medidas, 'peso',    'Peso',    'kg',  '#3DD598'));
-  graficosContainer.appendChild(crearGraficoIMC(medidas));
+  const grasaCorporal = parseFloat(ultima.grasaCorporal) || null;
+  
+  const summaryContainer = document.createElement('div');
+  summaryContainer.className = 'seg-summary-container';
+  
+  const metricsData = [
+    { key: 'peso', label: 'Peso', unit: 'kg', icon: '⚖️', inverse: true },
+    { key: 'cintura', label: 'Cintura', unit: 'cm', icon: '⭕', inverse: true },
+    { key: 'cadera', label: 'Cadera', unit: 'cm', icon: '🩺', inverse: true },
+    { key: 'pecho', label: 'Pecho', unit: 'cm', icon: '🏋️', inverse: false },
+    { key: 'brazo', label: 'Brazo', unit: 'cm', icon: '💪', inverse: false },
+    { key: 'muslo', label: 'Muslo', unit: 'cm', icon: '🦵', inverse: true },
+    { key: 'grasaCorporal', label: 'Grasa corporal', unit: '%', icon: '📉', inverse: true },
+    { key: 'masaMuscular', label: 'Masa muscular', unit: 'kg', icon: '💪', inverse: false }
+  ];
+  
+  metricsData.forEach(metric => {
+    const valores = medidas.map(m => parseFloat(m[metric.key])).filter(v => !Number.isNaN(v));
+    if (valores.length === 0) return;
+    
+    const inicial = valores[0];
+    const actual = valores[valores.length - 1];
+    const cambio = actual - inicial;
+    const objetivo = parseFloat(seguidoNivel.objetivos?.[metric.key]) || null;
+    
+    const progressPercent = objetivo ? Math.min(100, Math.max(0, Math.abs(cambio) / Math.abs(objetivo - inicial || 1) * 100)) : 0;
+    
+    const card = document.createElement('div');
+    card.className = 'seg-metric-card';
+    
+    const headerDiv = document.createElement('div');
+    headerDiv.className = 'seg-metric-header';
+    headerDiv.innerHTML = `<span class="seg-metric-icon">${metric.icon}</span><span class="seg-metric-label">${metric.label}</span>`;
+    card.appendChild(headerDiv);
+    
+    const contenidoDiv = document.createElement('div');
+    contenidoDiv.className = 'seg-metric-content';
+    
+    // Medida actual
+    const actualDiv = document.createElement('div');
+    actualDiv.className = 'seg-metric-field';
+    actualDiv.innerHTML = `<div class="seg-metric-field-label">Actual</div><div class="seg-metric-field-value">${actual.toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
+    contenidoDiv.appendChild(actualDiv);
+    
+    // Cambio total
+    const cambioDiv = document.createElement('div');
+    cambioDiv.className = 'seg-metric-field';
+    const cambioSign = metric.inverse ? (cambio < 0 ? '↓' : cambio > 0 ? '↑' : '') : (cambio > 0 ? '↑' : cambio < 0 ? '↓' : '');
+    cambioDiv.innerHTML = `<div class="seg-metric-field-label">Cambio</div><div class="seg-metric-field-value">${cambioSign} ${Math.abs(cambio).toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
+    contenidoDiv.appendChild(cambioDiv);
+    
+    // Objetivo
+    const objetivoDiv = document.createElement('div');
+    objetivoDiv.className = 'seg-metric-field';
+    objetivoDiv.innerHTML = `<div class="seg-metric-field-label">Objetivo</div><div class="seg-metric-field-value">${objetivo ? objetivo.toFixed(1) : 'S/O'}</div><div class="seg-metric-field-unit">${objetivo ? metric.unit : ''}</div>`;
+    contenidoDiv.appendChild(objetivoDiv);
+    
+    // Progreso
+    const progressDiv = document.createElement('div');
+    progressDiv.className = 'seg-metric-field seg-metric-field-progress';
+    progressDiv.innerHTML = `<div class="seg-metric-field-label">Progreso</div><div class="seg-metric-progress-bar"><div class="seg-metric-progress-fill" style="width:${progressPercent}%;"></div></div><div class="seg-metric-field-value">${Math.round(progressPercent)}%</div>`;
+    contenidoDiv.appendChild(progressDiv);
+    
+    card.appendChild(contenidoDiv);
+    summaryContainer.appendChild(card);
+  });
+  
+  contenido.appendChild(summaryContainer);
+  
+  const summaryRow = document.createElement('div');
+  summaryRow.className = 'seg-summary-row seg-summary-row--hidden';
+  // Tarjetas antiguas removidas - ahora usando contenedores horizontales por métrica
+  
+  const mainRow = document.createElement('div');
+  mainRow.className = 'seg-main-row';
 
-  const medidasGrid = document.createElement('div');
-  medidasGrid.className = 'seg-medidas-grid';
-  medidasGrid.appendChild(crearGraficoMetrica(medidas, 'brazo',   'Brazo',   'cm', '#00D4D4', true));
-  medidasGrid.appendChild(crearGraficoMetrica(medidas, 'cintura', 'Cintura', 'cm', '#FF6B6B', true));
-  graficosContainer.appendChild(medidasGrid);
-  contenido.appendChild(graficosContainer);
+  const chartCard = document.createElement('div');
+  chartCard.className = 'seg-panel seg-panel-chart';
+  
+  const headerDiv = document.createElement('div');
+  headerDiv.className = 'seg-panel-header';
+  headerDiv.innerHTML = '<div><h3>Evolución</h3></div>';
+  
+  const filterDiv = document.createElement('div');
+  filterDiv.className = 'seg-panel-header-right';
+  
+  const select = document.createElement('select');
+  select.className = 'seg-filter-select';
+  
+  const allMetrics = [
+    { key: 'peso', label: 'Peso', unit: 'kg', color: '#7c6cf5', inverse: true },
+    { key: 'altura', label: 'Altura', unit: 'cm', color: '#2db5ff', inverse: false },
+    { key: 'cintura', label: 'Cintura', unit: 'cm', color: '#f06565', inverse: true },
+    { key: 'cadera', label: 'Cadera', unit: 'cm', color: '#2db5ff', inverse: true },
+    { key: 'pecho', label: 'Pecho', unit: 'cm', color: '#1ec0b0', inverse: false },
+    { key: 'brazo', label: 'Brazo', unit: 'cm', color: '#f7a728', inverse: false },
+    { key: 'muslo', label: 'Muslo', unit: 'cm', color: '#8b5cf6', inverse: true },
+    { key: 'grasaCorporal', label: 'Grasa corporal', unit: '%', color: '#2ec5a2', inverse: true },
+    { key: 'masaMuscular', label: 'Masa muscular', unit: 'kg', color: '#a855f7', inverse: false }
+  ];
+  
+  const availableMetrics = allMetrics.filter(m => medidas.some(med => med[m.key]));
+  
+  availableMetrics.forEach(metric => {
+    const option = document.createElement('option');
+    option.value = metric.key;
+    option.textContent = metric.label;
+    select.appendChild(option);
+  });
+  
+  select.value = 'peso';
+  filterDiv.appendChild(select);
+  headerDiv.appendChild(filterDiv);
+  chartCard.appendChild(headerDiv);
+  
+  const chartWrap = document.createElement('div');
+  chartWrap.className = 'seg-chart-wrap';
+  const chartCanvas = document.createElement('canvas');
+  chartCanvas.className = 'seg-weight-chart';
+  chartWrap.appendChild(chartCanvas);
+  chartCard.appendChild(chartWrap);
+  
+  let currentChart = null;
+  
+  const drawChart = (metricKey) => {
+    const metric = allMetrics.find(m => m.key === metricKey);
+    if (!metric || !window.Chart) return;
+    
+    const datosMetrica = medidas
+      .filter(m => m[metricKey] && m.fecha)
+      .map(m => ({ x: new Date(m.fecha + 'T00:00:00'), y: parseFloat(m[metricKey]) }))
+      .sort((a, b) => a.x - b.x);
+    
+    if (datosMetrica.length === 0) {
+      chartCanvas.style.display = 'none';
+      return;
+    }
+    chartCanvas.style.display = 'block';
+    
+    if (currentChart) currentChart.destroy();
+    
+    const ctx = chartCanvas.getContext('2d');
+    currentChart = new window.Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [{
+          label: metric.label,
+          data: datosMetrica,
+          borderColor: metric.color,
+          backgroundColor: metric.color + '20',
+          tension: 0.35,
+          fill: true,
+          pointRadius: 0,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: metric.color,
+          pointBorderWidth: 2,
+          borderWidth: 3
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { intersect: false, mode: 'index' },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(18, 22, 31, 0.9)',
+            titleColor: '#fff',
+            bodyColor: '#fff',
+            padding: 12,
+            displayColors: false,
+            callbacks: {
+              title: item => item[0]?.label ? new Date(item[0].label).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' }) : '',
+              label: ctx => `${ctx.dataset.label}: ${Number(ctx.parsed.y).toFixed(1)} ${metric.unit}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: { unit: 'day', tooltipFormat: 'dd/MM', displayFormats: { day: 'dd/MM' } },
+            grid: { display: false },
+            border: { display: false },
+            ticks: { color: '#7987a1', font: { size: 10 } }
+          },
+          y: {
+            min: Math.min(...datosMetrica.map(d => d.y)) - 2,
+            max: Math.max(...datosMetrica.map(d => d.y)) + 2,
+            grid: { color: 'rgba(125, 135, 153, 0.12)', drawBorder: false },
+            border: { display: false },
+            ticks: { color: '#7987a1', font: { size: 10 }, callback: value => `${value.toFixed(0)} ${metric.unit}` }
+          }
+        }
+      }
+    });
+  };
+  
+  select.addEventListener('change', () => drawChart(select.value));
+  
+  mainRow.appendChild(chartCard);
+  setTimeout(() => drawChart('peso'), 100);
 
-  contenido.appendChild(crearSeccionHistorial(medidas, seguidoNivel, contenido));
+  const sideCard = document.createElement('div');
+  sideCard.className = 'seg-panel seg-panel-side';
+  sideCard.innerHTML = '<div class="seg-panel-header"><h3>Resumen de progreso</h3></div>';
+  const trendList = document.createElement('div');
+  trendList.className = 'seg-trend-list';
+  const metricDefinitions = [
+    { key: 'peso', label: 'Peso', color: '#7c6cf5', icon: '⚖️', unit: 'kg', inverse: true },
+    { key: 'cintura', label: 'Cintura', color: '#f06565', icon: '⭕', unit: 'cm', inverse: true },
+    { key: 'grasaCorporal', label: 'Grasa corporal', color: '#2ec5a2', icon: '📉', unit: '%', inverse: true },
+    { key: 'masaMuscular', label: 'Masa muscular', color: '#a855f7', icon: '💪', unit: 'kg', inverse: false }
+  ];
+  metricDefinitions.forEach(metric => {
+    const item = document.createElement('div');
+    item.className = 'seg-trend-item';
+    const values = medidas.map(m => parseFloat(m[metric.key])).filter(v => !Number.isNaN(v));
+    const initial = values[0] || 0;
+    const final = values[values.length - 1] || 0;
+    const delta = final - initial;
+    const sparkSvg = crearSparkline(values, metric.color);
+    item.innerHTML = `
+      <div class="seg-trend-main">
+        <div class="seg-trend-icon" style="background:${metric.color}18; color:${metric.color};">${metric.icon}</div>
+        <div class="seg-trend-copy">
+          <div class="seg-trend-label">${metric.label}</div>
+          <div class="seg-trend-value">${delta >= 0 && !metric.inverse ? '+' : ''}${delta.toFixed(1)} ${metric.unit}</div>
+        </div>
+      </div>
+      <div class="seg-trend-spark">${sparkSvg}</div>
+    `;
+    trendList.appendChild(item);
+  });
+  sideCard.appendChild(trendList);
+  const footerBtn = document.createElement('button');
+  footerBtn.className = 'seg-footer-btn';
+  footerBtn.textContent = 'Ver informe completo';
+  sideCard.appendChild(footerBtn);
+  mainRow.appendChild(sideCard);
+  contenido.appendChild(mainRow);
+
+  const lowerRow = document.createElement('div');
+  lowerRow.className = 'seg-lower-row';
+
+  const tableCard = document.createElement('div');
+  tableCard.className = 'seg-panel seg-panel-table';
+  tableCard.innerHTML = '<div class="seg-panel-header"><h3>Medidas corporales</h3></div>';
+  const table = document.createElement('div');
+  table.className = 'seg-measures-table';
+  const header = document.createElement('div');
+  header.className = 'seg-measures-row seg-measures-header';
+  header.innerHTML = '<span>Medida</span><span>Inicial</span><span>Actual</span><span>Cambio</span><span>Progreso</span>';
+  table.appendChild(header);
+
+  const medidasAComparar = [
+    { key: 'cintura', label: 'Cintura', color: '#f06565', unit: 'cm', inverse: true },
+    { key: 'cadera', label: 'Cadera', color: '#2db5ff', unit: 'cm', inverse: true },
+    { key: 'pecho', label: 'Pecho', color: '#1ec0b0', unit: 'cm', inverse: false },
+    { key: 'brazo', label: 'Brazo', color: '#f7a728', unit: 'cm', inverse: false },
+    { key: 'muslo', label: 'Muslo', color: '#8b5cf6', unit: 'cm', inverse: true }
+  ];
+
+  medidasAComparar.forEach(m => {
+    const valores = medidas.map(md => parseFloat(md[m.key])).filter(v => !Number.isNaN(v));
+    const inicial = valores[0] || 0;
+    const actual = valores[valores.length - 1] || 0;
+    const cambio = actual - inicial;
+    const progress = inicial ? Math.min(100, Math.max(0, Math.abs(cambio) / inicial * 100)) : 0;
+    const deltaSign = m.inverse ? (cambio < 0 ? '↓' : cambio > 0 ? '↑' : '•') : (cambio > 0 ? '↑' : cambio < 0 ? '↓' : '•');
+    const row = document.createElement('div');
+    row.className = 'seg-measures-row';
+    row.innerHTML = `
+      <span class="seg-measure-name"><i style="color:${m.color}">●</i> ${m.label}</span>
+      <span>${inicial.toFixed(1)} ${m.unit}</span>
+      <span>${actual.toFixed(1)} ${m.unit}</span>
+      <span class="seg-change ${cambio <= 0 ? 'seg-change-down' : 'seg-change-up'}">${deltaSign} ${Math.abs(cambio).toFixed(1)} ${m.unit}</span>
+      <span class="seg-measure-progress"><em style="width:${progress}%"></em></span>
+    `;
+    table.appendChild(row);
+  });
+  tableCard.appendChild(table);
+  lowerRow.appendChild(tableCard);
+
+  const distCard = document.createElement('div');
+  distCard.className = 'seg-panel seg-panel-distribution';
+  distCard.innerHTML = '<div class="seg-panel-header"><h3>Distribución de medidas</h3></div>';
+  const distribution = document.createElement('div');
+  distribution.className = 'seg-distribution-wrap';
+  const ultimo = medidas[medidas.length - 1];
+  const bodyMap = [
+    { key: 'pecho', label: 'Pecho', style: { left: '50%', top: '18%' } },
+    { key: 'cintura', label: 'Cintura', style: { left: '50%', top: '38%' } },
+    { key: 'cadera', label: 'Cadera', style: { left: '50%', top: '58%' } },
+    { key: 'brazo', label: 'Brazo', style: { left: '28%', top: '32%' } },
+    { key: 'muslo', label: 'Muslo', style: { left: '74%', top: '64%' } }
+  ];
+  distribution.innerHTML = `
+    <svg viewBox="0 0 240 300" class="seg-silhouette">
+      <g fill="none" stroke="#dfe6f1" stroke-width="2">
+        <circle cx="120" cy="52" r="22" fill="#e7edf5"/>
+        <path d="M96 88 L120 70 L144 88 L136 112 L104 112 Z" fill="#e7edf5"/>
+        <rect x="88" y="110" width="64" height="74" rx="20" fill="#e7edf5"/>
+        <rect x="100" y="188" width="18" height="62" rx="10" fill="#e7edf5"/>
+        <rect x="122" y="188" width="18" height="62" rx="10" fill="#e7edf5"/>
+        <rect x="74" y="126" width="14" height="66" rx="7" fill="#e7edf5"/>
+        <rect x="152" y="126" width="14" height="66" rx="7" fill="#e7edf5"/>
+      </g>
+      <g stroke="#bfcad9" stroke-width="2" stroke-dasharray="5 5">
+        <line x1="120" y1="52" x2="120" y2="12"/>
+        <line x1="120" y1="72" x2="120" y2="145"/>
+        <line x1="120" y1="145" x2="120" y2="200"/>
+        <line x1="88" y1="130" x2="48" y2="146"/>
+        <line x1="152" y1="130" x2="190" y2="146"/>
+      </g>
+    </svg>
+  `;
+  const labels = document.createElement('div');
+  labels.className = 'seg-measure-layers';
+  bodyMap.forEach(metric => {
+    const value = ultimo?.[metric.key] ? Number(ultimo[metric.key]) : 0;
+    const node = document.createElement('div');
+    node.className = 'seg-body-tag';
+    node.style.left = metric.style.left;
+    node.style.top = metric.style.top;
+    node.innerHTML = `<span class="seg-body-dot" style="background:${obtenerColor(metric.key)}"></span><span>${metric.label}</span><strong>${value.toFixed(1)} cm</strong>`;
+    labels.appendChild(node);
+  });
+  distribution.append(labels);
+  distCard.appendChild(distribution);
+  lowerRow.appendChild(distCard);
+  contenido.appendChild(lowerRow);
+}
+
+function crearTarjetaResumen({ icon, title, value, subtitle, tone = 'purple' }) {
+  const card = document.createElement('div');
+  card.className = `seg-summary-card seg-summary-card--${tone}`;
+  card.innerHTML = `
+    <div class="seg-summary-header">
+      <div class="seg-summary-icon">${icon}</div>
+    </div>
+    <div class="seg-summary-body">
+      <div class="seg-summary-title">${title}</div>
+      <div class="seg-summary-value">${value}</div>
+      <div class="seg-summary-subtitle">${subtitle}</div>
+    </div>
+  `;
+  return card;
+}
+
+function crearSparkline(values, color) {
+  if (!Array.isArray(values) || values.length === 0) {
+    return '<svg viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M0 13 L100 13" stroke="'+color+'" stroke-width="2" fill="none"/></svg>';
+  }
+  const clean = values.filter(v => Number.isFinite(v));
+  if (clean.length < 2) {
+    const y = 13;
+    return '<svg viewBox="0 0 100 26" preserveAspectRatio="none"><path d="M0 '+y+' L100 '+y+'" stroke="'+color+'" stroke-width="2" fill="none"/></svg>';
+  }
+  const min = Math.min(...clean);
+  const max = Math.max(...clean);
+  const range = max - min || 1;
+  const line = clean.map((value, index) => {
+    const x = (index / (clean.length - 1)) * 100;
+    const y = 22 - ((value - min) / range) * 16;
+    return `${index === 0 ? 'M' : 'L'} ${x} ${y}`;
+  }).join(' ');
+  return `<svg viewBox="0 0 100 26" preserveAspectRatio="none"><path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+}
+
+function obtenerColor(key) {
+  const map = {
+    pecho: '#1ec0b0',
+    cintura: '#f06565',
+    cadera: '#2db5ff',
+    brazo: '#f7a728',
+    muslo: '#8b5cf6',
+    peso: '#7c6cf5',
+    grasaCorporal: '#2ec5a2',
+    masaMuscular: '#a855f7'
+  };
+  return map[key] || '#8b5cf6';
 }
 
 // ── Card: última medición ─────────────────────────────────────
@@ -310,54 +689,87 @@ function crearItemHistorial(medicion, index, nivel, contenido) {
 // ── Modal: añadir medidas ─────────────────────────────────────
 function mostrarModalMedidas(nivel, contenido) {
   const modal = document.createElement('div');
-  modal.className = 'modal-medidas-overlay';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15, 23, 42, 0.62);display:flex;align-items:center;justify-content:center;padding:8px;z-index:2000;';
 
   const caja = document.createElement('div');
-  caja.className = 'modal-medidas-caja';
+  caja.style.cssText = 'width:100%;height:100%;max-width:1200px;max-height:100vh;background:#f8fafc;display:flex;flex-direction:column;align-items:center;padding:16px 12px;overflow-y:auto;gap:6px;';
 
   const tituloEl = document.createElement('h3');
-  tituloEl.className = 'seg-modal-titulo';
-  tituloEl.textContent = '📏 Nueva Medición';
+  tituloEl.style.cssText = 'margin:0 0 4px;font-size:0.95rem;font-weight:800;color:var(--text-primary);text-align:center;';
+  tituloEl.textContent = 'Nueva medición';
   caja.appendChild(tituloEl);
 
   // Fecha
   const fechaContainer = document.createElement('div');
-  fechaContainer.className = 'seg-modal-fecha-container';
+  fechaContainer.style.cssText = 'display:flex;flex-direction:column;gap:2px;align-items:center;margin-bottom:4px;width:min(100%,200px);';
   const fechaLabel = document.createElement('label');
-  fechaLabel.className = 'seg-modal-fecha-label'; fechaLabel.textContent = '📅 Fecha';
+  fechaLabel.style.cssText = 'font-size:0.75rem;font-weight:600;color:var(--text-secondary);';
+  fechaLabel.textContent = 'Fecha';
   const fechaInput = document.createElement('input');
-  fechaInput.type = 'date'; fechaInput.className = 'seg-modal-fecha-input';
+  fechaInput.type = 'date';
   fechaInput.value = hoyISO();
+  fechaInput.style.cssText = 'width:100%;height:30px;padding:3px 6px;margin:0;font-size:1rem;font-weight:300;background:transparent;border:none;transition:all 0.2s ease;box-shadow:none;text-align:center;';
+  fechaInput.addEventListener('focus', () => {
+    fechaInput.style.border = '1px solid var(--primary)';
+    fechaInput.style.background = 'rgba(255,255,255,0.5)';
+  });
+  fechaInput.addEventListener('blur', () => {
+    fechaInput.style.border = 'none';
+    fechaInput.style.background = 'transparent';
+  });
   fechaContainer.append(fechaLabel, fechaInput);
   caja.appendChild(fechaContainer);
 
-  // Campos de medida
+  // Grid de campos compactos
   const campos = [
-    { key:'peso',    label:'Peso',    placeholder:'kg',  icon:'⚖️' },
-    { key:'altura',  label:'Altura',  placeholder:'cm',  icon:'📏' },
-    { key:'brazo',   label:'Brazo',   placeholder:'cm',  icon:'💪' },
-    { key:'cintura', label:'Cintura', placeholder:'cm',  icon:'⭕' },
+    { key:'peso',    label:'Peso',    unit:'kg' },
+    { key:'altura',  label:'Altura',  unit:'cm' },
+    { key:'brazo',   label:'Brazo',   unit:'cm' },
+    { key:'cintura', label:'Cintura', unit:'cm' },
+    { key:'cadera',  label:'Cadera',  unit:'cm' },
+    { key:'pecho',   label:'Pecho',   unit:'cm' },
+    { key:'grasaCorporal', label:'Grasa', unit:'%' },
+    { key:'masaMuscular',  label:'Masa',  unit:'kg' }
   ];
+
   const inputs = {};
-  campos.forEach(({ key, label, placeholder, icon }) => {
-    const row = document.createElement('div');
-    row.className = 'seg-modal-campo';
+  const gridContainer = document.createElement('div');
+  gridContainer.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:6px 8px;width:100%;max-width:900px;margin-bottom:6px;';
+
+  campos.forEach(({ key, label, unit }) => {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.style.cssText = 'display:flex;flex-direction:column;gap:1px;';
+
     const lbl = document.createElement('label');
-    lbl.className = 'seg-modal-campo-label'; lbl.textContent = `${icon} ${label}`;
+    lbl.style.cssText = 'font-size:0.7rem;font-weight:600;color:var(--text-secondary);text-align:center;letter-spacing:0.5px;';
+    lbl.textContent = label;
+
     const inp = document.createElement('input');
-    inp.type = 'number'; inp.step = '0.1'; inp.className = 'seg-modal-campo-input';
-    inp.placeholder = placeholder;
+    inp.type = 'number';
+    inp.step = '0.1';
+    inp.style.cssText = 'height:28px;padding:2px 3px;margin:0;font-size:1.1rem;font-weight:300;background:transparent;border:none;transition:all 0.2s ease;box-shadow:none;text-align:center;';
+    inp.placeholder = unit;
+    inp.addEventListener('focus', () => {
+      inp.style.border = '1px solid var(--primary)';
+      inp.style.background = 'rgba(255,255,255,0.5)';
+    });
+    inp.addEventListener('blur', () => {
+      inp.style.border = 'none';
+      inp.style.background = 'transparent';
+    });
     inputs[key] = inp;
-    row.append(lbl, inp);
-    caja.appendChild(row);
+
+    fieldDiv.append(lbl, inp);
+    gridContainer.appendChild(fieldDiv);
   });
+  caja.appendChild(gridContainer);
 
-  // Botones
-  const botonesDiv = document.createElement('div');
-  botonesDiv.className = 'seg-modal-botones';
-
+  // Botón guardar medidas
   const btnGuardar = document.createElement('button');
-  btnGuardar.className = 'btn-confirmacion-si'; btnGuardar.textContent = 'Guardar';
+  btnGuardar.style.cssText = 'width:min(100%,300px);height:32px;padding:6px 16px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;margin-bottom:4px;';
+  btnGuardar.textContent = 'Guardar medición';
+  btnGuardar.onmouseover = () => btnGuardar.style.opacity = '0.9';
+  btnGuardar.onmouseout = () => btnGuardar.style.opacity = '1';
   btnGuardar.onclick = () => {
     const nuevaMedicion = { fecha: fechaInput.value };
     campos.forEach(({ key }) => {
@@ -371,13 +783,107 @@ function mostrarModalMedidas(nivel, contenido) {
     modal.remove();
     window.renderizar?.();
   };
+  caja.appendChild(btnGuardar);
+
+  // Botón cancelar
+  const btnCancelar = document.createElement('button');
+  btnCancelar.style.cssText = 'width:min(100%,300px);height:30px;background:transparent;border:none;color:var(--text-secondary);font-weight:600;cursor:pointer;font-size:0.8rem;transition:all 0.2s;';
+  btnCancelar.textContent = 'Cancelar';
+  btnCancelar.onmouseover = () => btnCancelar.style.color = 'var(--text-primary)';
+  btnCancelar.onmouseout = () => btnCancelar.style.color = 'var(--text-secondary)';
+  btnCancelar.onclick = () => modal.remove();
+  caja.appendChild(btnCancelar);
+
+  modal.appendChild(caja);
+  document.body.appendChild(modal);
+}
+
+// ── Modal: editar objetivos ────────────────────────────────────
+function mostrarModalObjetivos(nivel, contenido) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(15, 23, 42, 0.62);display:flex;align-items:center;justify-content:center;padding:8px;z-index:2000;';
+
+  const caja = document.createElement('div');
+  caja.style.cssText = 'width:100%;height:100%;max-width:1200px;max-height:100vh;background:#f8fafc;display:flex;flex-direction:column;align-items:center;padding:16px 12px;overflow-y:auto;gap:6px;';
+
+  const tituloEl = document.createElement('h3');
+  tituloEl.style.cssText = 'margin:0 0 4px;font-size:0.95rem;font-weight:800;color:var(--text-primary);text-align:center;';
+  tituloEl.textContent = 'Objetivos de métricas';
+  caja.appendChild(tituloEl);
+
+  if (!nivel.objetivos) nivel.objetivos = {};
+
+  const campos = [
+    { key:'peso',    label:'Peso',    unit:'kg' },
+    { key:'altura',  label:'Altura',  unit:'cm' },
+    { key:'brazo',   label:'Brazo',   unit:'cm' },
+    { key:'cintura', label:'Cintura', unit:'cm' },
+    { key:'cadera',  label:'Cadera',  unit:'cm' },
+    { key:'pecho',   label:'Pecho',   unit:'cm' },
+    { key:'grasaCorporal', label:'Grasa corp.', unit:'%' },
+    { key:'masaMuscular',  label:'Masa musc.', unit:'kg' }
+  ];
+
+  const inputs = {};
+  const gridContainer = document.createElement('div');
+  gridContainer.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px 12px;width:100%;max-width:900px;margin-bottom:6px;';
+
+  campos.forEach(({ key, label, unit }) => {
+    const fieldDiv = document.createElement('div');
+    fieldDiv.style.cssText = 'display:flex;flex-direction:column;gap:2px;';
+
+    const lbl = document.createElement('label');
+    lbl.style.cssText = 'font-size:0.7rem;font-weight:600;color:var(--text-secondary);text-align:center;letter-spacing:0.5px;';
+    lbl.textContent = label;
+
+    const inp = document.createElement('input');
+    inp.type = 'number';
+    inp.step = '0.1';
+    inp.value = nivel.objetivos[key] || '';
+    inp.style.cssText = 'height:28px;padding:2px 3px;margin:0;font-size:1.1rem;font-weight:300;background:transparent;border:none;transition:all 0.2s ease;box-shadow:none;text-align:center;';
+    inp.placeholder = unit;
+    inp.addEventListener('focus', () => {
+      inp.style.border = '1px solid var(--primary)';
+      inp.style.background = 'rgba(255,255,255,0.5)';
+    });
+    inp.addEventListener('blur', () => {
+      inp.style.border = 'none';
+      inp.style.background = 'transparent';
+    });
+    inputs[key] = inp;
+
+    fieldDiv.append(lbl, inp);
+    gridContainer.appendChild(fieldDiv);
+  });
+  caja.appendChild(gridContainer);
+
+  const btnGuardar = document.createElement('button');
+  btnGuardar.style.cssText = 'width:min(100%,300px);height:32px;padding:6px 16px;background:var(--primary);color:white;border:none;border-radius:6px;font-weight:700;font-size:0.85rem;cursor:pointer;transition:all 0.2s;margin-bottom:4px;';
+  btnGuardar.textContent = 'Guardar objetivos';
+  btnGuardar.onmouseover = () => btnGuardar.style.opacity = '0.9';
+  btnGuardar.onmouseout = () => btnGuardar.style.opacity = '1';
+  btnGuardar.onclick = () => {
+    campos.forEach(({ key }) => {
+      if (inputs[key].value) {
+        nivel.objetivos[key] = inputs[key].value;
+      } else {
+        delete nivel.objetivos[key];
+      }
+    });
+    window.guardarDatos?.();
+    modal.remove();
+    window.renderizar?.();
+  };
+  caja.appendChild(btnGuardar);
 
   const btnCancelar = document.createElement('button');
-  btnCancelar.className = 'btn-confirmacion-no'; btnCancelar.textContent = 'Cancelar';
+  btnCancelar.style.cssText = 'width:min(100%,300px);height:30px;background:transparent;border:none;color:var(--text-secondary);font-weight:600;cursor:pointer;font-size:0.8rem;transition:all 0.2s;';
+  btnCancelar.textContent = 'Cancelar';
+  btnCancelar.onmouseover = () => btnCancelar.style.color = 'var(--text-primary)';
+  btnCancelar.onmouseout = () => btnCancelar.style.color = 'var(--text-secondary)';
   btnCancelar.onclick = () => modal.remove();
+  caja.appendChild(btnCancelar);
 
-  botonesDiv.append(btnGuardar, btnCancelar);
-  caja.appendChild(botonesDiv);
   modal.appendChild(caja);
   document.body.appendChild(modal);
 }
