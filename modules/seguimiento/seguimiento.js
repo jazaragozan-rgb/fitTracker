@@ -5,6 +5,47 @@
 
 import { hoyISO, formatearFechaLarga } from '../../shared/utils.js';
 
+const DIRECCION_OBJETIVO_POR_METRICA = {
+  peso: 'decrease',
+  cintura: 'decrease',
+  cadera: 'decrease',
+  pecho: 'increase',
+  brazo: 'increase',
+  muslo: 'increase',
+  grasaCorporal: 'decrease',
+  masaMuscular: 'increase'
+};
+
+function getDireccionObjetivoPorMetrica(metricKey, nivel) {
+  const guardada = nivel?.objetivosDireccion?.[metricKey];
+  if (guardada === 'increase' || guardada === 'decrease') return guardada;
+  return DIRECCION_OBJETIVO_POR_METRICA[metricKey] || 'increase';
+}
+
+function getObjetivoMetricData(nivel, metricKey) {
+  const valor = parseFloat(nivel?.objetivos?.[metricKey]);
+  return {
+    valor: Number.isFinite(valor) ? valor : null,
+    tipo: getDireccionObjetivoPorMetrica(metricKey, nivel)
+  };
+}
+
+function calcularProgresoObjetivo(inicial, actual, objetivo, tipo) {
+  if (!Number.isFinite(inicial) || !Number.isFinite(actual) || !Number.isFinite(objetivo) || objetivo === 0) return 0;
+
+  if (tipo === 'increase') {
+    if (objetivo <= inicial) return 0;
+    return Math.min(100, Math.max(0, ((actual - inicial) / (objetivo - inicial)) * 100));
+  }
+
+  if (tipo === 'decrease') {
+    if (objetivo >= inicial) return 0;
+    return Math.min(100, Math.max(0, ((inicial - actual) / (inicial - objetivo)) * 100));
+  }
+
+  return 0;
+}
+
 // ── Exportación principal ─────────────────────────────────────
 export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addButton) {
   subHeader.innerHTML = '';
@@ -76,9 +117,9 @@ export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addBut
     const inicial = valores[0];
     const actual = valores[valores.length - 1];
     const cambio = actual - inicial;
-    const objetivo = parseFloat(seguidoNivel.objetivos?.[metric.key]) || null;
-    
-    const progressPercent = objetivo ? Math.min(100, Math.max(0, Math.abs(cambio) / Math.abs(objetivo - inicial || 1) * 100)) : 0;
+    const objetivoData = getObjetivoMetricData(seguidoNivel, metric.key);
+    const objetivo = objetivoData.valor;
+    const progressPercent = objetivo !== null ? calcularProgresoObjetivo(inicial, actual, objetivo, objetivoData.tipo) : 0;
     
     const card = document.createElement('div');
     card.className = 'seg-metric-card';
@@ -91,23 +132,31 @@ export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addBut
     const contenidoDiv = document.createElement('div');
     contenidoDiv.className = 'seg-metric-content';
     
+    // Medida anterior
+    const anteriorDiv = document.createElement('div');
+    anteriorDiv.className = 'seg-metric-field';
+    anteriorDiv.innerHTML = `<div class="seg-metric-field-label">Anterior</div><div class="seg-metric-field-value">${inicial.toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
+    contenidoDiv.appendChild(anteriorDiv);
+
     // Medida actual
     const actualDiv = document.createElement('div');
     actualDiv.className = 'seg-metric-field';
     actualDiv.innerHTML = `<div class="seg-metric-field-label">Actual</div><div class="seg-metric-field-value">${actual.toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
     contenidoDiv.appendChild(actualDiv);
     
-    // Cambio total
+    // Cambio actual respecto al inicio
     const cambioDiv = document.createElement('div');
     cambioDiv.className = 'seg-metric-field';
-    const cambioSign = metric.inverse ? (cambio < 0 ? '↓' : cambio > 0 ? '↑' : '') : (cambio > 0 ? '↑' : cambio < 0 ? '↓' : '');
-    cambioDiv.innerHTML = `<div class="seg-metric-field-label">Cambio</div><div class="seg-metric-field-value">${cambioSign} ${Math.abs(cambio).toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
+    const direccionObjetivo = objetivoData.tipo;
+    const cambioSign = cambio >= 0 ? '↑' : '↓';
+    const objetivoVaBien = direccionObjetivo === 'increase' ? cambio >= 0 : cambio <= 0;
+    cambioDiv.innerHTML = `<div class="seg-metric-field-label">Cambio</div><div class="seg-metric-field-value seg-change-indicator ${objetivoVaBien ? 'good' : 'bad'}">${cambioSign} ${Math.abs(cambio).toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
     contenidoDiv.appendChild(cambioDiv);
-    
+
     // Objetivo
     const objetivoDiv = document.createElement('div');
     objetivoDiv.className = 'seg-metric-field';
-    objetivoDiv.innerHTML = `<div class="seg-metric-field-label">Objetivo</div><div class="seg-metric-field-value">${objetivo ? objetivo.toFixed(1) : 'S/O'}</div><div class="seg-metric-field-unit">${objetivo ? metric.unit : ''}</div>`;
+    objetivoDiv.innerHTML = `<div class="seg-metric-field-label">Objetivo</div><div class="seg-metric-field-value">${objetivo !== null ? objetivo.toFixed(1) : 'S/O'}</div><div class="seg-metric-field-unit">${objetivo !== null ? metric.unit : ''}</div>`;
     contenidoDiv.appendChild(objetivoDiv);
     
     // Progreso
@@ -812,6 +861,7 @@ function mostrarModalObjetivos(nivel, contenido) {
   caja.appendChild(tituloEl);
 
   if (!nivel.objetivos) nivel.objetivos = {};
+  if (!nivel.objetivosDireccion) nivel.objetivosDireccion = {};
 
   const campos = [
     { key:'peso',    label:'Peso',    unit:'kg' },
@@ -825,8 +875,9 @@ function mostrarModalObjetivos(nivel, contenido) {
   ];
 
   const inputs = {};
+  const directionInputs = {};
   const gridContainer = document.createElement('div');
-  gridContainer.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px 12px;width:100%;max-width:900px;margin-bottom:6px;';
+  gridContainer.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px 12px;width:100%;max-width:900px;margin-bottom:6px;';
 
   campos.forEach(({ key, label, unit }) => {
     const fieldDiv = document.createElement('div');
@@ -852,7 +903,16 @@ function mostrarModalObjetivos(nivel, contenido) {
     });
     inputs[key] = inp;
 
-    fieldDiv.append(lbl, inp);
+    const dirSelect = document.createElement('select');
+    dirSelect.style.cssText = 'height:28px;padding:2px 5px;margin:0;border:1px solid var(--border-color);border-radius:6px;background:#fff;color:var(--text-primary);font-size:0.72rem;font-weight:600;';
+    dirSelect.innerHTML = `
+      <option value="increase">Aumentar</option>
+      <option value="decrease">Disminuir</option>
+    `;
+    dirSelect.value = getDireccionObjetivoPorMetrica(key, nivel);
+    directionInputs[key] = dirSelect;
+
+    fieldDiv.append(lbl, inp, dirSelect);
     gridContainer.appendChild(fieldDiv);
   });
   caja.appendChild(gridContainer);
@@ -864,10 +924,15 @@ function mostrarModalObjetivos(nivel, contenido) {
   btnGuardar.onmouseout = () => btnGuardar.style.opacity = '1';
   btnGuardar.onclick = () => {
     campos.forEach(({ key }) => {
-      if (inputs[key].value) {
-        nivel.objetivos[key] = inputs[key].value;
+      const valor = inputs[key].value;
+      const tipo = directionInputs[key].value;
+
+      if (valor) {
+        nivel.objetivos[key] = valor;
+        nivel.objetivosDireccion[key] = tipo;
       } else {
         delete nivel.objetivos[key];
+        delete nivel.objetivosDireccion[key];
       }
     });
     window.guardarDatos?.();

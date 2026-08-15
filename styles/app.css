@@ -651,7 +651,7 @@
 
 .dashboard-card.hero {
   grid-column: 1 / -1;
-  padding: 22px;
+  padding: 18px 18px 14px;
 }
 
 .card-titulo {
@@ -660,54 +660,54 @@
   color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.9px;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   text-align: left;
 }
 
 .dashboard-hero-title {
-  font-size: 1.35rem;
+  font-size: 1.22rem;
   font-weight: 800;
   color: var(--text-primary);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   line-height: 1.1;
 }
 
 .dashboard-hero-subtitle {
-  font-size: 0.95rem;
+  font-size: 0.88rem;
   color: var(--text-secondary);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 .dashboard-stats-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-top: 12px;
+  gap: 10px;
+  margin-top: 8px;
 }
 
 .dashboard-stat-card {
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
   border: 0.5px solid var(--border-color);
-  padding: 16px;
+  padding: 12px 12px 10px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 5px;
 }
 
 .dashboard-stat-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
+  width: 30px;
+  height: 30px;
+  border-radius: 10px;
   display: grid;
   place-items: center;
   background: rgba(26, 115, 232, 0.12);
   color: var(--primary);
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .dashboard-stat-value {
-  font-size: 1.2rem;
+  font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-primary);
 }
@@ -762,23 +762,32 @@
   background: #15203c;
   color: #ffffff;
   border-radius: var(--radius-xl);
-  padding: 20px;
+  padding: 14px 16px 12px;
+  min-height: 104px;
 }
 
 .rutina-activa .card-titulo {
   color: rgba(255,255,255,0.6);
+  margin-bottom: 8px;
 }
 
 .rutina-activa .rutina-activa-title {
-  font-size: 1.2rem;
+  font-size: 1.08rem;
   font-weight: 800;
-  margin-top: 6px;
-  margin-bottom: 12px;
+  margin-top: 2px;
+  margin-bottom: 0;
 }
 
-.rutina-activa .rutina-activa-meta {
-  font-size: 0.85rem;
-  color: rgba(255,255,255,0.75);
+.rutina-activa .rutina-activa-title.is-active {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(97, 218, 163, 0.18);
+  border: 1px solid rgba(97, 218, 163, 0.45);
+  color: #ddfff1;
+  box-shadow: 0 10px 24px rgba(97, 218, 163, 0.18);
+  margin-bottom: 0;
 }
 
 /* Ejercicios con checkbox azul */
@@ -1105,67 +1114,79 @@
 .seg-metric-card {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   width: 100%;
   background: #ffffff;
   border: 1px solid rgba(15, 23, 42, 0.06);
   border-radius: 12px;
-  padding: 10px 14px;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
-  min-height: 80px;
+  padding: 8px 10px;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.025);
+  min-height: 62px;
   justify-content: space-between;
 }
 
 .seg-metric-header {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: var(--text-primary);
 }
 
 .seg-metric-icon {
-  font-size: 1.2rem;
-  width: 28px;
-  height: 28px;
+  font-size: 1rem;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .seg-metric-content {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 5px;
   width: 100%;
+  align-items: stretch;
 }
 
 .seg-metric-field {
   display: flex;
+  flex: 1 1 0;
   flex-direction: column;
-  gap: 2px;
+  gap: 1px;
   align-items: center;
   text-align: center;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.seg-change-indicator.good {
+  color: #16a34a;
+}
+
+.seg-change-indicator.bad {
+  color: #ef4444;
 }
 
 .seg-metric-field-label {
-  font-size: 0.65rem;
+  font-size: 0.56rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.45px;
 }
 
 .seg-metric-field-value {
-  font-size: clamp(0.85rem, 2vw, 1.1rem);
+  font-size: clamp(0.72rem, 1.8vw, 0.9rem);
   font-weight: 800;
   color: var(--text-primary);
-  line-height: 1;
+  line-height: 1.1;
 }
 
 .seg-metric-field-unit {
-  font-size: 0.65rem;
+  font-size: 0.56rem;
   font-weight: 600;
   color: var(--text-secondary);
 }
@@ -1173,13 +1194,13 @@
 .seg-metric-field-progress {
   position: relative;
   justify-content: center;
-  gap: 4px;
+  gap: 3px;
   flex-direction: column;
   align-items: stretch;
 }
 
 .seg-metric-progress-bar {
-  height: 6px;
+  height: 5px;
   background: rgba(91, 101, 247, 0.1);
   border-radius: 999px;
   overflow: hidden;

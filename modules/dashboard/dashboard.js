@@ -25,11 +25,52 @@ function _getDisplayName() {
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
+function _obtenerFechaSesionMasReciente(nodo) {
+  if (!nodo) return null;
+
+  if (nodo.fecha) {
+    const fecha = new Date(`${nodo.fecha}T00:00:00`);
+    return Number.isNaN(fecha.getTime()) ? null : fecha;
+  }
+
+  if (Array.isArray(nodo.hijos)) {
+    let fechaMasReciente = null;
+    for (const hijo of nodo.hijos) {
+      const fecha = _obtenerFechaSesionMasReciente(hijo);
+      if (fecha && (!fechaMasReciente || fecha > fechaMasReciente)) {
+        fechaMasReciente = fecha;
+      }
+    }
+    return fechaMasReciente;
+  }
+
+  return null;
+}
+
 function _getRutinaActiva(datos) {
-  const meso = datos[0]?.hijos?.find(m => Array.isArray(m.hijos) && m.hijos.length > 0);
-  if (!meso) return null;
-  const micro = meso.hijos.find(m => Array.isArray(m.hijos) && m.hijos.length > 0);
-  return micro?.nombre || meso.nombre;
+  const mesociclos = datos[0]?.hijos || [];
+  let rutinaActiva = null;
+  let ultimaFecha = null;
+
+  mesociclos.forEach(meso => {
+    if (!Array.isArray(meso?.hijos)) return;
+
+    meso.hijos.forEach(micro => {
+      if (!Array.isArray(micro?.hijos)) return;
+
+      micro.hijos.forEach(sesion => {
+        const fecha = _obtenerFechaSesionMasReciente(sesion);
+        if (!fecha) return;
+
+        if (!ultimaFecha || fecha > ultimaFecha) {
+          ultimaFecha = fecha;
+          rutinaActiva = meso?.nombre || 'Sin nombre';
+        }
+      });
+    });
+  });
+
+  return rutinaActiva || mesociclos[0]?.nombre || null;
 }
 
 // ── Exportación principal ─────────────────────────────────────
@@ -135,9 +176,9 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
     <div class="dashboard-hero-title">Hola ${_getDisplayName()},</div>
     <div class="dashboard-hero-subtitle">Aprovecha tu rutina y alcanza tus metas.</div>
     <div class="dashboard-stats-grid">
-      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🔥</div><div class="dashboard-stat-value">${racha}</div><div class="dashboard-stat-label">Racha actual</div></div>
+      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🏋️</div><div class="dashboard-stat-value">${totalSesiones}</div><div class="dashboard-stat-label">Sesiones totales</div></div>
       <div class="dashboard-stat-card"><div class="dashboard-stat-icon">📅</div><div class="dashboard-stat-value">${sesionesEsteMes}</div><div class="dashboard-stat-label">Sesiones este mes</div></div>
-      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🏋️</div><div class="dashboard-stat-value">${ejerciciosUnicos}</div><div class="dashboard-stat-label">Ejercicios distintos</div></div>
+      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🔥</div><div class="dashboard-stat-value">${racha}</div><div class="dashboard-stat-label">Racha actual</div></div>
       <div class="dashboard-stat-card"><div class="dashboard-stat-icon">⚖️</div><div class="dashboard-stat-value">${Math.round(volumenTotal)}<span class="stat-unit">kg</span></div><div class="dashboard-stat-label">Volumen 30 días</div></div>
     </div>
   `;
@@ -146,31 +187,9 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   const cardRutina = crearCard('Rutina activa', 'rutina-activa');
   const nombreRutina = _getRutinaActiva(datos) || 'Sin rutina activa';
   cardRutina.innerHTML += `
-    <div class="rutina-activa-title">${nombreRutina}</div>
-    <div class="rutina-activa-meta">El primer mesociclo/microciclo activo se muestra aquí.</div>
+    <div class="rutina-activa-title is-active">${nombreRutina}</div>
   `;
   dashboard.appendChild(cardRutina);
-
-  // ── 2. RESUMEN GENERAL ──────────────────────────────────────
-  const cardResumen = crearCard('Resumen General', 'full-width');
-  const statsScroll = document.createElement('div');
-  statsScroll.className = 'stats-scroll-row';
-  [
-    { icon: '🏋️', value: totalSesiones,   label: 'Sesiones totales' },
-    { icon: '📅', value: sesionesEsteMes,  label: 'Este mes' },
-    { icon: '💪', value: ejerciciosUnicos, label: 'Ejercicios distintos' },
-    { icon: '⚖️', value: `${Math.round(volumenTotal)}<span class="stat-unit">kg</span>`, label: 'Volumen 30 días' },
-    { icon: '🔥', value: racha,            label: 'Racha actual' },
-    { icon: '🏅', value: mejorRacha,       label: 'Mejor racha' },
-    { icon: '⏱️', value: sesiones.length > 0 ? `${duracionEstimada}<span class="stat-unit">min</span>` : '—', label: 'Duración est.' },
-  ].forEach(s => {
-    const item = document.createElement('div');
-    item.className = 'stat-item';
-    item.innerHTML = `<div class="stat-icon-emoji">${s.icon}</div><div class="stat-value">${s.value}</div><div class="stat-label">${s.label}</div>`;
-    statsScroll.appendChild(item);
-  });
-  cardResumen.appendChild(statsScroll);
-  dashboard.appendChild(cardResumen);
 
   // ── 2. CALENDARIO SEMANAL ───────────────────────────────────
   _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, renderizar);
