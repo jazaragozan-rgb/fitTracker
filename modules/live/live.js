@@ -28,10 +28,12 @@ if (loadSavedLiveState()) {
 
 function persistLiveState() {
   try {
+    actualizarSegundosTimer();
     const payload = {
       entrenamientoActual,
       timerSeconds,
       timerPaused,
+      timerStartedAt,
       ejercicioExpandidoLive,
       savedAt: new Date().toISOString()
     };
@@ -76,6 +78,7 @@ export function checkLiveRestore() {
   entrenamientoActual = saved.entrenamientoActual || { ejercicios: [], fecha: new Date().toISOString().slice(0, 10) };
   timerSeconds = saved.timerSeconds || 0;
   timerPaused = saved.timerPaused || false;
+  timerStartedAt = saved.timerStartedAt || null;
   ejercicioExpandidoLive = saved.ejercicioExpandidoLive ?? null;
   abrirEntrenamientoEnVivo();
 }
@@ -184,6 +187,7 @@ let entrenamientoActual = {
 let timerInterval = null;
 let timerSeconds = 0;
 let timerPaused = false;
+let timerStartedAt = null;
 
 // Variable para controlar qué ejercicio está expandido
 let ejercicioExpandidoLive = null;
@@ -221,6 +225,7 @@ export function iniciarEntrenamiento(ejerciciosPrecargados = []) {
   };
   timerSeconds = 0;
   timerPaused = false;
+  timerStartedAt = Date.now();
   ejercicioExpandidoLive = null;
   window.liveSessionActive = true;
   abrirEntrenamientoEnVivo();
@@ -372,8 +377,8 @@ function abrirEntrenamientoEnVivo() {
   overlay.appendChild(headerTimer);
 
   updateTimerDisplay(timerDisplay);
-  if (timerSeconds > 0 && !timerPaused) {
-    timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(timerDisplay); }, 1000);
+  if (!timerPaused && timerStartedAt !== null) {
+    timerInterval = setInterval(() => { actualizarSegundosTimer(); updateTimerDisplay(timerDisplay); }, 1000);
   }
 
   // Zona ejercicios
@@ -431,16 +436,20 @@ function abrirEntrenamientoEnVivo() {
 function startTimer(display, btn) {
   if (timerPaused) {
     timerPaused = false;
+    timerStartedAt = Date.now();
     btn.textContent = "⏸";
-    timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(display); }, 1000);
+    timerInterval = setInterval(() => { actualizarSegundosTimer(); updateTimerDisplay(display); }, 1000);
   } else if (timerInterval) {
+    actualizarSegundosTimer();
     timerPaused = true;
+    timerStartedAt = null;
     btn.textContent = "▶";
     clearInterval(timerInterval);
     timerInterval = null;
   } else {
+    timerStartedAt = Date.now();
     btn.textContent = "⏸";
-    timerInterval = setInterval(() => { timerSeconds++; updateTimerDisplay(display); }, 1000);
+    timerInterval = setInterval(() => { actualizarSegundosTimer(); updateTimerDisplay(display); }, 1000);
   }
   schedulePersist();
 }
@@ -450,15 +459,23 @@ function resetTimer(display, btn) {
   timerInterval = null;
   timerSeconds = 0;
   timerPaused = false;
+  timerStartedAt = null;
   btn.textContent = "▶";
   updateTimerDisplay(display);
   schedulePersist();
 }
 
 function updateTimerDisplay(display) {
+  actualizarSegundosTimer();
   const mins = Math.floor(timerSeconds / 60);
   const secs = timerSeconds % 60;
   display.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function actualizarSegundosTimer() {
+  if (!timerPaused && timerStartedAt !== null) {
+    timerSeconds = Math.max(timerSeconds, Math.floor((Date.now() - timerStartedAt) / 1000));
+  }
 }
 
 function obtenerDuracionMinutosActual() {
