@@ -54,9 +54,9 @@ export function mostrarTimer() {
     document.head.appendChild(style);
   }
 
-  const RADIUS = 30;
+  const RADIUS = 47;
   const CIRCUM = 2 * Math.PI * RADIUS;
-  const SIZE   = 72;
+  const SIZE   = 112;
 
   // ── Card ─────────────────────────────────────────────────
   const card = document.createElement('div');
@@ -109,12 +109,12 @@ export function mostrarTimer() {
   `;
   const timeLabel = document.createElement('div');
   timeLabel.style.cssText = `
-    font-size:18px;font-weight:600;color:var(--text-primary);
+    font-size:32px;font-weight:700;color:var(--text-primary);
     font-variant-numeric:tabular-nums;letter-spacing:-0.5px;line-height:1;
   `;
   const restLabel = document.createElement('div');
   restLabel.style.cssText = `
-    font-size:9px;font-weight:600;color:var(--text-light);
+    font-size:11px;font-weight:600;color:var(--text-light);
     text-transform:uppercase;letter-spacing:0.5px;
   `;
   restLabel.textContent = 'rest';
