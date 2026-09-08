@@ -29,6 +29,7 @@ let ultimoMenuSeleccionado   = 'Dashboard';
 let contenido, subHeader, menuTitulo;
 let backButton, addButton, logoutButton;
 let footerButtons, headerUserName, headerAvatar;
+let nivel4Editando = false;
 
 // ── Helpers ───────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -122,7 +123,7 @@ export function renderizar() {
 
   // NIVEL 4: acordeón de ejercicios
   if (rutaActual.length === 4) {
-    renderizarNivel4(nivel, contenido, rutaActual);
+    renderizarNivel4(nivel, contenido, rutaActual, nivel4Editando);
     return;
   }
 
@@ -184,14 +185,62 @@ function _buildSubheaderNivel(nivel) {
     cont.appendChild(backBtn);
   }
 
-  // En nivel 4: solo botón "Iniciar sesión", sin añadir ni buscar
+  // En nivel 4: iniciar sesión y edición del plan
   if (rutaActual.length === 4) {
+    cont.classList.add('subheader-level4');
     const btnIniciar = document.createElement('button');
     btnIniciar.className = 'header-btn';
     btnIniciar.textContent = '▶ Iniciar sesión';
     btnIniciar.style.cssText = 'background:var(--accent-green);min-width:160px;max-width:200px;';
     btnIniciar.addEventListener('click', () => _iniciarSesionDesdeNivel4(nivel));
     cont.appendChild(btnIniciar);
+
+    const accionesEdicion = document.createElement('div');
+    accionesEdicion.className = 'header-edit-actions';
+
+    const btnEditar = document.createElement('button');
+    btnEditar.className = 'header-btn header-icon-btn';
+    btnEditar.type = 'button';
+    btnEditar.title = nivel4Editando ? 'Guardar entrenamiento' : 'Editar entrenamiento';
+    btnEditar.setAttribute('aria-label', btnEditar.title);
+    btnEditar.textContent = nivel4Editando ? '💾' : '✎';
+    btnEditar.addEventListener('click', () => {
+      if (!nivel4Editando) {
+        nivel4Editando = true;
+        renderizar();
+        return;
+      }
+
+      nivel4Editando = false;
+      renderizar();
+      Promise.resolve(guardarDatos({ immediate: true })).then(guardado => {
+        if (guardado !== false) return;
+        nivel4Editando = true;
+        renderizar();
+        alert('No se pudo guardar el entrenamiento. Comprueba que has iniciado sesión y tu conexión.');
+      });
+    });
+    accionesEdicion.appendChild(btnEditar);
+
+    const btnBuscar = document.createElement('button');
+    btnBuscar.className = 'header-btn header-icon-btn';
+    btnBuscar.type = 'button';
+    btnBuscar.title = 'Añadir ejercicio';
+    btnBuscar.setAttribute('aria-label', btnBuscar.title);
+    btnBuscar.textContent = '🔍';
+    btnBuscar.style.visibility = nivel4Editando ? 'visible' : 'hidden';
+    btnBuscar.tabIndex = nivel4Editando ? 0 : -1;
+    btnBuscar.addEventListener('click', () => {
+      if (!nivel4Editando) return;
+      abrirBuscadorEjercicios((nombre, imagen) => {
+        nivel.hijos = nivel.hijos || [];
+        nivel.hijos.push({ nombre, imagen: imagen || '', hijos: [], series: [] });
+        guardarDatos();
+        renderizar();
+      });
+    });
+    accionesEdicion.appendChild(btnBuscar);
+    cont.appendChild(accionesEdicion);
   } else {
     // Niveles 1-3: botón añadir normal
     const addBtn = document.createElement('button');

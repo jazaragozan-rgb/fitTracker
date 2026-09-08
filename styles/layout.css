@@ -193,6 +193,36 @@ header {
   overflow: hidden;
   text-overflow: ellipsis;
 }
+
+.header-icon-btn {
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  height: 30px;
+  padding: 0;
+  font-size: 1.15rem;
+  line-height: 1;
+}
+
+.header-edit-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 76px;
+  flex: 0 0 76px;
+}
+.subheader-level4 > .header-btn {
+  position: absolute;
+  left: 50%;
+  width: 160px;
+  min-width: 160px;
+  max-width: 160px;
+  transform: translateX(-50%);
+}
+.subheader-level4 > .header-edit-actions {
+  position: absolute;
+  left: calc(50% + 88px);
+}
 .header-btn:hover  { background: var(--primary-hover); }
 .header-btn:active { transform: scale(0.97); }
 

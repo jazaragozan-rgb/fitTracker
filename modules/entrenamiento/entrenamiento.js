@@ -57,7 +57,7 @@ function _rutasIguales(a, b) {
 // ============================================================
 // RENDER NIVEL 4: acordeón de ejercicios
 // ============================================================
-export function renderizarNivel4(nivel, contenido, rutaActual) {
+export function renderizarNivel4(nivel, contenido, rutaActual, modoEdicion = false) {
   const rutaAnterior = _rutaActual;
   _renderizar = window.renderizar;
   _rutaActual = rutaActual;
@@ -78,14 +78,14 @@ export function renderizarNivel4(nivel, contenido, rutaActual) {
   zonaScroll.style.cssText = `flex:1;overflow-y:auto;padding:12px;padding-bottom:80px;background:var(--bg-main);`;
 
   (nivel.hijos || []).forEach((ejercicio, index) => {
-    zonaScroll.appendChild(_crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual));
+    zonaScroll.appendChild(_crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual, modoEdicion));
   });
 
   wrapper.appendChild(zonaScroll);
   contenido.appendChild(wrapper);
 
   // Exponer crearEjercicioAcordeon para compatibilidad
-  window.crearEjercicioAcordeon = (ej, idx, niv) => _crearEjercicioAcordeon(ej, idx, niv, rutaActual);
+  window.crearEjercicioAcordeon = (ej, idx, niv) => _crearEjercicioAcordeon(ej, idx, niv, rutaActual, modoEdicion);
 }
 
 // ============================================================
@@ -242,7 +242,7 @@ function _crearIndice(item, index, nivel, rutaActual) {
 // ============================================================
 // CREAR ACORDEÓN DE EJERCICIO (nivel 4)
 // ============================================================
-function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
+function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual, modoEdicion = false) {
   const wrapper = document.createElement('div');
   wrapper.className = 'ejercicio-acordeon';
   wrapper.dataset.index = index;
@@ -331,7 +331,7 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
         }),
         onCopiar: () => ({ nivel: rutaActual.length, datos: structuredClone(ejercicio) })
       };
-      if (ejercicioExpandido !== index) {
+      if (modoEdicion || ejercicioExpandido !== index) {
         menuOpts.onEditar = () => { ejercicio.editando = true; guardarDatos(); getRenderizar()?.(); };
       }
       mostrarMenuOpciones(menuOpts);
@@ -363,7 +363,7 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
     const inner = document.createElement('div');
     inner.className = 'ejercicio-body-inner';
 
-    _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual);
+    _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modoEdicion);
 
     body.appendChild(inner);
     wrapper.appendChild(body);
@@ -373,13 +373,13 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual) {
 }
 
 // ── Rellena el interior del acordeón expandido ────────────────
-function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
+function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modoEdicion = false) {
   ejercicio.series = ejercicio.series || [];
 
   // Construir listado combinado de series: propias + series de hijos (si existen)
   const seriesToShow = [];
   const _collectSeries = (nodo) => {
-    (nodo.series || []).forEach(s => seriesToShow.push(Object.assign({ _origen: nodo.nombre }, s)));
+    (nodo.series || []).forEach(s => seriesToShow.push({ serie: s, origen: nodo.nombre }));
     (nodo.hijos || []).forEach(h => _collectSeries(h));
   };
   _collectSeries(ejercicio);
@@ -397,7 +397,7 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
   inner.appendChild(encabezados);
 
   // Filas de series
-    seriesToShow.forEach((serie, idx) => {
+    seriesToShow.forEach(({ serie, origen }, idx) => {
       const serieDiv = document.createElement('div');
       serieDiv.style.cssText = `
         display:grid;grid-template-columns:40px repeat(4,1fr) 40px;
@@ -415,29 +415,36 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual) {
         display:flex;align-items:center;justify-content:center;
       `;
       numBtn.textContent = serie.marca || (idx + 1);
-      if (serie._origen && serie._origen !== ejercicio.nombre) {
-        numBtn.title = serie._origen;
+      if (origen && origen !== ejercicio.nombre) {
+        numBtn.title = origen;
       }
 
-      const mkInput = (value, placeholder) => {
+      const mkInput = (value, placeholder, property) => {
         const inp = document.createElement('input');
         inp.type = 'text';
         inp.value = value || '';
         inp.placeholder = placeholder;
-        inp.readOnly = true;
+        inp.readOnly = !modoEdicion;
         inp.style.cssText = `
           margin:2px;padding:2px 4px;font-size:1.2rem;font-weight:300;
           background:transparent;border:none;
           box-shadow:none;min-height:26px;height:26px;text-align:center;
-          color:var(--text-primary);cursor:default;
+          color:var(--text-primary);cursor:${modoEdicion ? 'text' : 'default'};
         `;
+        if (modoEdicion) {
+          inp.classList.add('serie-input-editable');
+          inp.addEventListener('input', () => {
+            serie[property] = inp.value;
+            guardarDatos();
+          });
+        }
         return inp;
       };
 
-      const reps     = mkInput(serie.reps,     'R');
-      const peso     = mkInput(serie.peso,     'P');
-      const rir      = mkInput(serie.rir,      'R');
-      const descanso = mkInput(serie.descanso, 'D');
+      const reps     = mkInput(serie.reps,     'R', 'reps');
+      const peso     = mkInput(serie.peso,     'P', 'peso');
+      const rir      = mkInput(serie.rir,      'R', 'rir');
+      const descanso = mkInput(serie.descanso, 'D', 'descanso');
 
       // Check visible pero no clickeable (solo informativo)
       const checkIcon = document.createElement('div');

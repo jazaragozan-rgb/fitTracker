@@ -50,7 +50,7 @@ let _saveTimer = null;
 export function guardarDatos(options = {}) {
   if (typeof options === 'boolean') options = { immediate: options };
   const user = auth.currentUser;
-  if (!user) return options.immediate ? Promise.resolve() : undefined;
+  if (!user) return options.immediate ? Promise.resolve(false) : undefined;
   if (_saveTimer) {
     clearTimeout(_saveTimer);
     _saveTimer = null;
@@ -64,8 +64,10 @@ export function guardarDatos(options = {}) {
         { merge: true }
       );
       console.log('[store] ✓ Datos guardados');
+      return true;
     } catch (e) {
       console.error('[store] Error al guardar:', e);
+      return false;
     }
   };
 

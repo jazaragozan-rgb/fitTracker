@@ -215,6 +215,17 @@
 }
 .ejercicio-body-inner { padding: 12px 14px 16px; }
 
+.serie-input-editable {
+  border: 0.5px solid var(--border-color) !important;
+  border-radius: var(--radius-sm);
+  background: var(--bg-card) !important;
+  cursor: text !important;
+}
+.serie-input-editable:focus {
+  border-color: var(--border-focus) !important;
+  outline: none;
+}
+
 /* Estadísticas */
 .ej-stats-card {
   margin-top: 12px; padding: 12px; background: var(--bg-card);
