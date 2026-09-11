@@ -30,10 +30,10 @@
   --coral-dark:       #c0392b;
 
   /* Fondos */
-  --bg-main:          #ffffff;
-  --bg-card:          #f8fbff;
-  --bg-secondary:     #eef5ff;
-  --bg-tertiary:      #f1f5fb;
+  --bg-main:          transparent;
+  --bg-card:          rgba(248, 251, 255, 0.78);
+  --bg-secondary:     rgba(238, 245, 255, 0.72);
+  --bg-tertiary:      rgba(241, 245, 251, 0.72);
 
   /* Texto */
   --text-primary:     #111827;
@@ -94,7 +94,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  background: var(--bg-main);
+  background: var(--bg-main) url('../imagenes/Fondo_claro.png') top center / 100% auto scroll repeat-y;
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
@@ -120,7 +120,7 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
-  background: var(--bg-main);
+  background: transparent;
 }
 
 form {

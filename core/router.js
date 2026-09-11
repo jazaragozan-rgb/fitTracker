@@ -27,7 +27,7 @@ let ultimoMenuSeleccionado   = 'Dashboard';
 
 // ── Referencias al DOM (se inicializan en init()) ─────────────
 let contenido, subHeader, menuTitulo;
-let backButton, addButton, logoutButton;
+let backButton, addButton;
 let footerButtons, headerUserName, headerAvatar;
 let nivel4Editando = false;
 
@@ -58,7 +58,7 @@ function asignarSesionIds(datosArray) {
 }
 
 // ── Renderizado principal ─────────────────────────────────────
-export function renderizar() {
+export async function renderizar() {
   if (!contenido) return;
   contenido.innerHTML = '';
   restaurarTimer();
@@ -87,7 +87,7 @@ export function renderizar() {
 
   // ── Despacho a módulos ───────────────────────────────────────
   if (rutaActual.length === 0) {
-    renderizarDashboard(
+    await renderizarDashboard(
       datos, rutaActual, _crearIndice, contenido,
       $('tituloNivel'), backButton, addButton, renderizar
     );
@@ -335,7 +335,6 @@ export function init() {
   menuTitulo   = $('menuTitulo');
   backButton   = $('backButton');
   addButton    = $('addButton');
-  logoutButton = $('logoutButton');
   headerUserName = $('headerUserName');
   headerAvatar   = $('headerAvatar');
 
@@ -343,8 +342,6 @@ export function init() {
   if (backButton) backButton.addEventListener('click', () => {
     if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
-  if (logoutButton) logoutButton.addEventListener('click', () => window.salir?.());
-
   footerButtons = document.querySelectorAll('.footer-btn');
   footerButtons.forEach(btn => {
     btn.addEventListener('click', () => {
@@ -377,10 +374,10 @@ function _getAvatarText(user) {
 }
 
 function _updateHeaderUser() {
-  if (!headerUserName || !headerAvatar) return;
+  if (!headerAvatar) return;
   const user = auth.currentUser;
   const name = user?.displayName || user?.email?.split('@')[0] || 'Usuario';
-  headerUserName.textContent = name.charAt(0).toUpperCase() + name.slice(1);
+  if (headerUserName) headerUserName.textContent = name.charAt(0).toUpperCase() + name.slice(1);
   headerAvatar.textContent = _getAvatarText(user);
 }
 
@@ -398,6 +395,7 @@ function _highlightFooterButton() {
 function _renderizarMas(contenido) {
   const card = document.createElement('div');
   card.className = 'dashboard-card';
-  card.innerHTML = `<div class="card-titulo">Más</div><div style="font-size:1rem;font-weight:600;color:var(--text-primary);">Próximas funciones</div><p style="margin-top:10px;color:var(--text-secondary);font-size:0.92rem;line-height:1.5;">Aquí podrás agregar accesos rápidos, ajustes y más opciones personalizadas.</p>`;
+  card.innerHTML = `<div class="card-titulo">Más</div><div style="font-size:1rem;font-weight:600;color:var(--text-primary);">Próximas funciones</div><p style="margin-top:10px;color:var(--text-secondary);font-size:0.92rem;line-height:1.5;">Aquí podrás agregar accesos rápidos, ajustes y más opciones personalizadas.</p><button class="mas-logout" type="button">Cerrar sesión</button>`;
+  card.querySelector('.mas-logout').addEventListener('click', () => window.salir?.());
   contenido.appendChild(card);
 }

@@ -770,7 +770,7 @@
 
 /* Tarjeta de rutina activa */
 .rutina-activa {
-  background: #15203c;
+  background: linear-gradient(135deg, #15203c 0%, #1e4663 52%, #237b75 100%);
   color: #ffffff;
   border-radius: var(--radius-xl);
   padding: 14px 16px 12px;
@@ -962,7 +962,7 @@
   justify-content: center; padding: 4px 10px; width: auto; box-shadow: none;
 }
 .cal-nav-btn:hover { background: var(--bg-secondary); border-color: var(--border-hover); }
-.cal-mes-label    { font-size: 0.75rem; font-weight: 600; color: var(--text-secondary); letter-spacing: 0.5px; text-transform: uppercase; flex: 1; text-align: center; }
+.cal-mes-label    { font-size: 1rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; flex: 1; text-align: center; }
 
 .day-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -976,6 +976,7 @@
 .day-btn.selected .day-number { color: #fff; }
 .day-btn.today    { border-color: var(--primary); }
 .day-btn.today .day-number { color: var(--primary); font-weight: 600; }
+.day-btn.today.selected .day-number { color: #fff; }
 .day-btn.done .day-dot { background: var(--text-primary); }
 .day-letter { font-size: 0.6rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; }
 .day-number { font-size: 0.875rem; font-weight: 600; color: var(--text-primary); }
@@ -1031,6 +1032,19 @@
   transition: border-color var(--transition); text-align: left; box-shadow: none;
 }
 .selector-ejercicio:focus { outline: none; border-color: var(--border-focus); }
+
+.mas-logout {
+  width: auto;
+  margin: 18px auto 0;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--danger);
+  font-size: 0.9rem;
+  font-weight: 600;
+  box-shadow: none;
+}
+.mas-logout:hover { background: transparent; color: var(--coral-dark); }
 
 
 /* ════════════════════════════════════════════════════════════

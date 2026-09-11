@@ -20,41 +20,40 @@ header {
   color: var(--text-primary);
   padding: 16px;
   height: var(--header-height);
-  border-bottom: 0.5px solid var(--border-color);
+  border: none;
   z-index: 100;
 }
 
-#headerGreeting {
+.header-brand {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
-  align-items: flex-start;
-  gap: 4px;
-  flex: 1;
+  align-items: center;
+  gap: 8px;
   min-width: 0;
 }
 
-.dashboard-welcome {
-  font-size: 1rem;
+.header-brand img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.header-brand span {
+  color: #111827;
+  font-size: 1.05rem;
   font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
+  white-space: nowrap;
 }
 
-.dashboard-strong {
-  font-size: 1.1rem;
-  color: var(--primary);
-}
-
-.dashboard-subtitle {
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: var(--text-secondary);
+.header-brand strong {
+  color: var(--accent-blue);
 }
 
 #headerAvatar {
   width: 44px;
   height: 44px;
+  margin: 0;
+  padding: 0;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
@@ -66,21 +65,6 @@ header {
   text-transform: uppercase;
   flex-shrink: 0;
 }
-
-#logoutButton {
-  background: rgba(26, 115, 232, 0.08);
-  border: none;
-  border-radius: var(--radius-lg);
-  cursor: pointer;
-  width: 44px;
-  height: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: background var(--transition);
-}
-#logoutButton:hover { background: var(--accent-blue-light); }
-#logoutButton img { width: 20px; height: 20px; opacity: 0.85; }
 
 #subHeader {
   position: fixed;
@@ -95,7 +79,7 @@ header {
   background: var(--bg-card);
   min-height: 72px;
   z-index: 90;
-  border-bottom: 0.5px solid var(--border-color);
+  border: none;
   overflow: hidden;
   gap: 8px;
 }
@@ -137,7 +121,7 @@ header {
   background: var(--bg-card);
   height: var(--subheader-height);
   z-index: 90;
-  border-bottom: 0.5px solid var(--border-color);
+  border: none;
   overflow: hidden;
   gap: 6px;
 }
@@ -293,7 +277,7 @@ header {
 main#contenido {
   position: relative;
   z-index: 20;
-  background: var(--bg-main);
+  background: transparent;
   padding-top: var(--topbar-height);
   padding-bottom: 75px;
   min-height: 100vh;

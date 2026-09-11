@@ -3,7 +3,8 @@
 // Renderizado del Dashboard (nivel 0).
 // ============================================================
 
-import { auth } from '../../core/firebase.js';
+import { auth, db } from '../../core/firebase.js';
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { hoyISO, formatearFechaCorta, calcularVolumen, calcular1RM, redondear } from '../../shared/utils.js';
 
 function crearCard(titulo, extraClass = '') {
@@ -75,7 +76,7 @@ function _getRutinaActiva(datos) {
 
 // ── Exportación principal ─────────────────────────────────────
 // Recibe renderizarFn para que los botones del calendario puedan navegar
-export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton, renderizarFn) {
+export async function renderizarDashboard(datos, rutaActual, crearIndice, contenido, tituloNivel, backButton, addButton, renderizarFn) {
   if (tituloNivel) tituloNivel.textContent = 'Dashboard';
   if (backButton)  backButton.style.visibility = 'hidden';
   if (addButton)   addButton.style.visibility  = 'hidden';
@@ -184,7 +185,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
   `;
   dashboard.appendChild(cardHero);
 
-  const cardRutina = crearCard('Rutina activa', 'rutina-activa');
+  const cardRutina = crearCard('Última rutina activa', 'rutina-activa');
   const nombreRutina = _getRutinaActiva(datos) || 'Sin rutina activa';
   cardRutina.innerHTML += `
     <div class="rutina-activa-title is-active">${nombreRutina}</div>
@@ -196,7 +197,7 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
 
   // ── 3. NUTRICIÓN COMPACTA ───────────────────────────────────
   const nivelNutricion = datos[3];
-  _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
+  await _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
 
   // ── 4. FRECUENCIA MENSUAL ───────────────────────────────────
   const cardFrecuencia = crearCard('Frecuencia Mensual', '');
@@ -305,9 +306,8 @@ export function renderizarDashboard(datos, rutaActual, crearIndice, contenido, t
 
 // ── Card: Calendario semanal ──────────────────────────────────
 function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, renderizar) {
-  const cardCalendario = crearCard('Esta Semana', '');
+  const cardCalendario = crearCard('', '');
   const DIAS_LETRA = ['L','M','X','J','V','S','D'];
-  const MESES_UP   = ['ENE','FEB','MAR','ABR','MAY','JUN','JUL','AGO','SEP','OCT','NOV','DIC'];
 
   const fStr = d => {
     const yyyy=d.getFullYear(), mm=String(d.getMonth()+1).padStart(2,'0'), dd=String(d.getDate()).padStart(2,'0');
@@ -366,7 +366,7 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, rende
         v.textContent = 'Sesión sin ejercicios registrados.';
         detalleDiv.appendChild(v);
       } else {
-        ejerciciosFlat.slice(0, 5).forEach(ej => {
+        ejerciciosFlat.forEach(ej => {
           const series      = ej.series || [];
           const completadas = series.filter(s => s.completada).length;
           const total       = series.length;
@@ -390,7 +390,7 @@ function _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, rende
 
   const renderDias = () => {
     daysRow.innerHTML = '';
-    mesEl.textContent = MESES_UP[new Date(primerDiaSemana).getMonth()];
+    mesEl.textContent = new Date(primerDiaSemana).toLocaleDateString('es-ES', { month: 'long' });
     const hoyLocalStr = fStr(new Date());
     let datosBtnHoy = null;
 
@@ -552,8 +552,18 @@ function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr, dato
 }
 
 // ── Card: Nutrición compacta ──────────────────────────────────
-function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyStr) {
+async function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyStr) {
   const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
+  const user = auth.currentUser;
+  if (user) {
+    try {
+      const snap = await getDoc(doc(db, 'usuarios', user.uid));
+      const metaNutricional = snap.exists() ? snap.data().metasNutricionales : null;
+      if (metaNutricional?.calorias) METAS_DIARIAS.calorias = metaNutricional.calorias;
+    } catch (error) {
+      console.error('[Dashboard] Error cargando meta de calorías:', error);
+    }
+  }
   const registrosHoy = (nivelNutricion.hijos || []).filter(r => r.fecha === hoyStr);
   const totales = _calcularTotalNutricion(registrosHoy);
 
