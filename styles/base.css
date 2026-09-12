@@ -94,7 +94,7 @@
 
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  background: var(--bg-main) url('../imagenes/Fondo_claro.png') top center / 100% auto scroll repeat-y;
+  background: linear-gradient(rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.7)), url('../imagenes/Fondo_claro.png') top center / 100% auto scroll repeat-y;
   color: var(--text-primary);
   display: flex;
   flex-direction: column;
