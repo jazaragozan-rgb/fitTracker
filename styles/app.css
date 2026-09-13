@@ -700,10 +700,13 @@
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
   border: 0.5px solid var(--border-color);
-  padding: 12px 12px 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
+  aspect-ratio: 2 / 1;
+  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-rows: auto auto;
+  align-items: center;
+  column-gap: 10px;
 }
 
 .dashboard-stat-card:nth-child(1) { background: rgba(26, 115, 232, 0.14); }
@@ -712,26 +715,30 @@
 .dashboard-stat-card:nth-child(4) { background: rgba(231, 76, 60, 0.14); }
 
 .dashboard-stat-icon {
-  width: 30px;
-  height: 30px;
+  width: 42px;
+  height: 42px;
   border-radius: 10px;
   display: grid;
   place-items: center;
   background: rgba(26, 115, 232, 0.12);
   color: var(--primary);
-  font-size: 0.9rem;
+  font-size: 1.25rem;
+  grid-row: 1 / -1;
+  align-self: center;
 }
 
 .dashboard-stat-value {
   font-size: 1.05rem;
   font-weight: 800;
   color: var(--text-primary);
+  text-align: left;
 }
 
 .dashboard-stat-label {
   font-size: 0.75rem;
   font-weight: 600;
   color: var(--text-secondary);
+  text-align: left;
 }
 
 .stats-scroll-row {

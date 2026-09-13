@@ -240,7 +240,7 @@ function abrirEntrenamientoEnVivo() {
     position: fixed;
     top: 0; left: 0;
     width: 100%; height: 100%;
-    background: var(--bg-main);
+    background: linear-gradient(135deg, #dff4ff 0%, #ffffff 100%);
     z-index: 9999;
     display: flex;
     flex-direction: column;
@@ -391,7 +391,7 @@ function abrirEntrenamientoEnVivo() {
   const footer = document.createElement("div");
   footer.style.cssText = `
     position: fixed; bottom: 0; left: 0; right: 0;
-    background: var(--bg-card); padding: 12px;
+    background: #ffffff; padding: 12px;
     box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
     display: flex; gap: 8px; z-index: 100;
   `;
