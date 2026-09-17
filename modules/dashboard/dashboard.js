@@ -52,8 +52,9 @@ function _getRutinaActiva(datos) {
   const mesociclos = datos[0]?.hijos || [];
   let rutinaActiva = null;
   let ultimaFecha = null;
+  let mesocicloActivo = -1;
 
-  mesociclos.forEach(meso => {
+  mesociclos.forEach((meso, indice) => {
     if (!Array.isArray(meso?.hijos)) return;
 
     meso.hijos.forEach(micro => {
@@ -66,12 +67,17 @@ function _getRutinaActiva(datos) {
         if (!ultimaFecha || fecha > ultimaFecha) {
           ultimaFecha = fecha;
           rutinaActiva = meso?.nombre || 'Sin nombre';
+          mesocicloActivo = indice;
         }
       });
     });
   });
 
-  return rutinaActiva || mesociclos[0]?.nombre || null;
+  return {
+    nombre: rutinaActiva || mesociclos[0]?.nombre || null,
+    fecha: ultimaFecha,
+    indice: mesocicloActivo >= 0 ? mesocicloActivo : (mesociclos.length ? 0 : -1)
+  };
 }
 
 // ── Exportación principal ─────────────────────────────────────
@@ -143,14 +149,41 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
 
   // ── Stats base ──────────────────────────────────────────────
   const totalSesiones   = sesiones.length;
+  const inicioSemana = new Date(hoy);
+  const diaSemana = hoy.getDay() === 0 ? 6 : hoy.getDay() - 1;
+  inicioSemana.setDate(hoy.getDate() - diaSemana);
+  inicioSemana.setHours(0, 0, 0, 0);
+  const inicioSemanaAnterior = new Date(inicioSemana);
+  inicioSemanaAnterior.setDate(inicioSemana.getDate() - 7);
+  const finSemanaAnterior = new Date(inicioSemana);
+  finSemanaAnterior.setMilliseconds(-1);
   const sesionesEsteMes = sesiones.filter(s => {
     const f = new Date(s.fecha);
     return f.getMonth() === hoy.getMonth() && f.getFullYear() === hoy.getFullYear();
+  }).length;
+  const sesionesMesAnterior = sesiones.filter(s => {
+    const f = new Date(s.fecha);
+    const mesAnterior = new Date(hoy.getFullYear(), hoy.getMonth() - 1, 1);
+    return f.getMonth() === mesAnterior.getMonth() && f.getFullYear() === mesAnterior.getFullYear();
+  }).length;
+  const sesionesEstaSemana = sesiones.filter(s => new Date(`${s.fecha}T00:00:00`) >= inicioSemana).length;
+  const sesionesSemanaAnterior = sesiones.filter(s => {
+    const fecha = new Date(`${s.fecha}T00:00:00`);
+    return fecha >= inicioSemanaAnterior && fecha <= finSemanaAnterior;
   }).length;
   const ejerciciosUnicos = new Set(ejerciciosTodos.map(e => e.nombre)).size;
   const volumenTotal = ejerciciosTodos
     .filter(e => new Date(e.fecha) >= hace30Dias)
     .reduce((sum, e) => sum + calcularVolumen(e.series || []), 0);
+  const volumenPeriodoAnterior = ejerciciosTodos
+    .filter(e => {
+      const fecha = new Date(e.fecha);
+      return fecha >= new Date(hace30Dias.getTime() - 30 * 86400000) && fecha < hace30Dias;
+    })
+    .reduce((sum, e) => sum + calcularVolumen(e.series || []), 0);
+  const porcentajeCambio = (actual, anterior) => anterior > 0
+    ? Math.round(((actual - anterior) / anterior) * 100)
+    : 0;
 
   let racha = 0, fechaRef = new Date(); fechaRef.setHours(0, 0, 0, 0);
   for (const s of [...sesiones].sort((a, b) => new Date(b.fecha) - new Date(a.fecha))) {
@@ -174,22 +207,65 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
   // ── 1. DASHBOARD HERO ──────────────────────────────────────
   const cardHero = crearCard('', 'hero');
   cardHero.innerHTML = `
-    <div class="dashboard-hero-title">Hola ${_getDisplayName()},</div>
-    <div class="dashboard-hero-subtitle">Aprovecha tu rutina y alcanza tus metas.</div>
+    <div class="dashboard-hero-title">Hola ${_getDisplayName()}!</div>
+    <div class="dashboard-hero-subtitle">La constancia de hoy,<br>es el progreso de mañana.</div>
     <div class="dashboard-stats-grid">
-      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🏋️</div><div class="dashboard-stat-value">${totalSesiones}</div><div class="dashboard-stat-label">Sesiones totales</div></div>
-      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">📅</div><div class="dashboard-stat-value">${sesionesEsteMes}</div><div class="dashboard-stat-label">Sesiones este mes</div></div>
-      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">🔥</div><div class="dashboard-stat-value">${racha}</div><div class="dashboard-stat-label">Racha actual</div></div>
-      <div class="dashboard-stat-card"><div class="dashboard-stat-icon">⚖️</div><div class="dashboard-stat-value">${Math.round(volumenTotal)}<span class="stat-unit">kg</span></div><div class="dashboard-stat-label">Volumen 30 días</div></div>
+      <div class="dashboard-stat-card dashboard-stat-card-sessions">
+        <div class="dashboard-stat-icon">🏋️</div>
+        <div class="dashboard-stat-value">${totalSesiones}</div>
+        <div class="dashboard-stat-label">Sesiones totales</div>
+        <div class="dashboard-stat-trend">↗ <span>+${porcentajeCambio(sesionesEsteMes, sesionesMesAnterior)}% vs. mes anterior</span></div>
+      </div>
+      <div class="dashboard-stat-card dashboard-stat-card-week">
+        <div class="dashboard-stat-icon">▣</div>
+        <div class="dashboard-stat-value">${sesionesEstaSemana}</div>
+        <div class="dashboard-stat-label">Sesiones esta semana</div>
+        <div class="dashboard-stat-trend">↗ <span>+${sesionesEstaSemana - sesionesSemanaAnterior} vs. semana anterior</span></div>
+      </div>
+      <div class="dashboard-stat-card dashboard-stat-card-streak">
+        <div class="dashboard-stat-icon">🔥</div>
+        <div class="dashboard-stat-value">${racha}</div>
+        <div class="dashboard-stat-label">Racha actual</div>
+        <div class="dashboard-stat-trend">🔥 <span>¡Sigue así!</span></div>
+      </div>
+      <div class="dashboard-stat-card dashboard-stat-card-volume">
+        <div class="dashboard-stat-icon">kg</div>
+        <div class="dashboard-stat-value">${Math.round(volumenTotal)}<span class="stat-unit">kg</span></div>
+        <div class="dashboard-stat-label">Volumen total</div>
+        <div class="dashboard-stat-trend">↗ <span>+${porcentajeCambio(volumenTotal, volumenPeriodoAnterior)}% vs. mes anterior</span></div>
+      </div>
     </div>
   `;
   dashboard.appendChild(cardHero);
 
   const cardRutina = crearCard('Última rutina activa', 'rutina-activa');
-  const nombreRutina = _getRutinaActiva(datos) || 'Sin rutina activa';
-  cardRutina.innerHTML += `
-    <div class="rutina-activa-title is-active">${nombreRutina}</div>
+  const rutinaActiva = _getRutinaActiva(datos);
+  const nombreRutina = rutinaActiva.nombre || 'Sin rutina activa';
+  const fechaRutina = rutinaActiva.fecha
+    ? rutinaActiva.fecha.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+    : '--/--/----';
+  cardRutina.innerHTML = `
+    <div class="rutina-activa-main">
+      <div class="rutina-activa-icon" aria-hidden="true">🏋️</div>
+      <div class="rutina-activa-copy">
+        <div class="rutina-activa-kicker">Última rutina activa</div>
+        <div class="rutina-activa-title">${nombreRutina}</div>
+        <div class="rutina-activa-date">${fechaRutina}</div>
+      </div>
+    </div>
+    <div class="rutina-activa-footer">
+      <div class="rutina-activa-progress" role="progressbar" aria-label="Progreso de la rutina" aria-valuemin="0" aria-valuemax="100" aria-valuenow="58">
+        <span></span>
+      </div>
+      <button class="rutina-activa-button" type="button">Continuar <span aria-hidden="true">›</span></button>
+    </div>
   `;
+  cardRutina.querySelector('.rutina-activa-button').addEventListener('click', () => {
+    if (rutinaActiva.indice < 0 || typeof renderizar !== 'function') return;
+    rutaActual.length = 0;
+    rutaActual.push(0, rutinaActiva.indice);
+    renderizar();
+  });
   dashboard.appendChild(cardRutina);
 
   // ── 2. CALENDARIO SEMANAL ───────────────────────────────────

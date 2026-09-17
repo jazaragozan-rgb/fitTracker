@@ -665,6 +665,11 @@
   padding: 18px 18px 14px;
 }
 
+.dashboard-card.hero .dashboard-hero-title,
+.dashboard-card.hero .dashboard-hero-subtitle {
+  margin-left: -18px;
+}
+
 .card-titulo {
   font-size: 0.72rem;
   font-weight: 700;
@@ -681,12 +686,14 @@
   color: var(--text-primary);
   margin-bottom: 6px;
   line-height: 1.1;
+  text-align: left;
 }
 
 .dashboard-hero-subtitle {
   font-size: 0.88rem;
   color: var(--text-secondary);
   margin-bottom: 14px;
+  text-align: left;
 }
 
 .dashboard-stats-grid {
@@ -694,51 +701,98 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
   margin-top: 8px;
+  margin-left: -18px;
+  margin-right: -18px;
+  width: calc(100% + 36px);
 }
 
 .dashboard-stat-card {
+  position: relative;
   background: var(--bg-secondary);
   border-radius: var(--radius-xl);
   border: 0.5px solid var(--border-color);
   aspect-ratio: 2 / 1;
-  padding: 10px 12px;
+  padding: 10px 12px 9px;
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
-  grid-template-rows: auto auto;
+  grid-template-rows: auto auto auto;
   align-items: center;
   column-gap: 10px;
+  min-width: 0;
 }
 
-.dashboard-stat-card:nth-child(1) { background: rgba(26, 115, 232, 0.14); }
-.dashboard-stat-card:nth-child(2) { background: rgba(34, 160, 107, 0.14); }
-.dashboard-stat-card:nth-child(3) { background: rgba(224, 168, 0, 0.16); }
-.dashboard-stat-card:nth-child(4) { background: rgba(231, 76, 60, 0.14); }
+.dashboard-stat-card-sessions { background: #e7f8f5; }
+.dashboard-stat-card-week { background: #fff0ef; }
+.dashboard-stat-card-streak { background: #e9f3ff; }
+.dashboard-stat-card-volume { background: #f1edff; }
 
 .dashboard-stat-icon {
   width: 42px;
   height: 42px;
-  border-radius: 10px;
+  border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(26, 115, 232, 0.12);
-  color: var(--primary);
-  font-size: 1.25rem;
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 800;
   grid-row: 1 / -1;
   align-self: center;
 }
 
+.dashboard-stat-card-sessions .dashboard-stat-icon { background: #18b99f; }
+.dashboard-stat-card-week .dashboard-stat-icon { background: #ff887f; }
+.dashboard-stat-card-streak .dashboard-stat-icon { background: #168ff0; }
+.dashboard-stat-card-volume .dashboard-stat-icon { background: #8b51e9; font-size: 0.85rem; }
+
 .dashboard-stat-value {
-  font-size: 1.05rem;
+  font-size: 1.18rem;
   font-weight: 800;
   color: var(--text-primary);
   text-align: left;
+  line-height: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .dashboard-stat-label {
-  font-size: 0.75rem;
+  min-width: 0;
+  font-size: 0.5rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: left;
+  text-transform: uppercase;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-stat-trend {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+  color: #155dfc;
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.05;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-stat-trend span {
+  min-width: 0;
+  color: #45617b;
+  font-size: 0.48rem;
+  font-weight: 600;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .stats-scroll-row {
@@ -782,35 +836,117 @@
 
 /* Tarjeta de rutina activa */
 .rutina-activa {
-  background: linear-gradient(135deg, #15203c 0%, #1e4663 52%, #237b75 100%);
+  position: relative;
+  background-image: linear-gradient(90deg, rgba(5, 34, 68, 0.96) 0%, rgba(9, 58, 90, 0.76) 42%, rgba(24, 100, 113, 0.12) 100%), url('../imagenes/fondo_ultima_rutina.png');
+  background-position: center;
+  background-size: cover;
   color: #ffffff;
   border-radius: var(--radius-xl);
-  padding: 14px 16px 12px;
-  min-height: 104px;
+  padding: 11px 16px 10px;
+  min-height: 96px;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
-.rutina-activa .card-titulo {
-  color: rgba(255,255,255,0.6);
-  margin-bottom: 8px;
+.rutina-activa:hover {
+  border-color: transparent;
+  transform: translateY(-1px);
+}
+
+.rutina-activa-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.rutina-activa-icon {
+  display: grid;
+  flex: 0 0 34px;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(46, 224, 196, 0.2);
+  font-size: 1rem;
+}
+
+.rutina-activa-copy {
+  min-width: 0;
+}
+
+.rutina-activa-kicker {
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.65px;
+  line-height: 1;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.7);
+  margin-bottom: 4px;
 }
 
 .rutina-activa .rutina-activa-title {
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   font-weight: 800;
-  margin-top: 2px;
-  margin-bottom: 0;
+  line-height: 1.1;
+  margin: 0;
+  color: #ffffff;
 }
 
-.rutina-activa .rutina-activa-title.is-active {
+.rutina-activa-date {
+  font-size: 0.58rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.62);
+  margin-top: 3px;
+}
+
+.rutina-activa-footer {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.rutina-activa-progress {
+  flex: 0 0 calc(70% - 5px);
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(214, 240, 245, 0.34);
+}
+
+.rutina-activa-progress span {
+  display: block;
+  width: 58%;
+  height: 100%;
+  border-radius: inherit;
+  background: #2ee0c4;
+}
+
+.rutina-activa-button {
+  flex: 0 0 calc(30% - 5px);
   display: inline-flex;
   align-items: center;
-  padding: 8px 12px;
+  justify-content: center;
+  gap: 5px;
+  min-height: 25px;
+  padding: 0 7px;
+  border: 1px solid rgba(255,255,255,0.18);
   border-radius: 999px;
-  background: rgba(97, 218, 163, 0.18);
-  border: 1px solid rgba(97, 218, 163, 0.45);
-  color: #ddfff1;
-  box-shadow: 0 10px 24px rgba(97, 218, 163, 0.18);
-  margin-bottom: 0;
+  background: #159f91;
+  color: #ffffff;
+  font: inherit;
+  font-size: 0.58rem;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.rutina-activa-button span {
+  font-size: 1.05rem;
+  line-height: 0.7;
 }
 
 /* Ejercicios con checkbox azul */
