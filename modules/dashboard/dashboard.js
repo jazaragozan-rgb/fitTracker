@@ -102,7 +102,6 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
 
   const sesiones        = [];
   const ejerciciosTodos = [];
-  const sesionesPorMes  = {};
   const volumenPorSemana = [];
   const volumenPorFecha  = {};
 
@@ -128,8 +127,6 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
           for (const sub of sesion.hijos) { if (sub.fecha) { fecha = sub.fecha; break; } }
         }
         if (fecha) {
-          const mesKey = fecha.slice(0, 7);
-          sesionesPorMes[mesKey] = (sesionesPorMes[mesKey] || 0) + 1;
           sesiones.push({ fecha, ejercicios: sesion.hijos || [], ruta: [i, j, k], nombre: sesion.nombre || 'Sesión sin nombre' });
           const vol = extraerEjercicios(sesion, fecha);
           if (vol > 0) volumenPorFecha[fecha] = (volumenPorFecha[fecha] || 0) + vol;
@@ -219,7 +216,7 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
       <div class="dashboard-stat-card dashboard-stat-card-week">
         <div class="dashboard-stat-icon">▣</div>
         <div class="dashboard-stat-value">${sesionesEstaSemana}</div>
-        <div class="dashboard-stat-label">Sesiones esta semana</div>
+        <div class="dashboard-stat-label">ESTA SEMANA</div>
         <div class="dashboard-stat-trend">↗ <span>+${sesionesEstaSemana - sesionesSemanaAnterior} vs. semana anterior</span></div>
       </div>
       <div class="dashboard-stat-card dashboard-stat-card-streak">
@@ -276,44 +273,121 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
   await _renderCardNutricionCompacta(dashboard, nivelNutricion || { hijos: [] }, crearCard, hoyStr);
 
   // ── 4. FRECUENCIA MENSUAL ───────────────────────────────────
-  const cardFrecuencia = crearCard('Frecuencia Mensual', '');
+  const cardFrecuencia = crearCard('Frecuencia Mensual', 'dashboard-chart-card');
   const chartFrecuencia = document.createElement('canvas');
   chartFrecuencia.className = 'dashboard-chart';
+  const navFrecuencia = document.createElement('div');
+  navFrecuencia.className = 'dashboard-chart-nav';
+  navFrecuencia.innerHTML = '<button type="button" class="dashboard-chart-nav-btn" aria-label="Mes anterior">‹</button><span></span><button type="button" class="dashboard-chart-nav-btn" aria-label="Mes siguiente">›</button>';
+  cardFrecuencia.appendChild(navFrecuencia);
+  const navFrecuenciaLabel = navFrecuencia.querySelector('span');
+  const navFrecuenciaPrev = navFrecuencia.querySelector('button:first-child');
+  const navFrecuenciaNext = navFrecuencia.querySelector('button:last-child');
   cardFrecuencia.appendChild(chartFrecuencia);
-  const meses12 = Array.from({ length: 12 }, (_, i) => {
-    const d = new Date(hoy.getFullYear(), hoy.getMonth() - 11 + i, 1);
-    return { key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`, label: d.toLocaleDateString('es-ES',{month:'short'}) };
-  });
-  if (window.Chart) {
-    new window.Chart(chartFrecuencia.getContext('2d'), {
+  const obtenerSemanaISO = fecha => {
+    const d = new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
+    const dia = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dia);
+    const inicioAnio = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - inicioAnio) / 86400000) + 1) / 7);
+  };
+  const pluginValoresBarras = {
+    id: 'pluginValoresBarras',
+    afterDatasetsDraw(chart) {
+      const { ctx } = chart;
+      const meta = chart.getDatasetMeta(0);
+      ctx.save();
+      ctx.fillStyle = '#102A43';
+      ctx.font = '700 11px sans-serif';
+      ctx.textAlign = 'center';
+      meta.data.forEach((barra, indice) => {
+        ctx.fillText(String(chart.data.datasets[0].data[indice]), barra.x, barra.y - 8);
+      });
+      ctx.restore();
+    }
+  };
+  let frecuenciaChart = null;
+  let frecuenciaOffset = 0;
+  const renderizarFrecuencia = () => {
+    const fechaMes = new Date(hoy.getFullYear(), hoy.getMonth() + frecuenciaOffset, 1);
+    const inicioMes = new Date(fechaMes.getFullYear(), fechaMes.getMonth(), 1);
+    const finMes = new Date(fechaMes.getFullYear(), fechaMes.getMonth() + 1, 0);
+    const semanasMes = new Map();
+    for (let dia = new Date(inicioMes); dia <= finMes; dia.setDate(dia.getDate() + 1)) {
+      const semana = obtenerSemanaISO(dia);
+      if (!semanasMes.has(semana)) semanasMes.set(semana, new Set());
+    }
+    sesiones.forEach(sesion => {
+      const fecha = new Date(`${sesion.fecha}T00:00:00`);
+      if (fecha.getFullYear() !== fechaMes.getFullYear() || fecha.getMonth() !== fechaMes.getMonth()) return;
+      const semana = obtenerSemanaISO(fecha);
+      if (semanasMes.has(semana)) semanasMes.get(semana).add(sesion.fecha);
+    });
+    const frecuenciaSemanal = [...semanasMes.entries()].map(([semana, dias]) => ({ semana, dias: dias.size, label: `S${semana}` }));
+    navFrecuenciaLabel.textContent = fechaMes.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    navFrecuenciaNext.disabled = frecuenciaOffset >= 0;
+    if (!window.Chart) return;
+    if (frecuenciaChart) frecuenciaChart.destroy();
+    frecuenciaChart = new window.Chart(chartFrecuencia.getContext('2d'), {
       type: 'bar',
       data: {
-        labels: meses12.map(m => m.label),
-        datasets: [{ data: meses12.map(m => sesionesPorMes[m.key] || 0),
-          backgroundColor: meses12.map((m,i) => i === 11 ? 'rgba(61,213,152,0.95)' : 'rgba(61,213,152,0.4)'),
-          borderColor: 'rgb(61,213,152)', borderWidth: 2, borderRadius: 8, borderSkipped: false }]
+        labels: frecuenciaSemanal.map(semana => semana.label),
+        datasets: [{ data: frecuenciaSemanal.map(semana => semana.dias),
+          backgroundColor: 'rgba(22,131,255,0.72)',
+          borderColor: '#1683FF', borderWidth: 1, borderRadius: 7, borderSkipped: false,
+          maxBarThickness: 34 }]
       },
+      plugins: [pluginValoresBarras],
       options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(26,29,35,0.92)', padding: 10, callbacks: { label: ctx => `${ctx.parsed.y} sesiones` } } },
-        scales: { y: { beginAtZero: true, ticks: { stepSize:1, font:{size:11}, color:'#9ca3af' }, grid:{color:'rgba(0,0,0,0.04)'}, border:{display:false} },
-                  x: { grid:{display:false}, ticks:{font:{size:11,weight:'700'}, color:'#6b7280'}, border:{display:false} } } }
+        layout: { padding: { top: 18, right: 4, left: 0, bottom: 0 } },
+        plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(16,42,67,0.94)', padding: 10, callbacks: { label: ctx => `${ctx.parsed.y} días de entrenamiento` } } },
+        scales: { y: { beginAtZero: true, suggestedMax: Math.max(...frecuenciaSemanal.map(semana => semana.dias), 1) + 1, ticks: { stepSize:1, font:{size:11}, color:'#64748b', precision:0 }, grid:{color:'rgba(16,42,67,0.06)'}, border:{display:false} },
+                  x: { grid:{display:false}, ticks:{font:{size:11,weight:'700'}, color:'#475569'}, border:{display:false} } } }
     });
-  }
+  };
+  navFrecuenciaPrev.addEventListener('click', () => { frecuenciaOffset -= 1; renderizarFrecuencia(); });
+  navFrecuenciaNext.addEventListener('click', () => { if (frecuenciaOffset < 0) { frecuenciaOffset += 1; renderizarFrecuencia(); } });
+  renderizarFrecuencia();
   dashboard.appendChild(cardFrecuencia);
 
   // ── 4. VOLUMEN SEMANAL ──────────────────────────────────────
-  const cardVolumen = crearCard('Volumen Semanal', '');
+  const cardVolumen = crearCard('Volumen Semanal', 'dashboard-chart-card');
   const chartVolumen = document.createElement('canvas');
   chartVolumen.className = 'dashboard-chart';
+  const navVolumen = document.createElement('div');
+  navVolumen.className = 'dashboard-chart-nav';
+  navVolumen.innerHTML = '<button type="button" class="dashboard-chart-nav-btn" aria-label="Semanas anteriores">‹</button><span></span><button type="button" class="dashboard-chart-nav-btn" aria-label="Semanas siguientes">›</button>';
+  cardVolumen.appendChild(navVolumen);
+  const navVolumenLabel = navVolumen.querySelector('span');
+  const navVolumenPrev = navVolumen.querySelector('button:first-child');
+  const navVolumenNext = navVolumen.querySelector('button:last-child');
   cardVolumen.appendChild(chartVolumen);
-  const ultimasSemanas = [...volumenPorSemana].sort((a,b) => new Date(a.semana)-new Date(b.semana)).slice(-8);
-  if (window.Chart && ultimasSemanas.length > 0) {
+  const semanasVolumen = [...volumenPorSemana].sort((a,b) => new Date(a.semana)-new Date(b.semana));
+  let volumenChart = null;
+  let volumenOffset = 0;
+  const renderizarVolumen = () => {
+    if (!semanasVolumen.length) {
+      navVolumenLabel.textContent = 'Sin datos';
+      navVolumenPrev.disabled = true;
+      navVolumenNext.disabled = true;
+      return;
+    }
+    const fin = Math.max(7, Math.min(semanasVolumen.length - 1, semanasVolumen.length - 1 + volumenOffset * 8));
+    const inicio = Math.max(0, fin - 7);
+    const ultimasSemanas = semanasVolumen.slice(inicio, fin + 1);
+    const primera = new Date(`${ultimasSemanas[0].semana}T00:00:00`);
+    const ultima = new Date(`${ultimasSemanas[ultimasSemanas.length - 1].semana}T00:00:00`);
+    navVolumenLabel.textContent = `${primera.toLocaleDateString('es-ES', { day:'numeric', month:'short' })} - ${ultima.toLocaleDateString('es-ES', { day:'numeric', month:'short' })}`;
+    navVolumenPrev.disabled = inicio === 0;
+    navVolumenNext.disabled = fin >= semanasVolumen.length - 1;
+    if (!window.Chart) return;
+    if (volumenChart) volumenChart.destroy();
     const ctxV = chartVolumen.getContext('2d');
     const gradV = ctxV.createLinearGradient(0,0,0,220);
     gradV.addColorStop(0,'rgba(0,212,212,0.28)'); gradV.addColorStop(1,'rgba(0,212,212,0.02)');
-    new window.Chart(ctxV, {
+    volumenChart = new window.Chart(ctxV, {
       type: 'line',
-      data: { labels: ultimasSemanas.map(s => { const f=new Date(s.semana); return `${f.getDate()}/${f.getMonth()+1}`; }),
+      data: { labels: ultimasSemanas.map(s => `S${obtenerSemanaISO(new Date(`${s.semana}T00:00:00`))}`),
               datasets: [{ data: ultimasSemanas.map(s => Math.round(s.volumen)), borderColor:'rgb(0,212,212)', backgroundColor:gradV,
                 borderWidth:2.5, tension:0.4, fill:true, pointRadius:4, pointHoverRadius:7,
                 pointBackgroundColor:'rgb(0,212,212)', pointBorderColor:'#fff', pointBorderWidth:2 }] },
@@ -322,7 +396,11 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
         scales:{ y:{beginAtZero:true,ticks:{font:{size:11},color:'#9ca3af',callback:v=>v>=1000?`${(v/1000).toFixed(0)}k`:v},grid:{color:'rgba(0,0,0,0.04)'},border:{display:false}},
                  x:{grid:{display:false},ticks:{font:{size:11,weight:'600'},color:'#6b7280'},border:{display:false}} } }
     });
-  } else if (!ultimasSemanas.length) {
+  };
+  navVolumenPrev.addEventListener('click', () => { if (!navVolumenPrev.disabled) { volumenOffset -= 1; renderizarVolumen(); } });
+  navVolumenNext.addEventListener('click', () => { if (!navVolumenNext.disabled) { volumenOffset += 1; renderizarVolumen(); } });
+  renderizarVolumen();
+  if (!semanasVolumen.length) {
     const msg = document.createElement('div'); msg.className='empty-state';
     msg.textContent='Completa sesiones con series registradas para ver este gráfico.';
     cardVolumen.appendChild(msg);
@@ -636,6 +714,11 @@ async function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard
       const snap = await getDoc(doc(db, 'usuarios', user.uid));
       const metaNutricional = snap.exists() ? snap.data().metasNutricionales : null;
       if (metaNutricional?.calorias) METAS_DIARIAS.calorias = metaNutricional.calorias;
+      if (metaNutricional?.macros) {
+        METAS_DIARIAS.proteinas = metaNutricional.macros.proteinas?.g || METAS_DIARIAS.proteinas;
+        METAS_DIARIAS.carbohidratos = metaNutricional.macros.carbohidratos?.g || METAS_DIARIAS.carbohidratos;
+        METAS_DIARIAS.grasas = metaNutricional.macros.grasas?.g || METAS_DIARIAS.grasas;
+      }
     } catch (error) {
       console.error('[Dashboard] Error cargando meta de calorías:', error);
     }
@@ -643,54 +726,72 @@ async function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard
   const registrosHoy = (nivelNutricion.hijos || []).filter(r => r.fecha === hoyStr);
   const totales = _calcularTotalNutricion(registrosHoy);
 
-  const cardCalories = crearCard('Nutrición de Hoy', '');
-  const caloriesSummary = document.createElement('div');
-  caloriesSummary.style.cssText = 'display:flex;align-items:center;gap:12px;margin-bottom:12px;';
-
   const meta = METAS_DIARIAS.calorias;
   const consumidas = totales.calorias;
-  const pct = Math.min(100, (consumidas / meta) * 100);
+  const pctReal = meta > 0 ? (consumidas / meta) * 100 : 0;
+  const pct = Math.min(100, Math.max(0, pctReal));
   const restantes = Math.max(0, meta - consumidas);
+  const excedido = pctReal > 100;
+  const formatear = valor => Math.round(valor).toLocaleString('es-ES');
 
-  const caloriesCircle = document.createElement('div');
-  caloriesCircle.style.cssText = 'width:80px;min-width:80px;height:80px;border-radius:50%;background:var(--bg-secondary);display:flex;flex-direction:column;align-items:center;justify-content:center;border:2px solid var(--primary-mint);';
-  caloriesCircle.innerHTML = `<div style="font-size:1.2rem;font-weight:900;color:var(--text-primary);">${Math.round(consumidas)}</div><div style="font-size:0.6rem;font-weight:600;color:var(--text-secondary);">kcal</div>`;
-
-  const caloriesInfo = document.createElement('div');
-  caloriesInfo.style.cssText = 'flex:1;display:flex;flex-direction:column;gap:6px;';
-  caloriesInfo.innerHTML = `
-    <div style="display:flex;justify-content:space-between;font-size:0.75rem;">
-      <span style="color:var(--text-secondary);">Meta</span>
-      <span style="font-weight:600;color:var(--text-primary);">${meta} kcal</span>
+  const cardCalories = crearCard('', 'nutrition-summary-card');
+  cardCalories.innerHTML = `
+    <div class="nutrition-card-header">
+      <div class="nutrition-card-icon" aria-hidden="true">⌁</div>
+      <div>
+        <div class="nutrition-card-kicker">Nutrición de hoy</div>
+        <div class="nutrition-card-subtitle">Tu alimentación, tu progreso.</div>
+      </div>
     </div>
-    <div style="display:flex;justify-content:space-between;font-size:0.75rem;">
-      <span style="color:var(--text-secondary);">Restante</span>
-      <span style="font-weight:600;color:var(--primary-mint);">${Math.round(restantes)} kcal</span>
+    <div class="nutrition-calories-layout">
+      <div class="nutrition-ring-wrap${excedido ? ' is-over' : ''}">
+        <svg class="nutrition-ring" viewBox="0 0 120 120" role="img" aria-label="${Math.round(pctReal)}% del objetivo de calorías">
+          <circle class="nutrition-ring-track" cx="60" cy="60" r="50"></circle>
+          <circle class="nutrition-ring-progress" cx="60" cy="60" r="50" pathLength="100" style="--ring-progress:${pct};"></circle>
+        </svg>
+        <div class="nutrition-ring-center">
+          <strong>${formatear(consumidas)}</strong>
+          <span>kcal</span>
+          <b>${Math.round(pctReal)}%</b>
+        </div>
+      </div>
+      <div class="nutrition-calorie-details">
+        <div class="nutrition-detail-row">
+          <span><i class="nutrition-detail-dot is-blue"></i>Consumidas</span>
+          <strong>${formatear(consumidas)} kcal</strong>
+        </div>
+        <div class="nutrition-detail-row">
+          <span><i class="nutrition-detail-dot is-amber"></i>Objetivo</span>
+          <strong>${formatear(meta)} kcal</strong>
+        </div>
+        <div class="nutrition-detail-row${excedido ? ' is-over' : ''}">
+          <span><i class="nutrition-detail-dot is-coral"></i>${excedido ? 'Exceso' : 'Restantes'}</span>
+          <strong>${formatear(excedido ? consumidas - meta : restantes)} kcal</strong>
+        </div>
+        <div class="nutrition-progress" role="progressbar" aria-label="Progreso de calorías" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.min(100, Math.round(pctReal))}">
+          <span style="--bar-progress:${pct}%;"></span>
+        </div>
+      </div>
     </div>
-    <div style="width:100%;height:6px;background:var(--border-color);border-radius:3px;overflow:hidden;">
-      <div style="width:${pct}%;height:100%;background:var(--primary-mint);transition:width 0.3s ease;"></div>
-    </div>`;
-
-  caloriesSummary.append(caloriesCircle, caloriesInfo);
-  cardCalories.appendChild(caloriesSummary);
+    ${consumidas === 0 ? '<div class="nutrition-empty-state">Todavía no has registrado alimentos hoy.</div>' : ''}`;
 
   const macrosGrid = document.createElement('div');
-  macrosGrid.style.cssText = 'display:grid;grid-template-columns:repeat(3,1fr);gap:8px;';
+  macrosGrid.className = 'nutrition-macros-grid';
   [
-    { nombre: 'Proteínas', valor: totales.proteinas, meta: METAS_DIARIAS.proteinas, unidad: 'g', color: '#FF6B6B', icono: '💪' },
-    { nombre: 'Carbs', valor: totales.carbohidratos, meta: METAS_DIARIAS.carbohidratos, unidad: 'g', color: '#4FC3F7', icono: '🍞' },
-    { nombre: 'Grasas', valor: totales.grasas, meta: METAS_DIARIAS.grasas, unidad: 'g', color: '#FFB74D', icono: '🥑' }
+    { nombre: 'Proteínas', valor: totales.proteinas, meta: METAS_DIARIAS.proteinas, color: '#f26b6b', icono: 'P', clase: 'protein' },
+    { nombre: 'Carbohidratos', valor: totales.carbohidratos, meta: METAS_DIARIAS.carbohidratos, color: '#e5a623', icono: 'C', clase: 'carbs' },
+    { nombre: 'Grasas', valor: totales.grasas, meta: METAS_DIARIAS.grasas, color: '#20a982', icono: 'G', clase: 'fats' }
   ].forEach(macro => {
-    const pctMacro = Math.min(100, (macro.valor / macro.meta) * 100);
+    const pctMacroReal = macro.meta > 0 ? (macro.valor / macro.meta) * 100 : 0;
+    const pctMacro = Math.min(100, Math.max(0, pctMacroReal));
     const macroBox = document.createElement('div');
-    macroBox.style.cssText = 'background:var(--bg-secondary);border-radius:8px;padding:8px;text-align:center;';
+    macroBox.className = `nutrition-macro-card ${macro.clase}`;
     macroBox.innerHTML = `
-      <div style="font-size:0.85rem;margin-bottom:4px;">${macro.icono}</div>
-      <div style="font-size:0.7rem;color:var(--text-secondary);margin-bottom:4px;">${macro.nombre}</div>
-      <div style="font-size:0.9rem;font-weight:700;color:${macro.color};margin-bottom:4px;">${Math.round(macro.valor)}</div>
-      <div style="font-size:0.65rem;color:var(--text-light);">de ${macro.meta}${macro.unidad}</div>
-      <div style="width:100%;height:4px;background:rgba(0,0,0,0.05);border-radius:2px;overflow:hidden;margin-top:4px;">
-        <div style="width:${pctMacro}%;height:100%;background:${macro.color};"></div>
+      <div class="nutrition-macro-top"><span class="nutrition-macro-icon">${macro.icono}</span><span class="nutrition-macro-percent">${Math.round(pctMacroReal)}%</span></div>
+      <div class="nutrition-macro-name">${macro.nombre}</div>
+      <div class="nutrition-macro-value">${formatear(macro.valor)} <small>g</small></div>
+      <div class="nutrition-macro-goal">de ${formatear(macro.meta)} g</div>
+      <div class="nutrition-macro-progress"><span style="--macro-progress:${pctMacro}%;background:${macro.color};"></span>
       </div>`;
     macrosGrid.appendChild(macroBox);
   });

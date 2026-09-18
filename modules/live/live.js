@@ -251,7 +251,7 @@ function abrirEntrenamientoEnVivo() {
   const header = document.createElement("div");
   header.style.cssText = `
     position: sticky; top: 0;
-    background: var(--bg-card);
+    background: #ffffff;
     padding: 8px 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 100;

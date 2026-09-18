@@ -670,6 +670,70 @@
   margin-left: -18px;
 }
 
+/* Resumen de nutrición del Dashboard */
+.dashboard-card.nutrition-summary-card {
+  grid-column: 1 / -1;
+  padding: 20px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.nutrition-card-header { display: flex; align-items: center; gap: 10px; text-align: left; }
+.nutrition-card-icon {
+  width: 34px; height: 34px; display: grid; place-items: center; flex: 0 0 34px;
+  border-radius: 11px; background: #e8f2ff; color: var(--primary); font-size: 1.35rem; font-weight: 800;
+}
+.nutrition-card-kicker { color: var(--text-primary); font-size: 0.76rem; font-weight: 800; letter-spacing: 0.9px; text-align: left; text-transform: uppercase; }
+.nutrition-card-subtitle { color: var(--text-secondary); font-size: 0.74rem; margin-top: 1px; text-align: left; }
+.nutrition-calories-layout { display: grid; grid-template-columns: minmax(130px, 0.9fr) minmax(0, 1.35fr); align-items: center; gap: 18px; margin-top: 18px; }
+.nutrition-ring-wrap { position: relative; width: min(150px, 100%); aspect-ratio: 1; margin: auto; }
+.nutrition-ring { display: block; width: 100%; height: 100%; transform: rotate(-90deg); overflow: visible; }
+.nutrition-ring circle { fill: none; stroke-width: 10; }
+.nutrition-ring-track { stroke: #dceafa; }
+.nutrition-ring-progress { stroke: var(--primary); stroke-dasharray: var(--ring-progress) 100; stroke-linecap: round; transition: stroke-dasharray 0.7s ease-out; }
+.nutrition-ring-wrap.is-over .nutrition-ring-progress { stroke: var(--primary-coral); }
+.nutrition-ring-center { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.1; }
+.nutrition-ring-center strong { color: var(--text-primary); font-size: clamp(1.35rem, 6vw, 1.8rem); font-weight: 800; }
+.nutrition-ring-center span { color: var(--text-secondary); font-size: 0.7rem; margin-top: 3px; }
+.nutrition-ring-center b { color: var(--primary); font-size: 0.82rem; margin-top: 7px; }
+.nutrition-ring-wrap.is-over .nutrition-ring-center b { color: var(--primary-coral); }
+.nutrition-calorie-details { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.nutrition-detail-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--text-secondary); font-size: 0.72rem; text-align: left; }
+.nutrition-detail-row span { display: flex; align-items: center; min-width: 0; text-align: left; }
+.nutrition-detail-row strong { color: var(--text-primary); font-size: 0.8rem; white-space: nowrap; }
+.nutrition-detail-row.is-over strong { color: var(--primary-coral); }
+.nutrition-detail-dot { width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; flex: 0 0 7px; background: var(--primary); }
+.nutrition-detail-dot.is-amber { background: #e5a623; }
+.nutrition-detail-dot.is-coral { background: var(--primary-coral); }
+.nutrition-progress, .nutrition-macro-progress { height: 6px; overflow: hidden; border-radius: 999px; background: #dceafa; }
+.nutrition-progress { margin-top: 3px; }
+.nutrition-progress span, .nutrition-macro-progress span { display: block; width: var(--bar-progress, var(--macro-progress)); height: 100%; border-radius: inherit; background: var(--primary); transition: width 0.7s ease-out; }
+.nutrition-empty-state { margin-top: 14px; color: var(--text-light); font-size: 0.72rem; text-align: center; }
+.nutrition-macros-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 18px; }
+.nutrition-macro-card { min-width: 0; padding: 12px 10px; border: 1px solid rgba(26,115,232,0.08); border-radius: 13px; background: rgba(255,255,255,0.64); text-align: left; }
+.nutrition-macro-card.protein { background: linear-gradient(145deg, rgba(255,246,246,0.88), rgba(255,255,255,0.62)); }
+.nutrition-macro-card.carbs { background: linear-gradient(145deg, rgba(255,250,239,0.9), rgba(255,255,255,0.62)); }
+.nutrition-macro-card.fats { background: linear-gradient(145deg, rgba(239,251,247,0.9), rgba(255,255,255,0.62)); }
+.nutrition-macro-top { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+.nutrition-macro-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; color: #fff; background: var(--primary-coral); font-size: 0.7rem; font-weight: 800; }
+.nutrition-macro-card.carbs .nutrition-macro-icon { background: #e5a623; }
+.nutrition-macro-card.fats .nutrition-macro-icon { background: #20a982; }
+.nutrition-macro-percent { color: var(--primary-coral); font-size: 0.75rem; font-weight: 800; }
+.nutrition-macro-card.carbs .nutrition-macro-percent { color: #b57b00; }
+.nutrition-macro-card.fats .nutrition-macro-percent { color: #168465; }
+.nutrition-macro-name { overflow: hidden; margin-top: 10px; color: var(--text-secondary); font-size: 0.68rem; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+.nutrition-macro-value { margin-top: 3px; color: var(--text-primary); font-size: 1.05rem; font-weight: 800; text-align: left; }
+.nutrition-macro-value small { color: var(--text-light); font-size: 0.65rem; font-weight: 600; }
+.nutrition-macro-goal { margin: 1px 0 8px; color: var(--text-light); font-size: 0.64rem; text-align: left; }
+.nutrition-macro-progress { height: 5px; }
+
+@media (max-width: 360px) {
+  .dashboard-card.nutrition-summary-card { padding: 16px 13px; }
+  .nutrition-calories-layout { gap: 10px; }
+  .nutrition-macro-card { padding: 10px 7px; }
+  .nutrition-macro-value { font-size: 0.95rem; }
+}
+
 .card-titulo {
   font-size: 0.72rem;
   font-weight: 700;
@@ -758,7 +822,7 @@
 
 .dashboard-stat-label {
   min-width: 0;
-  font-size: 0.5rem;
+  font-size: 0.62rem;
   font-weight: 600;
   color: var(--text-secondary);
   text-align: left;
@@ -787,7 +851,7 @@
 .dashboard-stat-trend span {
   min-width: 0;
   color: #45617b;
-  font-size: 0.48rem;
+  font-size: 0.56rem;
   font-weight: 600;
   line-height: 1;
   overflow: hidden;
@@ -1098,19 +1162,77 @@
 .dashboard-chart     { height: 180px !important; }
 .dashboard-chart--mt { margin-top: 12px; }
 
+.dashboard-card.dashboard-chart-card {
+  grid-column: 1 / -1;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+.dashboard-card.dashboard-chart-card:hover {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  transform: none;
+}
+.dashboard-chart-card .card-titulo {
+  margin-bottom: 8px;
+  border-bottom: none;
+  padding-bottom: 0;
+  color: var(--text-primary);
+  font-size: 0.75rem;
+  letter-spacing: 0.85px;
+}
+.dashboard-chart-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  margin-bottom: 2px;
+}
+.dashboard-chart-nav span {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.dashboard-chart-nav-btn {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  padding: 0;
+  border: 1px solid rgba(22,131,255,0.14);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.52);
+  color: var(--primary);
+  font-size: 1.15rem;
+  line-height: 1;
+  box-shadow: none;
+}
+.dashboard-chart-nav-btn:hover:not(:disabled) { background: var(--accent-blue-light); }
+.dashboard-chart-nav-btn:disabled { opacity: 0.3; cursor: default; }
+
+@media (max-width: 414px) {
+  .dashboard-chart-card { padding: 14px 4px; }
+  .dashboard-chart-card .dashboard-chart { height: 174px !important; }
+}
+
 /* Calendario semanal del dashboard */
 .cal-wrapper      { display: flex; flex-direction: column; gap: 8px; }
-.cal-nav-row      { display: flex; align-items: center; gap: 8px; }
+.cal-nav-row      { display: flex; align-items: center; gap: 6px; }
 .cal-days-row     { display: flex; gap: 6px; }
 
 .cal-nav-btn  {
   background: var(--bg-main); border: 0.5px solid var(--border-color); border-radius: var(--radius-md);
   font-size: 1rem; font-weight: 600; cursor: pointer; color: var(--text-primary);
   transition: background var(--transition); display: flex; align-items: center;
-  justify-content: center; padding: 4px 10px; width: auto; box-shadow: none;
+  justify-content: center; padding: 4px 10px; width: auto; margin: 0; flex: 0 0 auto; box-shadow: none;
 }
 .cal-nav-btn:hover { background: var(--bg-secondary); border-color: var(--border-hover); }
-.cal-mes-label    { font-size: 1rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; flex: 1; text-align: center; }
+.cal-mes-label    { order: 1; font-size: 1rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.8px; text-transform: uppercase; white-space: nowrap; flex: 1; text-align: left; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.cal-nav-btn      { order: 2; }
 
 .day-btn {
   flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
