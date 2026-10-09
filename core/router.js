@@ -61,6 +61,8 @@ function asignarSesionIds(datosArray) {
 export async function renderizar() {
   if (!contenido) return;
   contenido.innerHTML = '';
+  contenido.className = '';
+  contenido.removeAttribute('style');
   restaurarTimer();
 
   _updateHeaderUser();

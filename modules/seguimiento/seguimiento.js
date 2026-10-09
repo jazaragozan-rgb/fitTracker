@@ -135,7 +135,7 @@ export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addBut
     // Medida anterior
     const anteriorDiv = document.createElement('div');
     anteriorDiv.className = 'seg-metric-field';
-    anteriorDiv.innerHTML = `<div class="seg-metric-field-label">Anterior</div><div class="seg-metric-field-value">${inicial.toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
+    anteriorDiv.innerHTML = `<div class="seg-metric-field-label">Inicial</div><div class="seg-metric-field-value">${inicial.toFixed(1)}</div><div class="seg-metric-field-unit">${metric.unit}</div>`;
     contenidoDiv.appendChild(anteriorDiv);
 
     // Medida actual
@@ -777,6 +777,7 @@ function mostrarModalMedidas(nivel, contenido) {
     { key:'cintura', label:'Cintura', unit:'cm' },
     { key:'cadera',  label:'Cadera',  unit:'cm' },
     { key:'pecho',   label:'Pecho',   unit:'cm' },
+    { key:'muslo',   label:'Muslo',   unit:'cm' },
     { key:'grasaCorporal', label:'Grasa', unit:'%' },
     { key:'masaMuscular',  label:'Masa',  unit:'kg' }
   ];
@@ -870,6 +871,7 @@ function mostrarModalObjetivos(nivel, contenido) {
     { key:'cintura', label:'Cintura', unit:'cm' },
     { key:'cadera',  label:'Cadera',  unit:'cm' },
     { key:'pecho',   label:'Pecho',   unit:'cm' },
+    { key:'muslo',   label:'Muslo',   unit:'cm' },
     { key:'grasaCorporal', label:'Grasa corp.', unit:'%' },
     { key:'masaMuscular',  label:'Masa musc.', unit:'kg' }
   ];

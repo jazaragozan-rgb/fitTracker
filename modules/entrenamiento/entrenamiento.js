@@ -384,6 +384,19 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
   };
   _collectSeries(ejercicio);
 
+  if (modoEdicion) {
+    const addSerieBtn = document.createElement('button');
+    addSerieBtn.textContent = '+ Serie';
+    addSerieBtn.className = 'btn-add-serie-compact';
+    addSerieBtn.onclick = e => {
+      e.stopPropagation();
+      ejercicio.series.push({ reps: '', peso: '', rir: '', descanso: '', completada: false });
+      guardarDatos();
+      getRenderizar()?.();
+    };
+    inner.appendChild(addSerieBtn);
+  }
+
   // Cabeceras
   const encabezados = document.createElement('div');
   encabezados.style.cssText = `
@@ -415,6 +428,17 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
         display:flex;align-items:center;justify-content:center;
       `;
       numBtn.textContent = serie.marca || (idx + 1);
+      if (modoEdicion) {
+        numBtn.style.cursor = 'pointer';
+        numBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          mostrarSelectorMarca(serie, idx, () => {
+            if (serie.marca === String(idx + 1)) delete serie.marca;
+            guardarDatos();
+            getRenderizar()?.();
+          });
+        });
+      }
       if (origen && origen !== ejercicio.nombre) {
         numBtn.title = origen;
       }
@@ -454,7 +478,23 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
       `;
       checkIcon.textContent = serie.completada ? '✔️' : '🕔';
 
-      [numBtn, reps, peso, rir, descanso, checkIcon].forEach(el => serieDiv.appendChild(el));
+      let ultimaCelda = checkIcon;
+      if (modoEdicion && ejercicio.series.includes(serie)) {
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '✕';
+        delBtn.title = 'Eliminar serie';
+        delBtn.style.cssText = 'width:26px;height:26px;padding:0;margin:0;border:none;background:transparent;color:var(--text-light);font-size:1rem;box-shadow:none;';
+        delBtn.addEventListener('click', e => {
+          e.stopPropagation();
+          mostrarConfirmacion('¿Desea borrar esta serie?', () => {
+            ejercicio.series.splice(ejercicio.series.indexOf(serie), 1);
+            guardarDatos();
+            getRenderizar()?.();
+          });
+        });
+        ultimaCelda = delBtn;
+      }
+      [numBtn, reps, peso, rir, descanso, ultimaCelda].forEach(el => serieDiv.appendChild(el));
       inner.appendChild(serieDiv);
     });
 

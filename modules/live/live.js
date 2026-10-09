@@ -3,6 +3,8 @@
 
 // Importar funciones del timer
 import { iniciarTimer } from '../../shared/timer.js';
+import { mostrarSelectorMarca } from '../../shared/ui.js';
+import { hoyISO } from '../../shared/utils.js';
 import { datos as datosStore, guardarDatos as guardarDatosStore } from '../../core/store.js';
 import { guardarDuracionSesion } from '../entrenamiento/entrenamiento.js';
 import { searchExercisesByName, searchExercisesBackupByName } from '../exercises/exercises.js';
@@ -75,7 +77,7 @@ export function checkLiveRestore() {
     clearSavedLiveState();
     return;
   }
-  entrenamientoActual = saved.entrenamientoActual || { ejercicios: [], fecha: new Date().toISOString().slice(0, 10) };
+  entrenamientoActual = saved.entrenamientoActual || { ejercicios: [], fecha: hoyISO() };
   timerSeconds = saved.timerSeconds || 0;
   timerPaused = saved.timerPaused || false;
   timerStartedAt = saved.timerStartedAt || null;
@@ -221,7 +223,7 @@ export function iniciarEntrenamiento(ejerciciosPrecargados = []) {
           }))
         }))
       : [],
-    fecha: new Date().toISOString().slice(0, 10)
+    fecha: hoyISO()
   };
   timerSeconds = 0;
   timerPaused = false;
@@ -437,7 +439,7 @@ function abrirEntrenamientoEnVivo() {
 function startTimer(display, btn) {
   if (timerPaused) {
     timerPaused = false;
-    timerStartedAt = Date.now();
+    timerStartedAt = Date.now() - timerSeconds * 1000;
     btn.textContent = "⏸";
     timerInterval = setInterval(() => { actualizarSegundosTimer(); updateTimerDisplay(display); }, 1000);
   } else if (timerInterval) {
@@ -448,7 +450,7 @@ function startTimer(display, btn) {
     clearInterval(timerInterval);
     timerInterval = null;
   } else {
-    timerStartedAt = Date.now();
+    timerStartedAt = Date.now() - timerSeconds * 1000;
     btn.textContent = "⏸";
     timerInterval = setInterval(() => { actualizarSegundosTimer(); updateTimerDisplay(display); }, 1000);
   }
@@ -486,7 +488,7 @@ function obtenerDuracionMinutosActual() {
 export function abrirBuscadorEjercicios(callback) {
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
-  overlay.addEventListener('click', e => { if (e.target === overlay) closeLiveOverlay(overlay); });
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
   const modal = document.createElement('div');
   modal.className = 'modal-ejercicios';
@@ -927,7 +929,16 @@ async function renderizarEjerciciosLive() {
         serieDiv.addEventListener('mouseleave', () => { serieDiv.style.background = serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent'; });
 
         const num = document.createElement("div");
-        num.textContent = serieIdx + 1;
+        num.textContent = serie.marca || (serieIdx + 1);
+        num.title = 'Tipo de serie';
+        num.addEventListener('click', (e) => {
+          e.stopPropagation();
+          mostrarSelectorMarca(serie, serieIdx, () => {
+            if (serie.marca === String(serieIdx + 1)) delete serie.marca;
+            schedulePersist();
+            renderizarEjerciciosLive();
+          });
+        });
         num.style.cssText = `
           width: 26px; height: 26px; padding: 2px 4px; margin: 2px;
           font-size: 1.2rem; font-weight: 700; border: none !important;

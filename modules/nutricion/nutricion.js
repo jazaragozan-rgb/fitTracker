@@ -9,7 +9,8 @@ import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/
 import { hoyISO, sumarDias } from '../../shared/utils.js';
 
 // ── Configuración ─────────────────────────────────────────────
-const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
+  const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
+  let registrosHoy = [];
 
 const TIPOS_COMIDA = [
   { id: 'desayuno',  nombre: 'Desayuno',  icono: '🌅', color: '#FFB74D' },
@@ -46,9 +47,11 @@ async function cargarRegistrosFirestore(nivel, fecha) {
   try {
     const snap = await getDoc(doc(db, 'usuarios', user.uid));
     if (!snap.exists()) return;
-    const registros = snap.data().nutricion?.[fecha]?.items || [];
-    nivel.hijos = (nivel.hijos || []).filter(r => r.fecha !== fecha);
-    registros.forEach(r => nivel.hijos.push(r));
+    const mapa = snap.data().nutricion || {};
+    const fechas = new Set([fecha]);
+    for (let i = 0; i < 7; i++) fechas.add(sumarDias(hoyISO(), -i));
+    nivel.hijos = [];
+    fechas.forEach(f => (mapa[f]?.items || []).forEach(r => nivel.hijos.push(r)));
   } catch (err) { console.error('[Nutrición] Error cargando registros:', err); }
 }
 
@@ -441,23 +444,45 @@ export function mostrarBuscadorAlimentos(nivel, contenido, tipoComida = 'desayun
       list.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-secondary);">🔍 Buscando...</div>';
 
       try {
-        const params = new URLSearchParams({
-          search_terms: finalQuery,
-          search_simple: '1',
-          action: 'process',
-          json: '1',
-          page_size: '20',
-          fields: 'product_name,nutriments,brands,serving_size'
-        });
+        const buildParams = (legacy = false) => {
+          const params = new URLSearchParams({
+            search_terms: finalQuery,
+            page_size: '20',
+            fields: 'product_name,nutriments,brands,serving_size'
+          });
 
-        const res = await fetch(`https://world.openfoodfacts.org/cgi/search.pl?${params.toString()}`, {
-          signal: controller.signal
-        });
+          if (legacy) {
+            params.set('search_simple', '1');
+            params.set('action', 'process');
+            params.set('json', '1');
+          }
+
+          return params;
+        };
+
+        const fetchSearch = async (legacy = false) => {
+          const url = legacy
+            ? `https://world.openfoodfacts.org/cgi/search.pl?${buildParams(true).toString()}`
+            : `https://world.openfoodfacts.org/api/v2/search?${buildParams(false).toString()}`;
+
+          const res = await fetch(url, { signal: controller.signal });
+          if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+          }
+          return res.json();
+        };
+
+        let data;
+        try {
+          data = await fetchSearch(false);
+        } catch (primaryErr) {
+          console.warn('[nutricion] API v2 falló, reintentando endpoint clásico:', primaryErr);
+          data = await fetchSearch(true);
+        }
 
         if (searchId !== currentSearchId) return;
 
-        const data = await res.json();
-        const productos = (data.products || []).filter(p => p.product_name && p.nutriments?.['energy-kcal_100g']);
+        const productos = ((data.products || data.products || []) || []).filter(p => p.product_name && (p.nutriments?.['energy-kcal_100g'] || p.nutriments?.['energy-kcal'] || p.nutriments?.energy_kcal_100g));
 
         list.innerHTML = '';
         if (!productos.length) {

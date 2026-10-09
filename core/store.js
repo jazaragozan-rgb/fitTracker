@@ -84,6 +84,14 @@ async function cargarConReintentos(uid) {
   return resultado;
 }
 
+// La comida ya se guarda aparte (campo "nutricion"), así que no hace
+// falta duplicarla dentro de los datos de entrenamiento.
+function _datosParaGuardar() {
+  const copia = structuredClone(datos);
+  if (copia[3]) copia[3].hijos = [];
+  return copia;
+}
+
 // ── Guardar datos en Firestore (con debounce 300 ms) ──────────
 let _saveTimer = null;
 export function guardarDatos(options = {}) {
@@ -109,7 +117,7 @@ export function guardarDatos(options = {}) {
     try {
       await setDoc(
         doc(db, 'usuarios', user.uid),
-        { datos: structuredClone(datos), ultimaActualizacion: new Date().toISOString() },
+        { datos: _datosParaGuardar(), ultimaActualizacion: new Date().toISOString() },
         { merge: true }
       );
       _guardarCopiaLocal(user.uid);

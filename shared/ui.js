@@ -10,6 +10,9 @@ function resetCompletadas(nodo) {
   if (!nodo) return;
   if (Array.isArray(nodo)) { nodo.forEach(resetCompletadas); return; }
   if (Array.isArray(nodo.series)) nodo.series.forEach(s => { s.completada = false; });
+  delete nodo.fecha;
+  delete nodo._fecha;
+  delete nodo.duracionMinutos;
   if (Array.isArray(nodo.hijos))  nodo.hijos.forEach(resetCompletadas);
 }
 

@@ -101,21 +101,34 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
   const hace30Dias = new Date(); hace30Dias.setDate(hoy.getDate() - 30);
 
   const sesiones        = [];
+  const sesionesPlan    = [];
   const ejerciciosTodos = [];
   const volumenPorSemana = [];
   const volumenPorFecha  = {};
 
-  const extraerEjercicios = (nodo, fecha) => {
+  // Una sesión cuenta como "hecha" si ya pasó (o es hoy) y tiene series
+  // completadas o una duración registrada. Si tiene series completadas,
+  // solo se cuentan esas; si no, se cuentan todas (datos antiguos).
+  const _tieneCompletadas = (nodo) => {
+    if (!nodo) return false;
+    if ((nodo.series || []).some(s => s.completada)) return true;
+    return (nodo.hijos || []).some(_tieneCompletadas);
+  };
+
+  const extraerEjercicios = (nodo, fecha, soloCompletadas) => {
     if (!nodo) return 0;
     let vol = 0;
-    if (nodo.series?.length > 0) {
-      vol = calcularVolumen(nodo.series);
-      const pesoMax = Math.max(...nodo.series.map(s => parseFloat(s.peso) || 0), 0);
+    const seriesValidas = soloCompletadas
+      ? (nodo.series || []).filter(s => s.completada)
+      : (nodo.series || []);
+    if (seriesValidas.length > 0) {
+      vol = calcularVolumen(seriesValidas);
+      const pesoMax = Math.max(...seriesValidas.map(s => parseFloat(s.peso) || 0), 0);
       if (pesoMax > 0 && nodo.nombre) {
-        ejerciciosTodos.push({ nombre: nodo.nombre, fecha, pesoMax, series: nodo.series });
+        ejerciciosTodos.push({ nombre: nodo.nombre, fecha, pesoMax, series: seriesValidas });
       }
     }
-    (nodo.hijos || []).forEach(h => { vol += extraerEjercicios(h, fecha); });
+    (nodo.hijos || []).forEach(h => { vol += extraerEjercicios(h, fecha, soloCompletadas); });
     return vol;
   };
 
@@ -127,9 +140,15 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
           for (const sub of sesion.hijos) { if (sub.fecha) { fecha = sub.fecha; break; } }
         }
         if (fecha) {
-          sesiones.push({ fecha, ejercicios: sesion.hijos || [], ruta: [i, j, k], nombre: sesion.nombre || 'Sesión sin nombre' });
-          const vol = extraerEjercicios(sesion, fecha);
-          if (vol > 0) volumenPorFecha[fecha] = (volumenPorFecha[fecha] || 0) + vol;
+          const infoSesion = { fecha, ejercicios: sesion.hijos || [], ruta: [i, j, k], nombre: sesion.nombre || 'Sesión sin nombre' };
+          sesionesPlan.push(infoSesion);
+          const completadas = _tieneCompletadas(sesion);
+          const hecha = fecha <= hoyStr && (completadas || sesion.duracionMinutos > 0);
+          if (hecha) {
+            sesiones.push(infoSesion);
+            const vol = extraerEjercicios(sesion, fecha, completadas);
+            if (vol > 0) volumenPorFecha[fecha] = (volumenPorFecha[fecha] || 0) + vol;
+          }
         }
       });
     });
@@ -266,7 +285,7 @@ export async function renderizarDashboard(datos, rutaActual, crearIndice, conten
   dashboard.appendChild(cardRutina);
 
   // ── 2. CALENDARIO SEMANAL ───────────────────────────────────
-  _renderCardCalendario(dashboard, sesiones, crearCard, rutaActual, renderizar);
+  _renderCardCalendario(dashboard, sesionesPlan, crearCard, rutaActual, renderizar);
 
   // ── 3. NUTRICIÓN COMPACTA ───────────────────────────────────
   const nivelNutricion = datos[3];
@@ -708,11 +727,13 @@ function _renderCardProgreso(dashboard, ejerciciosTodos, crearCard, hoyStr, dato
 // ── Card: Nutrición compacta ──────────────────────────────────
 async function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard, hoyStr) {
   const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
+  let registrosHoy = [];
   const user = auth.currentUser;
   if (user) {
     try {
       const snap = await getDoc(doc(db, 'usuarios', user.uid));
       const metaNutricional = snap.exists() ? snap.data().metasNutricionales : null;
+      registrosHoy = snap.exists() ? (snap.data().nutricion?.[hoyStr]?.items || []) : [];
       if (metaNutricional?.calorias) METAS_DIARIAS.calorias = metaNutricional.calorias;
       if (metaNutricional?.macros) {
         METAS_DIARIAS.proteinas = metaNutricional.macros.proteinas?.g || METAS_DIARIAS.proteinas;
@@ -723,7 +744,6 @@ async function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard
       console.error('[Dashboard] Error cargando meta de calorías:', error);
     }
   }
-  const registrosHoy = (nivelNutricion.hijos || []).filter(r => r.fecha === hoyStr);
   const totales = _calcularTotalNutricion(registrosHoy);
 
   const meta = METAS_DIARIAS.calorias;
