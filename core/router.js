@@ -395,7 +395,15 @@ function _highlightFooterButton() {
 function _renderizarMas(contenido) {
   const card = document.createElement('div');
   card.className = 'dashboard-card';
-  card.innerHTML = `<div class="card-titulo">Más</div><div style="font-size:1rem;font-weight:600;color:var(--text-primary);">Próximas funciones</div><p style="margin-top:10px;color:var(--text-secondary);font-size:0.92rem;line-height:1.5;">Aquí podrás agregar accesos rápidos, ajustes y más opciones personalizadas.</p><button class="mas-logout" type="button">Cerrar sesión</button>`;
+  card.innerHTML = `
+    <div class="card-titulo">Más</div>
+    <div style="font-size:1rem;font-weight:600;color:var(--text-primary);">Copia de seguridad</div>
+    <p style="margin:10px 0 14px;color:var(--text-secondary);font-size:0.92rem;line-height:1.5;">Guarda una copia de todos tus datos en tu móvil, o recupérala si algo sale mal.</p>
+    <button class="mas-exportar" type="button">⬇️ Exportar copia</button>
+    <button class="mas-importar" type="button">⬆️ Importar copia</button>
+    <button class="mas-logout" type="button">Cerrar sesión</button>`;
+  card.querySelector('.mas-exportar').addEventListener('click', () => window.exportarCopia?.());
+  card.querySelector('.mas-importar').addEventListener('click', () => window.importarCopia?.());
   card.querySelector('.mas-logout').addEventListener('click', () => window.salir?.());
   contenido.appendChild(card);
 }

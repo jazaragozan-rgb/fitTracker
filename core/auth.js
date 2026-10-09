@@ -1,7 +1,11 @@
 // ============================================================
 // core/auth.js
-// Login, registro y logout.
+// Login, registro y logout (solo se usa en auth.html).
 // Firebase se importa desde core/firebase.js — nunca desde aquí.
+//
+// NOVEDAD (Tanda 1):
+//  - Si ya tienes sesión iniciada, te lleva directo a la app.
+//  - Mensaje correcto cuando el email o la contraseña fallan.
 // ============================================================
 
 import { auth, db } from './firebase.js';
@@ -16,18 +20,28 @@ import {
 // ── Helper DOM ────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
 
+// Evita redirigir mientras se está entrando o registrando
+let ocupado = false;
+
 // ── Mensajes de error legibles ────────────────────────────────
 function getErrorMessage(error) {
   const map = {
-    'auth/email-already-in-use': 'Ese email ya está registrado.',
-    'auth/invalid-email':        'El email no es válido.',
-    'auth/weak-password':        'Contraseña demasiado débil.',
-    'auth/wrong-password':       'Contraseña incorrecta.',
-    'auth/user-not-found':       'No existe un usuario con ese email.',
-    'auth/too-many-requests':    'Demasiados intentos, espera un momento.'
+    'auth/email-already-in-use':   'Ese email ya está registrado.',
+    'auth/invalid-email':          'El email no es válido.',
+    'auth/weak-password':          'Contraseña demasiado débil.',
+    'auth/wrong-password':         'Contraseña incorrecta.',
+    'auth/user-not-found':         'No existe un usuario con ese email.',
+    'auth/invalid-credential':     'Email o contraseña incorrectos.',
+    'auth/too-many-requests':      'Demasiados intentos, espera un momento.',
+    'auth/network-request-failed': 'Sin conexión. Revisa tu internet.'
   };
   return map[error.code] || error.message;
 }
+
+// ── Si ya hay sesión, ir directo a la app ─────────────────────
+onAuthStateChanged(auth, (user) => {
+  if (user && !ocupado) window.location.replace('./app.html');
+});
 
 // ── Registro ──────────────────────────────────────────────────
 window.register = async function () {
@@ -42,13 +56,16 @@ window.register = async function () {
     msg.classList.add('err');
     return;
   }
+  ocupado = true;
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await sendEmailVerification(cred.user);
-    msg.textContent = 'Cuenta creada. Revisa tu correo.';
+    msg.textContent = 'Cuenta creada. Revisa tu correo. Entrando...';
     msg.classList.add('ok');
     $('reg-email').value = $('reg-pass').value = $('reg-pass2').value = '';
+    setTimeout(() => window.location.replace('./app.html'), 2500);
   } catch (err) {
+    ocupado = false;
     msg.textContent = getErrorMessage(err);
     msg.classList.add('err');
   }
@@ -60,15 +77,17 @@ window.login = async function () {
   const pass  = $('log-pass').value;
   const msg   = $('log-msg');
   msg.textContent = ''; msg.className = 'hint';
+  ocupado = true;
   try {
     await signInWithEmailAndPassword(auth, email, pass);
     $('log-email').value = $('log-pass').value = '';
     if (typeof window.onLoginSuccess === 'function') {
       window.onLoginSuccess();
     } else {
-      window.location.href = './app.html';
+      window.location.replace('./app.html');
     }
   } catch (err) {
+    ocupado = false;
     msg.textContent = getErrorMessage(err);
     msg.classList.add('err');
   }
@@ -85,7 +104,7 @@ window.salir = async function () {
 
   try {
     await signOut(auth);
-    window.location.href = './index.html';
+    window.location.href = './auth.html';
   } catch (err) {
     console.error('[auth] Error al cerrar sesión:', err);
   }

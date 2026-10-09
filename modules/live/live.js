@@ -276,8 +276,10 @@ function abrirEntrenamientoEnVivo() {
     btnCerrar.onclick = () => {
       if (confirm("¿Cerrar sin guardar?")) {
         clearInterval(timerInterval);
+        timerInterval = null;
+        if (persistTimer) { clearTimeout(persistTimer); persistTimer = null; }
         overlay.remove();
-        persistLiveState();
+        clearSavedLiveState();
       }
     };
     headerLeft.appendChild(btnCerrar);
@@ -407,7 +409,6 @@ function abrirEntrenamientoEnVivo() {
     abrirBuscadorEjercicios((nombre) => {
       entrenamientoActual.ejercicios.push({ nombre, series: [] });
       renderizarEjerciciosLive();
-      schedulePersist();
     });
   };
   footer.appendChild(btnAgregar);
@@ -1196,6 +1197,8 @@ function guardarEnSesionExistente(sesionInfo, overlayEntrenamiento) {
     // Reemplazar completamente el contenido previo de la sesión con el entrenamiento actual
     sesion.hijos = entrenamientoActual.ejercicios.map(ej => ({
       nombre: ej.nombre,
+      imagen: ej.imagen || '',
+      notas: ej.notas || '',
       series: ej.series.map(s => ({ ...s })),
       hijos: []
     }));
@@ -1368,7 +1371,7 @@ function crearYGuardarNuevaSesion(mesoIdx, microIdx, nombreSesion, overlayEntren
       hijos: []
     };
     entrenamientoActual.ejercicios.forEach(ej => {
-      nuevaSesion.hijos.push({ nombre: ej.nombre, series: ej.series.map(s => ({ ...s })), hijos: [] });
+      nuevaSesion.hijos.push({ nombre: ej.nombre, imagen: ej.imagen || '', notas: ej.notas || '', series: ej.series.map(s => ({ ...s })), hijos: [] });
     });
 
     micro.hijos.push(nuevaSesion);
