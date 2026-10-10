@@ -30,7 +30,10 @@ async function migrarHistorialAntiguo(uid) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
       throw new Error('Hay una fecha de nutrición antigua con formato inválido; no se eliminó ningún dato.');
     }
-    const itemsAntiguos = Array.isArray(registroDia?.items) ? registroDia.items : [];
+    if (!registroDia || typeof registroDia !== 'object' || !Array.isArray(registroDia.items)) {
+      throw new Error('Hay registros nutricionales antiguos con formato inválido; no se eliminó ningún dato.');
+    }
+    const itemsAntiguos = registroDia.items;
     const diaRef = refDia(uid, fecha);
     const diaSnap = await getDoc(diaRef);
     const itemsNuevos = diaSnap.exists() && Array.isArray(diaSnap.data().items)
