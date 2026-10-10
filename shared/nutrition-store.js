@@ -1,0 +1,105 @@
+// Persistencia del historial nutricional en documentos diarios.
+// Ruta: usuarios/{uid}/nutricion/{YYYY-MM-DD}
+import {
+  deleteField,
+  doc,
+  getDoc,
+  runTransaction,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const migracionesEnCurso = new Map();
+
+function refUsuario(uid) {
+  return doc(dbRef(), 'usuarios', uid);
+}
+
+// Firebase no expone una referencia global a db en este módulo; se inyecta abajo.
+let obtenerDb = null;
+export function configurarStoreNutricion(db) {
+  obtenerDb = () => db;
+}
+function dbRef() {
+  if (!obtenerDb) throw new Error('El store de nutrición no está configurado');
+  return obtenerDb();
+}
+
+function refDia(uid, fecha) {
+  return doc(dbRef(), 'usuarios', uid, 'nutricion', fecha);
+}
+
+async function migrarHistorialAntiguo(uid) {
+  const usuarioRef = refUsuario(uid);
+  const usuarioSnap = await getDoc(usuarioRef);
+  const mapaAntiguo = usuarioSnap.exists() ? usuarioSnap.data().nutricion : null;
+  if (!mapaAntiguo || typeof mapaAntiguo !== 'object' || Array.isArray(mapaAntiguo)) return;
+
+  const mapaOriginal = JSON.stringify(mapaAntiguo);
+  for (const [fecha, registroDia] of Object.entries(mapaAntiguo)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
+      throw new Error('Hay una fecha de nutrición antigua con formato inválido; no se eliminó ningún dato.');
+    }
+    const itemsAntiguos = Array.isArray(registroDia?.items) ? registroDia.items : [];
+    const diaRef = refDia(uid, fecha);
+    const diaSnap = await getDoc(diaRef);
+    const itemsNuevos = diaSnap.exists() && Array.isArray(diaSnap.data().items)
+      ? diaSnap.data().items
+      : [];
+    const clavesExistentes = new Set(itemsNuevos.map(item => JSON.stringify(item)));
+    const itemsCombinados = [
+      ...itemsNuevos,
+      ...itemsAntiguos.filter(item => !clavesExistentes.has(JSON.stringify(item)))
+    ];
+    await setDoc(diaRef, {
+      items: itemsCombinados,
+      updatedAt: registroDia?.updatedAt || new Date()
+    }, { merge: true });
+  }
+
+  // Borra el mapa antiguo solo si sigue igual al que acabamos de copiar.
+  await runTransaction(dbRef(), async transaction => {
+    const actual = await transaction.get(usuarioRef);
+    if (!actual.exists()) return;
+    const mapaActual = actual.data().nutricion;
+    if (JSON.stringify(mapaActual) !== mapaOriginal) {
+      throw new Error('El historial nutricional cambió durante la migración. Vuelve a intentarlo.');
+    }
+    transaction.update(usuarioRef, {
+      nutricion: deleteField(),
+      nutricionMigrada: true
+    });
+  });
+}
+
+async function asegurarMigracion(uid) {
+  if (!migracionesEnCurso.has(uid)) {
+    const tarea = migrarHistorialAntiguo(uid).finally(() => migracionesEnCurso.delete(uid));
+    migracionesEnCurso.set(uid, tarea);
+  }
+  return migracionesEnCurso.get(uid);
+}
+
+export async function obtenerRegistrosNutricion(user, fecha) {
+  if (!user) return [];
+  await asegurarMigracion(user.uid);
+  const snap = await getDoc(refDia(user.uid, fecha));
+  return snap.exists() && Array.isArray(snap.data().items) ? snap.data().items : [];
+}
+
+export async function obtenerRegistrosNutricionFechas(user, fechas) {
+  if (!user) return [];
+  await asegurarMigracion(user.uid);
+  const snapshots = await Promise.all(fechas.map(fecha => getDoc(refDia(user.uid, fecha))));
+  return snapshots.flatMap(snap =>
+    snap.exists() && Array.isArray(snap.data().items) ? snap.data().items : []
+  );
+}
+
+export async function guardarRegistrosNutricion(user, fecha, items) {
+  if (!user) return;
+  await asegurarMigracion(user.uid);
+  await setDoc(refDia(user.uid, fecha), {
+    items: Array.isArray(items) ? items : [],
+    updatedAt: new Date()
+  }, { merge: true });
+}
