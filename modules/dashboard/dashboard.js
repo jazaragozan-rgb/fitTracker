@@ -6,6 +6,7 @@
 import { auth, db } from '../../core/firebase.js';
 import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { hoyISO, formatearFechaCorta, calcularVolumen, calcular1RM, redondear } from '../../shared/utils.js';
+import { obtenerRegistrosNutricion } from '../../shared/nutrition-store.js';
 
 function crearCard(titulo, extraClass = '') {
   const card = document.createElement('div');
@@ -733,7 +734,7 @@ async function _renderCardNutricionCompacta(dashboard, nivelNutricion, crearCard
     try {
       const snap = await getDoc(doc(db, 'usuarios', user.uid));
       const metaNutricional = snap.exists() ? snap.data().metasNutricionales : null;
-      registrosHoy = snap.exists() ? (snap.data().nutricion?.[hoyStr]?.items || []) : [];
+      registrosHoy = await obtenerRegistrosNutricion(user, hoyStr);
       if (metaNutricional?.calorias) METAS_DIARIAS.calorias = metaNutricional.calorias;
       if (metaNutricional?.macros) {
         METAS_DIARIAS.proteinas = metaNutricional.macros.proteinas?.g || METAS_DIARIAS.proteinas;

@@ -7,6 +7,7 @@
 import { auth, db }  from '../../core/firebase.js';
 import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { hoyISO, sumarDias } from '../../shared/utils.js';
+import { obtenerRegistrosNutricionFechas, guardarRegistrosNutricion as guardarDiaNutricion } from '../../shared/nutrition-store.js';
 
 // ── Configuración ─────────────────────────────────────────────
   const METAS_DIARIAS = { calorias: 2000, proteinas: 150, carbohidratos: 250, grasas: 65 };
@@ -40,18 +41,14 @@ async function cargarMetasFirestore() {
   } catch (err) { console.error('[Nutrición] Error cargando metas:', err); }
 }
 
-// ── Firestore: cargar registros del día ───────────────────────
+// ── Firestore: cargar registros desde documentos diarios ──────
 async function cargarRegistrosFirestore(nivel, fecha) {
   const user = auth.currentUser;
   if (!user) return;
   try {
-    const snap = await getDoc(doc(db, 'usuarios', user.uid));
-    if (!snap.exists()) return;
-    const mapa = snap.data().nutricion || {};
     const fechas = new Set([fecha]);
     for (let i = 0; i < 7; i++) fechas.add(sumarDias(hoyISO(), -i));
-    nivel.hijos = [];
-    fechas.forEach(f => (mapa[f]?.items || []).forEach(r => nivel.hijos.push(r)));
+    nivel.hijos = await obtenerRegistrosNutricionFechas(user, [...fechas]);
   } catch (err) { console.error('[Nutrición] Error cargando registros:', err); }
 }
 
@@ -61,10 +58,7 @@ async function guardarRegistrosFirestore(nivel, fecha) {
   if (!user) return;
   try {
     const registrosDia = (nivel.hijos || []).filter(r => r.fecha === fecha);
-    await setDoc(doc(db, 'usuarios', user.uid),
-      { nutricion: { [fecha]: { items: registrosDia, updatedAt: new Date() } } },
-      { merge: true }
-    );
+    await guardarDiaNutricion(user, fecha, registrosDia);
   } catch (err) { console.error('[Nutrición] Error guardando registros:', err); }
 }
 
