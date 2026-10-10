@@ -154,6 +154,12 @@ header {
   gap: 8px;
 }
 
+#subHeaderButtons.subheader-entrenamiento .header-btn {
+  flex: 1;
+  min-width: 0;
+  max-width: 200px;
+}
+
 /* Botones del subheader */
 .header-btn {
   background: var(--primary);

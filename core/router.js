@@ -172,6 +172,9 @@ function _buildSubheaderNivel(nivel) {
 
   const cont = document.createElement('div');
   cont.id = 'subHeaderButtons';
+  if (rutaActual.length === 1 && rutaActual[0] === 0) {
+    cont.classList.add('subheader-entrenamiento');
+  }
 
   // Botón volver (niveles 2–4)
   if (rutaActual.length >= 2 && rutaActual.length <= 4) {
@@ -185,6 +188,19 @@ function _buildSubheaderNivel(nivel) {
       renderizar();
     });
     cont.appendChild(backBtn);
+  }
+
+  if (rutaActual.length === 1 && rutaActual[0] === 0) {
+    const calendarioBtn = document.createElement('button');
+    calendarioBtn.className = 'header-btn';
+    calendarioBtn.type = 'button';
+    calendarioBtn.textContent = '📅 Calendario';
+    calendarioBtn.title = 'Cambiar a la vista de calendario';
+    calendarioBtn.addEventListener('click', () => {
+      rutaActual.splice(0, rutaActual.length, 2);
+      renderizar();
+    });
+    cont.appendChild(calendarioBtn);
   }
 
   // En nivel 4: iniciar sesión y edición del plan
@@ -390,7 +406,7 @@ function _highlightFooterButton() {
     rutaActual.length === 1 && rutaActual[0] === 1 ? 'progreso' :
     rutaActual.length === 1 && rutaActual[0] === 3 ? 'nutricion' :
     rutaActual.length === 1 && rutaActual[0] === 4 ? 'mas' :
-    'dashboard';
+    'entrenamiento';
   footerButtons.forEach(btn => btn.classList.toggle('active', btn.dataset.seccion === section));
 }
 

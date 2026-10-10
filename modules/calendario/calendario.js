@@ -33,6 +33,15 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
   const btnHoy = document.createElement('button');
   btnHoy.textContent = '📍 Hoy'; btnHoy.className = 'btn-hoy-calendario';
 
+  const btnNiveles = document.createElement('button');
+  btnNiveles.type = 'button';
+  btnNiveles.textContent = '📁 Niveles';
+  btnNiveles.className = 'calendario-vista-btn cal-toggle-niveles';
+  btnNiveles.addEventListener('click', () => {
+    rutaActual.splice(0, rutaActual.length, 0);
+    renderizar();
+  });
+
   const selectorMes = document.createElement('select');
   selectorMes.className = 'selector-mes-calendario';
   selectorMes.style.display = vistaActual === 'mensual' ? 'block' : 'none';
@@ -48,7 +57,7 @@ export function renderizarCalendario(datos, contenido, subHeader, rutaActual, re
     selectorMes.appendChild(opt);
   }
 
-  rightSide.append(btnHoy, selectorMes);
+  rightSide.append(btnNiveles, btnHoy, selectorMes);
   subHeaderContent.append(leftSide, h2Nivel, rightSide);
   subHeader.appendChild(subHeaderContent);
 

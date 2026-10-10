@@ -1763,6 +1763,7 @@
   box-shadow: none; height: auto; transition: background var(--transition), border-color var(--transition);
   margin-right: 4px;
 }
+.cal-toggle-niveles { height: 22px; margin: 0; text-transform: none; letter-spacing: 0; }
 .calendario-vista-btn.active { background: var(--primary); color: #fff; border-color: var(--primary); }
 
 .btn-hoy-calendario {
