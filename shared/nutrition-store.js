@@ -19,19 +19,38 @@ function refDia(uid, fecha) {
   return doc(db, 'usuarios', uid, 'nutricion', fecha);
 }
 
+function serializarEstable(valor) {
+  if (valor instanceof Date) return JSON.stringify({ tipo: 'Date', valor: valor.toISOString() });
+  if (valor && typeof valor.toMillis === 'function') {
+    return JSON.stringify({ tipo: 'Timestamp', valor: valor.toMillis() });
+  }
+  if (Array.isArray(valor)) {
+    return `[${valor.map(serializarEstable).join(',')}]`;
+  }
+  if (valor && typeof valor === 'object') {
+    return `{${Object.keys(valor).sort().map(clave => `${JSON.stringify(clave)}:${serializarEstable(valor[clave])}`).join(',')}}`;
+  }
+  return JSON.stringify(valor);
+}
+
 async function migrarHistorialAntiguo(uid) {
   const usuarioRef = refUsuario(uid);
   const usuarioSnap = await getDoc(usuarioRef);
   const mapaAntiguo = usuarioSnap.exists() ? usuarioSnap.data().nutricion : null;
   if (!mapaAntiguo || typeof mapaAntiguo !== 'object' || Array.isArray(mapaAntiguo)) return;
 
-  const mapaOriginal = JSON.stringify(mapaAntiguo);
+  const mapaOriginal = serializarEstable(mapaAntiguo);
+  let migracionIncompleta = false;
   for (const [fecha, registroDia] of Object.entries(mapaAntiguo)) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(fecha)) {
-      throw new Error('Hay una fecha de nutrición antigua con formato inválido; no se eliminó ningún dato.');
+      console.error(`[Nutrición] Fecha antigua con formato inválido (${fecha}); se conserva el historial original.`);
+      migracionIncompleta = true;
+      continue;
     }
     if (!registroDia || typeof registroDia !== 'object' || !Array.isArray(registroDia.items)) {
-      throw new Error('Hay registros nutricionales antiguos con formato inválido; no se eliminó ningún dato.');
+      console.error(`[Nutrición] Registro antiguo con formato inválido para ${fecha}; se conserva el historial original.`);
+      migracionIncompleta = true;
+      continue;
     }
     const itemsAntiguos = registroDia.items;
     const diaRef = refDia(uid, fecha);
@@ -48,12 +67,14 @@ async function migrarHistorialAntiguo(uid) {
     }, { merge: true });
   }
 
+  if (migracionIncompleta) return;
+
   // Borra el mapa antiguo solo si sigue igual al que acabamos de copiar.
   await runTransaction(db, async transaction => {
     const actual = await transaction.get(usuarioRef);
     if (!actual.exists()) return;
     const mapaActual = actual.data().nutricion;
-    if (JSON.stringify(mapaActual) !== mapaOriginal) {
+    if (serializarEstable(mapaActual) !== mapaOriginal) {
       throw new Error('El historial nutricional cambió durante la migración. Vuelve a intentarlo.');
     }
     transaction.update(usuarioRef, {

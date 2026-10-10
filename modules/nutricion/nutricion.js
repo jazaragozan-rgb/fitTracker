@@ -383,7 +383,7 @@ export function mostrarBuscadorAlimentos(nivel, contenido, tipoComida = 'desayun
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
   const modal = document.createElement('div');
-  modal.style.cssText = 'background:var(--bg-card);border-radius:16px;width:90%;max-width:500px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;';
+  modal.style.cssText = 'background:#fff;border-radius:16px;width:90%;max-width:500px;max-height:85vh;display:flex;flex-direction:column;box-shadow:var(--shadow-lg);overflow:hidden;';
 
   const header = document.createElement('div');
   header.style.cssText = 'display:flex;justify-content:space-between;align-items:center;padding:20px;border-bottom:1px solid var(--border-color);';
@@ -516,7 +516,7 @@ function _mostrarModalCantidad(producto, nivel, tipoComida, overlayPadre) {
   const modal2 = document.createElement('div');
   modal2.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:10001;';
   const caja = document.createElement('div');
-  caja.style.cssText = 'background:var(--bg-main);border-radius:16px;padding:24px;width:90%;max-width:320px;box-shadow:var(--neu-out-lg);';
+  caja.style.cssText = 'background:#fff;border-radius:16px;padding:24px;width:90%;max-width:320px;box-shadow:var(--neu-out-lg);';
   const n = producto.nutriments;
   caja.innerHTML = `
     <h3 style="font-size:1rem;font-weight:700;margin-bottom:16px;color:var(--text-primary);">${producto.product_name}</h3>
