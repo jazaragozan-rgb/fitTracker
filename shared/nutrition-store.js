@@ -36,17 +36,15 @@ async function migrarHistorialAntiguo(uid) {
     const itemsAntiguos = registroDia.items;
     const diaRef = refDia(uid, fecha);
     const diaSnap = await getDoc(diaRef);
+    // Si una ejecución previa ya copió este día, no lo dupliques al reintentar.
+    if (diaSnap.exists() && diaSnap.data().legacyMigrated === true) continue;
     const itemsNuevos = diaSnap.exists() && Array.isArray(diaSnap.data().items)
       ? diaSnap.data().items
       : [];
-    const clavesExistentes = new Set(itemsNuevos.map(item => JSON.stringify(item)));
-    const itemsCombinados = [
-      ...itemsNuevos,
-      ...itemsAntiguos.filter(item => !clavesExistentes.has(JSON.stringify(item)))
-    ];
     await setDoc(diaRef, {
-      items: itemsCombinados,
-      updatedAt: registroDia?.updatedAt || new Date()
+      items: [...itemsNuevos, ...itemsAntiguos],
+      updatedAt: registroDia?.updatedAt || new Date(),
+      legacyMigrated: true
     }, { merge: true });
   }
 
