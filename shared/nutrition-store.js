@@ -1,5 +1,6 @@
 // Persistencia del historial nutricional en documentos diarios.
 // Ruta: usuarios/{uid}/nutricion/{YYYY-MM-DD}
+import { db } from '../core/firebase.js';
 import {
   deleteField,
   doc,
@@ -11,21 +12,11 @@ import {
 const migracionesEnCurso = new Map();
 
 function refUsuario(uid) {
-  return doc(dbRef(), 'usuarios', uid);
-}
-
-// Firebase no expone una referencia global a db en este módulo; se inyecta abajo.
-let obtenerDb = null;
-export function configurarStoreNutricion(db) {
-  obtenerDb = () => db;
-}
-function dbRef() {
-  if (!obtenerDb) throw new Error('El store de nutrición no está configurado');
-  return obtenerDb();
+  return doc(db, 'usuarios', uid);
 }
 
 function refDia(uid, fecha) {
-  return doc(dbRef(), 'usuarios', uid, 'nutricion', fecha);
+  return doc(db, 'usuarios', uid, 'nutricion', fecha);
 }
 
 async function migrarHistorialAntiguo(uid) {
@@ -57,7 +48,7 @@ async function migrarHistorialAntiguo(uid) {
   }
 
   // Borra el mapa antiguo solo si sigue igual al que acabamos de copiar.
-  await runTransaction(dbRef(), async transaction => {
+  await runTransaction(db, async transaction => {
     const actual = await transaction.get(usuarioRef);
     if (!actual.exists()) return;
     const mapaActual = actual.data().nutricion;
