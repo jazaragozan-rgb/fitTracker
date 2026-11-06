@@ -7,7 +7,7 @@ import { mostrarSelectorMarca } from '../../shared/ui.js';
 import { hoyISO } from '../../shared/utils.js';
 import { datos as datosStore, guardarDatos as guardarDatosStore } from '../../core/store.js';
 import { guardarDuracionSesion } from '../entrenamiento/entrenamiento.js';
-import { searchExercisesByName, searchExercisesBackupByName } from '../exercises/exercises.js';
+import { searchExercisesByName, searchExercisesBackupByName, exercisesBackup } from '../exercises/exercises.js';
 
 const LIVE_PERSIST_KEY = 'fitTracker_liveSession';
 
@@ -490,7 +490,7 @@ function obtenerDuracionMinutosActual() {
 
 export function abrirBuscadorEjercicios(callback) {
   const overlay = document.createElement('div');
-  overlay.className = 'modal-overlay';
+  overlay.className = 'modal-overlay exercise-search-overlay';
   overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
 
   const modal = document.createElement('div');
@@ -512,6 +512,68 @@ export function abrirBuscadorEjercicios(callback) {
   input.placeholder = 'Buscar ejercicio...';
   input.type = 'text';
 
+  let filtroGrupo = '';
+  let filtroEquipamiento = '';
+  const filtros = document.createElement('div');
+  filtros.className = 'exercise-filters';
+
+  const normalizarFiltro = (valor) => String(valor || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/_/g, ' ');
+
+  const crearGrupoFiltros = (titulo, opciones, onChange) => {
+    const grupo = document.createElement('div');
+    grupo.className = 'exercise-filter-group';
+    const etiqueta = document.createElement('span');
+    etiqueta.className = 'exercise-filter-title';
+    etiqueta.textContent = titulo;
+    grupo.appendChild(etiqueta);
+
+    opciones.forEach(opcion => {
+      const boton = document.createElement('button');
+      boton.type = 'button';
+      boton.className = 'exercise-filter-btn';
+      boton.textContent = opcion.label;
+      boton.dataset.value = opcion.value;
+      boton.onclick = () => {
+        onChange(opcion.value);
+        grupo.querySelectorAll('.exercise-filter-btn').forEach(btn => {
+          btn.classList.toggle('active', btn === boton);
+        });
+        loadResults(lastQuery, false);
+      };
+      grupo.appendChild(boton);
+    });
+    grupo.querySelector('.exercise-filter-btn')?.classList.add('active');
+    filtros.appendChild(grupo);
+  };
+
+  crearGrupoFiltros('Grupo muscular', [
+    { label: 'Todos', value: '' },
+    { label: 'Pecho', value: 'pecho' },
+    { label: 'Espalda', value: 'espalda' },
+    { label: 'Hombros', value: 'hombros' },
+    { label: 'Piernas', value: 'piernas' },
+    { label: 'Glúteos', value: 'gluteos' },
+    { label: 'Bíceps', value: 'biceps' },
+    { label: 'Tríceps', value: 'triceps' },
+    { label: 'Abdominales', value: 'abdominales' },
+    { label: 'Lumbares', value: 'espalda_baja' }
+  ], value => { filtroGrupo = value; });
+
+  crearGrupoFiltros('Equipamiento', [
+    { label: 'Todos', value: '' },
+    { label: 'Peso corporal', value: 'peso_corporal' },
+    { label: 'Mancuernas', value: 'mancuernas' },
+    { label: 'Barra', value: 'barra' },
+    { label: 'Polea', value: 'polea' },
+    { label: 'Máquina', value: 'maquina' },
+    { label: 'Banco', value: 'banco' },
+    { label: 'Lastre', value: 'lastre' }
+  ], value => { filtroEquipamiento = value; });
+
   const list = document.createElement('div');
   list.className = 'exercise-list';
   const msgInicial = document.createElement('div');
@@ -519,7 +581,7 @@ export function abrirBuscadorEjercicios(callback) {
   msgInicial.textContent = 'Escribe para buscar ejercicios...';
   list.appendChild(msgInicial);
 
-  modal.append(header, input, list);
+  modal.append(header, input, filtros, list);
   overlay.appendChild(modal);
   document.body.appendChild(overlay);
   setTimeout(() => input.focus(), 100);
@@ -616,7 +678,9 @@ export function abrirBuscadorEjercicios(callback) {
         });
 
         // Obtener resultados del backup (mapeados)
-        const backupResults = searchExercisesBackupByName(query);
+        const backupResults = query.trim().length >= 2
+          ? searchExercisesBackupByName(query)
+          : (filtroGrupo || filtroEquipamiento ? exercisesBackup.map(ej => ({ ...ej, fuente: 'backup' })) : []);
 
         // Combinar API filtrados + backup, evitando duplicados por id o nombre
         const combined = [];
@@ -650,8 +714,21 @@ export function abrirBuscadorEjercicios(callback) {
           renderResultsHeader(combined.length);
         }
 
+        const filteredCombined = combined.filter(ej => {
+          const grupos = (ej.grupo_muscular || []).map(normalizarFiltro);
+          const equipamiento = normalizarFiltro(ej.equipamiento);
+          return (!filtroGrupo || grupos.some(grupo => grupo.includes(normalizarFiltro(filtroGrupo)))) &&
+            (!filtroEquipamiento || equipamiento.includes(normalizarFiltro(filtroEquipamiento)));
+        });
+
+        if (!append) {
+          list.innerHTML = '';
+          if (filteredCombined.length > 0) renderResultsHeader(filteredCombined.length);
+          else mostrarMensaje('Sin resultados con estos filtros');
+        }
+
         // Renderizar los elementos añadidos en esta carga
-        combined.forEach(renderEjercicio);
+        filteredCombined.forEach(renderEjercicio);
     } catch (err) {
       list.innerHTML = '<div style="text-align:center;color:var(--danger);padding:20px;">Error al buscar</div>';
       console.error('[Buscador]', err);
@@ -676,6 +753,10 @@ export function abrirBuscadorEjercicios(callback) {
       const q = input.value.trim();
       lastQuery = q;
       if (q.length < 2) {
+        if (filtroGrupo || filtroEquipamiento) {
+          loadResults(q, false);
+          return;
+        }
         list.innerHTML = '';
         list.appendChild(msgInicial);
         currentCursor = null;
