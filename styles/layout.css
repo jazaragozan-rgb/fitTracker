@@ -321,7 +321,7 @@ main#contenido {
   pointer-events: none;
   background: transparent;
 }
-#timerContainer.timer-active { pointer-events: all; }
+#timerContainer.timer-active { pointer-events: all; background: #ffffff; }
 #timerContainer > div {
   width: 100%;
   max-width: 720px;

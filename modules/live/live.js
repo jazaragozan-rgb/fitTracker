@@ -254,7 +254,8 @@ function abrirEntrenamientoEnVivo() {
   header.style.cssText = `
     position: sticky; top: 0;
     background: #ffffff;
-    padding: 8px 12px;
+    min-height: 48px;
+    padding: 6px 12px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     z-index: 100;
     display: flex; align-items: center; justify-content: space-between;
@@ -339,14 +340,16 @@ function abrirEntrenamientoEnVivo() {
   // Timer secundario
   const headerTimer = document.createElement("div");
   headerTimer.style.cssText = `
-    background: var(--bg-card); padding: 8px 12px;
+    position: sticky; top: 48px;
+    background: #ffffff; padding: 4px 12px;
     border-bottom: 1px solid var(--border-color);
+    z-index: 99;
   `;
   const timerDisplay = document.createElement("div");
   timerDisplay.id = "timerDisplay";
   timerDisplay.textContent = "00:00";
   timerDisplay.style.cssText = `
-    font-size: 1.6rem; font-weight: 700;
+    font-size: 1.25rem; font-weight: 700;
     color: var(--primary-mint); font-family: monospace;
   `;
   const timerDiv = document.createElement("div");
@@ -358,7 +361,7 @@ function abrirEntrenamientoEnVivo() {
   btnStart.id = "btnStartTimer";
   btnStart.textContent = timerPaused ? "▶" : "⏸";
   btnStart.style.cssText = `
-    width: 36px; height: 36px; border: none; border-radius: 50%;
+    width: 30px; height: 30px; border: none; border-radius: 50%;
     background: var(--primary-mint); color: white; font-size: 1rem;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -370,7 +373,7 @@ function abrirEntrenamientoEnVivo() {
   const btnReset = document.createElement("button");
   btnReset.textContent = "↻";
   btnReset.style.cssText = `
-    width: 32px; height: 32px; border: none; border-radius: 50%;
+    width: 28px; height: 28px; border: none; border-radius: 50%;
     background: var(--bg-main); color: var(--text-secondary); font-size: 0.95rem;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
     transition: all 0.2s;
@@ -388,7 +391,7 @@ function abrirEntrenamientoEnVivo() {
   // Zona ejercicios
   const zonaEjercicios = document.createElement("div");
   zonaEjercicios.id = "zonaEjercicios";
-  zonaEjercicios.style.cssText = `flex: 1; padding: 12px; padding-bottom: 80px;`;
+  zonaEjercicios.style.cssText = `flex: 1; padding: 12px; padding-bottom: 300px;`;
   overlay.appendChild(zonaEjercicios);
 
   // Footer

@@ -135,15 +135,16 @@ export function mostrarSelectorMarca(serie, index, onSelect) {
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:99999;';
 
   const caja = document.createElement('div');
-  caja.style.cssText = 'background:#e8edf0;padding:20px;border-radius:16px;display:flex;flex-direction:column;gap:8px;min-width:220px;box-shadow:var(--neu-out-lg);';
+  caja.style.cssText = 'background:#ffffff;padding:20px;border-radius:16px;display:flex;flex-direction:column;gap:8px;min-width:220px;box-shadow:var(--neu-out-lg);';
 
   const titulo = document.createElement('p');
   titulo.textContent = 'Tipo de serie';
-  titulo.style.cssText = 'font-weight:700;font-size:0.95rem;color:var(--text-primary);margin-bottom:4px;text-align:center;';
+  titulo.style.cssText = 'font-weight:700;font-size:0.95rem;color:#111827;margin-bottom:4px;text-align:center;';
   caja.appendChild(titulo);
 
   [
-    { inicial: (index + 1).toString(), texto: `Serie ${index + 1}` },
+    { inicial: (index + 1).toString(), texto: 'Serie normal' },
+    { inicial: 'S', texto: 'Superserie' },
     { inicial: 'W', texto: 'Serie de calentamiento' },
     { inicial: 'D', texto: 'Dropset' },
     { inicial: 'R', texto: 'Rest pause' },
@@ -151,7 +152,7 @@ export function mostrarSelectorMarca(serie, index, onSelect) {
   ].forEach(op => {
     const b = document.createElement('button');
     b.textContent = `${op.inicial}  —  ${op.texto}`;
-    b.style.cssText = 'padding:10px 16px;border-radius:10px;border:none;background:var(--bg-main);font-size:0.875rem;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;';
+    b.style.cssText = 'padding:10px 16px;border-radius:10px;border:none;background:var(--bg-main);color:#111827;font-size:0.875rem;font-weight:600;cursor:pointer;text-align:left;transition:all 0.15s;';
     b.onmouseenter = () => { b.style.background='var(--primary-mint)'; b.style.color='#fff'; };
     b.onmouseleave = () => { b.style.background='var(--bg-main)'; b.style.color=''; };
     b.onclick = e => {
@@ -165,7 +166,7 @@ export function mostrarSelectorMarca(serie, index, onSelect) {
 
   const cancelBtn = document.createElement('button');
   cancelBtn.textContent = 'Cancelar';
-  cancelBtn.style.cssText = 'margin-top:4px;padding:10px;border-radius:10px;border:none;background:transparent;color:var(--text-secondary);font-weight:600;cursor:pointer;';
+  cancelBtn.style.cssText = 'margin-top:4px;padding:10px;border-radius:10px;border:none;background:transparent;color:#111827;font-weight:600;cursor:pointer;';
   cancelBtn.onclick = e => { e.stopPropagation(); modal.remove(); };
   caja.appendChild(cancelBtn);
 
