@@ -82,8 +82,141 @@ const exercisesBackup = [
   { id:"plancha", nombre:"Plancha", grupo_muscular:["core"], equipamiento:"peso_corporal", tipo_movimiento:"estabilizacion", imagen:"" },
   { id:"crunch", nombre:"Crunch", grupo_muscular:["core"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_columna", imagen:"" },
   { id:"rueda_abdominal", nombre:"Rueda abdominal", grupo_muscular:["core"], equipamiento:"rueda", tipo_movimiento:"estabilizacion", imagen:"" },
-  { id:"elevaciones_piernas", nombre:"Elevaciones piernas", grupo_muscular:["core"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_cadera", imagen:"" }
+  { id:"elevaciones_piernas", nombre:"Elevaciones piernas", grupo_muscular:["core"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_cadera", imagen:"" },
+  { id:"crunch_invertido", nombre:"Crunch invertido", grupo_muscular:["abdominales","core"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_columna", imagen:"" },
+  { id:"crunch_bicicleta", nombre:"Crunch bicicleta", grupo_muscular:["abdominales","oblicuos"], equipamiento:"peso_corporal", tipo_movimiento:"rotacion", imagen:"" },
+  { id:"crunch_polea", nombre:"Crunch en polea", grupo_muscular:["abdominales"], equipamiento:"polea", tipo_movimiento:"flexion_columna", imagen:"" },
+  { id:"crunch_maquina", nombre:"Crunch en máquina", grupo_muscular:["abdominales"], equipamiento:"maquina", tipo_movimiento:"flexion_columna", imagen:"" },
+  { id:"sit_up", nombre:"Sit up", grupo_muscular:["abdominales","core"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_columna", imagen:"" },
+  { id:"sit_up_banco_inclinado", nombre:"Sit up banco inclinado", grupo_muscular:["abdominales"], equipamiento:"banco", tipo_movimiento:"flexion_columna", imagen:"" },
+  { id:"dead_bug", nombre:"Dead bug", grupo_muscular:["abdominales","core"], equipamiento:"peso_corporal", tipo_movimiento:"estabilizacion", imagen:"" },
+  { id:"bird_dog", nombre:"Bird dog", grupo_muscular:["core","espalda_baja"], equipamiento:"peso_corporal", tipo_movimiento:"estabilizacion", imagen:"" },
+  { id:"plancha_lateral", nombre:"Plancha lateral", grupo_muscular:["oblicuos","core"], equipamiento:"peso_corporal", tipo_movimiento:"estabilizacion", imagen:"" },
+  { id:"plancha_lateral_elevacion_cadera", nombre:"Plancha lateral con elevación de cadera", grupo_muscular:["oblicuos","core"], equipamiento:"peso_corporal", tipo_movimiento:"estabilizacion", imagen:"" },
+  { id:"plancha_con_toque_hombros", nombre:"Plancha con toque de hombros", grupo_muscular:["abdominales","core"], equipamiento:"peso_corporal", tipo_movimiento:"estabilizacion", imagen:"" },
+  { id:"mountain_climbers", nombre:"Mountain climbers", grupo_muscular:["abdominales","cardio"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_cadera", imagen:"" },
+  { id:"pallof_press", nombre:"Pallof press", grupo_muscular:["oblicuos","core"], equipamiento:"polea", tipo_movimiento:"anti_rotacion", imagen:"" },
+  { id:"woodchopper_polea", nombre:"Woodchopper en polea", grupo_muscular:["oblicuos","core"], equipamiento:"polea", tipo_movimiento:"rotacion", imagen:"" },
+  { id:"giros_rusos", nombre:"Giros rusos", grupo_muscular:["oblicuos","abdominales"], equipamiento:"peso_corporal", tipo_movimiento:"rotacion", imagen:"" },
+  { id:"giros_rusos_mancuerna", nombre:"Giros rusos con mancuerna", grupo_muscular:["oblicuos","abdominales"], equipamiento:"mancuernas", tipo_movimiento:"rotacion", imagen:"" },
+  { id:"elevacion_rodillas_colgado", nombre:"Elevación de rodillas colgado", grupo_muscular:["abdominales","core"], equipamiento:"barra_dominadas", tipo_movimiento:"flexion_cadera", imagen:"" },
+  { id:"elevacion_piernas_colgado", nombre:"Elevación de piernas colgado", grupo_muscular:["abdominales","core"], equipamiento:"barra_dominadas", tipo_movimiento:"flexion_cadera", imagen:"" },
+  { id:"limpiaparabrisas_colgado", nombre:"Limpiaparabrisas colgado", grupo_muscular:["oblicuos","abdominales"], equipamiento:"barra_dominadas", tipo_movimiento:"rotacion", imagen:"" },
+
+  /* ================= LUMBARES ================= */
+  { id:"extension_lumbares", nombre:"Extensión de lumbares", grupo_muscular:["espalda_baja","gluteos"], equipamiento:"banco_romano", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"extension_lumbares_peso", nombre:"Extensión de lumbares con peso", grupo_muscular:["espalda_baja","gluteos"], equipamiento:"disco", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"extension_lumbares_maquina", nombre:"Extensión de lumbares en máquina", grupo_muscular:["espalda_baja"], equipamiento:"maquina", tipo_movimiento:"extension_columna", imagen:"" },
+  { id:"buenos_dias_barra", nombre:"Buenos días con barra", grupo_muscular:["espalda_baja","isquiotibiales"], equipamiento:"barra", tipo_movimiento:"bisagra_cadera", imagen:"" },
+  { id:"superman", nombre:"Superman", grupo_muscular:["espalda_baja","gluteos"], equipamiento:"peso_corporal", tipo_movimiento:"extension_columna", imagen:"" },
+  { id:"superman_alternado", nombre:"Superman alternado", grupo_muscular:["espalda_baja","core"], equipamiento:"peso_corporal", tipo_movimiento:"extension_columna", imagen:"" },
+  { id:"hiperextension_inversa", nombre:"Hiperextensión inversa", grupo_muscular:["espalda_baja","gluteos"], equipamiento:"maquina", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"puente_gluteo_marcha", nombre:"Puente de glúteo con marcha", grupo_muscular:["gluteos","core"], equipamiento:"peso_corporal", tipo_movimiento:"extension_cadera", imagen:"" },
+
+  /* ================= PECHO - VARIANTES ================= */
+  { id:"press_banca_mancuernas_agarre_neutro", nombre:"Press banca mancuernas agarre neutro", grupo_muscular:["pecho","triceps"], equipamiento:"mancuernas", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"press_banca_mancuernas_alternado", nombre:"Press banca mancuernas alternado", grupo_muscular:["pecho","core"], equipamiento:"mancuernas", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"press_inclinado_mancuernas_agarre_neutro", nombre:"Press inclinado mancuernas agarre neutro", grupo_muscular:["pecho","triceps"], equipamiento:"mancuernas", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"press_inclinado_smith", nombre:"Press inclinado smith", grupo_muscular:["pecho"], equipamiento:"smith", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"press_pecho_maquina", nombre:"Press de pecho en máquina", grupo_muscular:["pecho","triceps"], equipamiento:"maquina", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"press_pecho_maquina_unilateral", nombre:"Press de pecho en máquina unilateral", grupo_muscular:["pecho"], equipamiento:"maquina", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"press_polea_de_pie", nombre:"Press de pecho en polea de pie", grupo_muscular:["pecho","core"], equipamiento:"polea", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"flexiones_agarre_estrecho", nombre:"Flexiones agarre estrecho", grupo_muscular:["pecho","triceps"], equipamiento:"peso_corporal", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"flexiones_agarre_ancho", nombre:"Flexiones agarre ancho", grupo_muscular:["pecho"], equipamiento:"peso_corporal", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"flexiones_inclinadas", nombre:"Flexiones inclinadas", grupo_muscular:["pecho","triceps"], equipamiento:"peso_corporal", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"flexiones_declive", nombre:"Flexiones declive", grupo_muscular:["pecho","hombros"], equipamiento:"peso_corporal", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"flexiones_lastradas", nombre:"Flexiones lastradas", grupo_muscular:["pecho","triceps"], equipamiento:"lastre", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"pullover_mancuerna", nombre:"Pullover con mancuerna", grupo_muscular:["pecho","espalda"], equipamiento:"mancuernas", tipo_movimiento:"extension_hombro", imagen:"" },
+  { id:"aperturas_maquina", nombre:"Aperturas en máquina", grupo_muscular:["pecho"], equipamiento:"maquina", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"aperturas_polea_unilateral", nombre:"Aperturas en polea unilateral", grupo_muscular:["pecho"], equipamiento:"polea", tipo_movimiento:"aislamiento", imagen:"" },
+
+  /* ================= ESPALDA - VARIANTES ================= */
+  { id:"jalon_pecho_agarre_neutro", nombre:"Jalón al pecho agarre neutro", grupo_muscular:["espalda","biceps"], equipamiento:"polea", tipo_movimiento:"tiron_vertical", imagen:"" },
+  { id:"jalon_pecho_agarre_supino", nombre:"Jalón al pecho agarre supino", grupo_muscular:["espalda","biceps"], equipamiento:"polea", tipo_movimiento:"tiron_vertical", imagen:"" },
+  { id:"jalon_unilateral", nombre:"Jalón unilateral", grupo_muscular:["espalda"], equipamiento:"polea", tipo_movimiento:"tiron_vertical", imagen:"" },
+  { id:"pulldown_brazos_rectos", nombre:"Jalón de brazos rectos", grupo_muscular:["espalda"], equipamiento:"polea", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"remo_t_barra", nombre:"Remo en T", grupo_muscular:["espalda","biceps"], equipamiento:"barra", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_t_maquina", nombre:"Remo en T en máquina", grupo_muscular:["espalda"], equipamiento:"maquina", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_mancuerna_banco", nombre:"Remo con mancuerna apoyado en banco", grupo_muscular:["espalda"], equipamiento:"mancuernas", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_mancuernas_inclinado", nombre:"Remo con mancuernas inclinado", grupo_muscular:["espalda","hombro_posterior"], equipamiento:"mancuernas", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_polea_unilateral", nombre:"Remo unilateral en polea", grupo_muscular:["espalda"], equipamiento:"polea", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_polea_agarre_ancho", nombre:"Remo en polea agarre ancho", grupo_muscular:["espalda"], equipamiento:"polea", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_invertido", nombre:"Remo invertido", grupo_muscular:["espalda","biceps"], equipamiento:"peso_corporal", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"remo_invertido_pies_elevados", nombre:"Remo invertido pies elevados", grupo_muscular:["espalda","core"], equipamiento:"peso_corporal", tipo_movimiento:"tiron_horizontal", imagen:"" },
+  { id:"encogimientos_barra", nombre:"Encogimientos con barra", grupo_muscular:["trapecios"], equipamiento:"barra", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"encogimientos_mancuernas", nombre:"Encogimientos con mancuernas", grupo_muscular:["trapecios"], equipamiento:"mancuernas", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"encogimientos_maquina", nombre:"Encogimientos en máquina", grupo_muscular:["trapecios"], equipamiento:"maquina", tipo_movimiento:"aislamiento", imagen:"" },
+
+  /* ================= HOMBROS - VARIANTES ================= */
+  { id:"press_militar_mancuernas_sentado", nombre:"Press militar mancuernas sentado", grupo_muscular:["hombros","triceps"], equipamiento:"mancuernas", tipo_movimiento:"empuje_vertical", imagen:"" },
+  { id:"press_militar_mancuernas_de_pie", nombre:"Press militar mancuernas de pie", grupo_muscular:["hombros","core"], equipamiento:"mancuernas", tipo_movimiento:"empuje_vertical", imagen:"" },
+  { id:"press_arnold_sentado", nombre:"Arnold press sentado", grupo_muscular:["hombros"], equipamiento:"mancuernas", tipo_movimiento:"empuje_vertical", imagen:"" },
+  { id:"press_push_press", nombre:"Push press", grupo_muscular:["hombros","piernas"], equipamiento:"barra", tipo_movimiento:"empuje_vertical", imagen:"" },
+  { id:"elevaciones_frontales_disco", nombre:"Elevaciones frontales con disco", grupo_muscular:["hombro_anterior"], equipamiento:"disco", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"elevaciones_frontales_polea", nombre:"Elevaciones frontales en polea", grupo_muscular:["hombro_anterior"], equipamiento:"polea", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"elevaciones_laterales_maquina", nombre:"Elevaciones laterales en máquina", grupo_muscular:["hombro_lateral"], equipamiento:"maquina", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"elevaciones_laterales_unilaterales", nombre:"Elevaciones laterales unilaterales", grupo_muscular:["hombro_lateral"], equipamiento:"mancuernas", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"pajaros_maquina", nombre:"Pájaros en máquina", grupo_muscular:["hombro_posterior"], equipamiento:"maquina", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"pajaros_polea", nombre:"Pájaros en polea", grupo_muscular:["hombro_posterior"], equipamiento:"polea", tipo_movimiento:"aislamiento", imagen:"" },
+  { id:"remo_al_menton_barra", nombre:"Remo al mentón con barra", grupo_muscular:["hombros","trapecios"], equipamiento:"barra", tipo_movimiento:"tiron_vertical", imagen:"" },
+  { id:"remo_al_menton_polea", nombre:"Remo al mentón en polea", grupo_muscular:["hombros","trapecios"], equipamiento:"polea", tipo_movimiento:"tiron_vertical", imagen:"" },
+
+  /* ================= PIERNAS Y GLUTEOS - VARIANTES ================= */
+  { id:"sentadilla_barra_pausa", nombre:"Sentadilla con barra con pausa", grupo_muscular:["piernas","gluteos"], equipamiento:"barra", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"sentadilla_smith", nombre:"Sentadilla en smith", grupo_muscular:["piernas","gluteos"], equipamiento:"smith", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"sentadilla_sissy", nombre:"Sentadilla sissy", grupo_muscular:["cuadriceps"], equipamiento:"peso_corporal", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"hack_squat", nombre:"Hack squat", grupo_muscular:["piernas","cuadriceps"], equipamiento:"maquina", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"prensa_piernas_unilateral", nombre:"Prensa de piernas unilateral", grupo_muscular:["piernas","cuadriceps"], equipamiento:"maquina", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"step_up", nombre:"Step up", grupo_muscular:["piernas","gluteos"], equipamiento:"banco", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"step_up_mancuernas", nombre:"Step up con mancuernas", grupo_muscular:["piernas","gluteos"], equipamiento:"mancuernas", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"zancada_atras", nombre:"Zancada hacia atrás", grupo_muscular:["piernas","gluteos"], equipamiento:"peso_corporal", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"zancada_caminando", nombre:"Zancada caminando", grupo_muscular:["piernas","gluteos"], equipamiento:"mancuernas", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"zancada_lateral", nombre:"Zancada lateral", grupo_muscular:["piernas","aductores"], equipamiento:"peso_corporal", tipo_movimiento:"sentadilla", imagen:"" },
+  { id:"peso_muerto_sumo", nombre:"Peso muerto sumo", grupo_muscular:["gluteos","aductores"], equipamiento:"barra", tipo_movimiento:"bisagra_cadera", imagen:"" },
+  { id:"peso_muerto_trap_bar", nombre:"Peso muerto con barra hexagonal", grupo_muscular:["piernas","gluteos"], equipamiento:"barra_hexagonal", tipo_movimiento:"bisagra_cadera", imagen:"" },
+  { id:"peso_muerto_mancuernas", nombre:"Peso muerto con mancuernas", grupo_muscular:["isquiotibiales","gluteos"], equipamiento:"mancuernas", tipo_movimiento:"bisagra_cadera", imagen:"" },
+  { id:"hip_thrust_maquina", nombre:"Hip thrust en máquina", grupo_muscular:["gluteos"], equipamiento:"maquina", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"hip_thrust_unilateral", nombre:"Hip thrust unilateral", grupo_muscular:["gluteos","core"], equipamiento:"peso_corporal", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"patada_gluteo_polea", nombre:"Patada de glúteo en polea", grupo_muscular:["gluteos"], equipamiento:"polea", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"patada_gluteo_maquina", nombre:"Patada de glúteo en máquina", grupo_muscular:["gluteos"], equipamiento:"maquina", tipo_movimiento:"extension_cadera", imagen:"" },
+  { id:"abduccion_cadera_maquina", nombre:"Abducción de cadera en máquina", grupo_muscular:["gluteos"], equipamiento:"maquina", tipo_movimiento:"abduccion_cadera", imagen:"" },
+  { id:"aduccion_cadera_maquina", nombre:"Aducción de cadera en máquina", grupo_muscular:["aductores"], equipamiento:"maquina", tipo_movimiento:"aduccion_cadera", imagen:"" },
+  { id:"curl_femoral_tumbado", nombre:"Curl femoral tumbado", grupo_muscular:["isquiotibiales"], equipamiento:"maquina", tipo_movimiento:"flexion_rodilla", imagen:"" },
+  { id:"curl_femoral_sentado", nombre:"Curl femoral sentado", grupo_muscular:["isquiotibiales"], equipamiento:"maquina", tipo_movimiento:"flexion_rodilla", imagen:"" },
+  { id:"curl_femoral_unilateral", nombre:"Curl femoral unilateral", grupo_muscular:["isquiotibiales"], equipamiento:"maquina", tipo_movimiento:"flexion_rodilla", imagen:"" },
+  { id:"curl_nordico", nombre:"Curl nórdico", grupo_muscular:["isquiotibiales"], equipamiento:"peso_corporal", tipo_movimiento:"flexion_rodilla", imagen:"" },
+  { id:"extension_cuadriceps_unilateral", nombre:"Extensión de cuádriceps unilateral", grupo_muscular:["cuadriceps"], equipamiento:"maquina", tipo_movimiento:"extension_rodilla", imagen:"" },
+  { id:"gemelo_de_pie", nombre:"Gemelo de pie", grupo_muscular:["gemelos"], equipamiento:"maquina", tipo_movimiento:"extension_tobillo", imagen:"" },
+  { id:"gemelo_sentado", nombre:"Gemelo sentado", grupo_muscular:["gemelos"], equipamiento:"maquina", tipo_movimiento:"extension_tobillo", imagen:"" },
+  { id:"gemelo_prensa", nombre:"Gemelo en prensa", grupo_muscular:["gemelos"], equipamiento:"maquina", tipo_movimiento:"extension_tobillo", imagen:"" },
+
+  /* ================= BRAZOS - VARIANTES ================= */
+  { id:"curl_barra_de_pie", nombre:"Curl con barra de pie", grupo_muscular:["biceps"], equipamiento:"barra", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"curl_predicador_barra", nombre:"Curl predicador con barra", grupo_muscular:["biceps"], equipamiento:"barra", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"curl_predicador_mancuerna", nombre:"Curl predicador con mancuerna", grupo_muscular:["biceps"], equipamiento:"mancuernas", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"curl_concentrado", nombre:"Curl concentrado", grupo_muscular:["biceps"], equipamiento:"mancuernas", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"curl_inclinado_mancuernas", nombre:"Curl inclinado con mancuernas", grupo_muscular:["biceps"], equipamiento:"mancuernas", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"curl_bayesiano", nombre:"Curl bayesiano", grupo_muscular:["biceps"], equipamiento:"polea", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"curl_inverso_barra", nombre:"Curl inverso con barra", grupo_muscular:["biceps","antebrazos"], equipamiento:"barra", tipo_movimiento:"flexion_codo", imagen:"" },
+  { id:"extension_triceps_mancuerna", nombre:"Extensión de tríceps con mancuerna", grupo_muscular:["triceps"], equipamiento:"mancuernas", tipo_movimiento:"extension_codo", imagen:"" },
+  { id:"extension_triceps_sobre_cabeza_polea", nombre:"Extensión de tríceps sobre cabeza en polea", grupo_muscular:["triceps"], equipamiento:"polea", tipo_movimiento:"extension_codo", imagen:"" },
+  { id:"extension_triceps_unilateral_polea", nombre:"Extensión unilateral de tríceps en polea", grupo_muscular:["triceps"], equipamiento:"polea", tipo_movimiento:"extension_codo", imagen:"" },
+  { id:"press_cerrado_barra", nombre:"Press banca agarre cerrado", grupo_muscular:["triceps","pecho"], equipamiento:"barra", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"patada_triceps_mancuerna", nombre:"Patada de tríceps con mancuerna", grupo_muscular:["triceps"], equipamiento:"mancuernas", tipo_movimiento:"extension_codo", imagen:"" },
+  { id:"fondos_banco", nombre:"Fondos en banco", grupo_muscular:["triceps"], equipamiento:"banco", tipo_movimiento:"empuje_horizontal", imagen:"" },
+  { id:"extension_muneca_barra", nombre:"Extensión de muñeca con barra", grupo_muscular:["antebrazos"], equipamiento:"barra", tipo_movimiento:"flexion_muneca", imagen:"" },
+  { id:"curl_muneca_barra", nombre:"Curl de muñeca con barra", grupo_muscular:["antebrazos"], equipamiento:"barra", tipo_movimiento:"flexion_muneca", imagen:"" }
 ];
+
+function normalizarNombreEjercicio(nombre) {
+  return String(nombre || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+}
 
 // =====================
 // DICCIONARIO DE TRADUCCIÓN COMPLETO
@@ -686,6 +819,19 @@ function filterBackupExercises(query) {
   return matched.map(mapBackupExercise);
 }
 
+function deduplicarEjercicios(ejercicios) {
+  const nombresVistos = new Set();
+  const idsVistos = new Set();
+  return ejercicios.filter(ejercicio => {
+    const nombre = normalizarNombreEjercicio(ejercicio.nombre);
+    const id = String(ejercicio.id || '').trim();
+    if ((nombre && nombresVistos.has(nombre)) || (id && idsVistos.has(id))) return false;
+    if (nombre) nombresVistos.add(nombre);
+    if (id) idsVistos.add(id);
+    return true;
+  });
+}
+
 // =====================
 // Obtener TODOS los ejercicios de la API
 // =====================
@@ -774,7 +920,7 @@ async function fetchAllExercisesFromAPI() {
       console.log(`⚠️ Se encontraron ${duplicateCount} duplicados (filtrados)`);
     }
 
-    exercisesCache = allExercises.map(mapApiExercise);
+    exercisesCache = deduplicarEjercicios(allExercises.map(mapApiExercise));
     cacheTimestamp = Date.now();
     console.log(`✅ ${exercisesCache.length} ejercicios de API mapeados y traducidos`);
     
@@ -802,9 +948,12 @@ async function searchExercisesByName(query, limit = 25, cursor = null) {
   try {
     const response = await searchExercisesFromAPI(query, limit, cursor);
     const apiResults = Array.isArray(response.data) ? response.data.map(mapApiExercise) : [];
+    const backupNames = new Set(exercisesBackup.map(ex => normalizarNombreEjercicio(ex.nombre)));
+    const uniqueApiResults = deduplicarEjercicios(apiResults)
+      .filter(ex => !backupNames.has(normalizarNombreEjercicio(ex.nombre)));
     const nextCursor = response.meta?.nextCursor || null;
     const hasMore = !!nextCursor;
-    return { results: apiResults, nextCursor, hasMore };
+    return { results: uniqueApiResults, nextCursor, hasMore };
   } catch (error) {
     console.error('❌ [BÚSQUEDA API] Error:', error);
     return { results: [], nextCursor: null, hasMore: false };
@@ -831,10 +980,14 @@ async function fetchAllExercises() {
     }));
     
     // Combinar sin duplicados (priorizar API)
-    const apiIds = new Set(apiExercises.map(ex => ex.id));
-    const uniqueBackup = backupWithSource.filter(ex => !apiIds.has(ex.id));
-    
-    const allExercises = [...apiExercises, ...uniqueBackup];
+    const apiKeys = new Set(apiExercises.flatMap(ex => [
+      `id:${ex.id}`,
+      `nombre:${normalizarNombreEjercicio(ex.nombre)}`
+    ]));
+    const uniqueBackup = backupWithSource.filter(ex => !apiKeys.has(`id:${ex.id}`) &&
+      !apiKeys.has(`nombre:${normalizarNombreEjercicio(ex.nombre)}`));
+
+    const allExercises = deduplicarEjercicios([...apiExercises, ...uniqueBackup]);
     
     console.log(`📊 TOTAL COMBINADO: ${allExercises.length} ejercicios`);
     console.log(`   ├─ API: ${apiExercises.length}`);
