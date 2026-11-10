@@ -185,13 +185,20 @@ function _crearIndice(item, index, nivel, rutaActual) {
     });
     liMeta.appendChild(fechaInput);
 
-    if (item.duracionMinutos > 0) {
-      const dur = document.createElement('span');
-      dur.className    = 'li-tag';
-      const h = Math.floor(item.duracionMinutos / 60), m = item.duracionMinutos % 60;
-      dur.textContent  = h > 0 ? `${h}h${m > 0 ? ` ${m}min` : ''}` : `${m}min`;
-      liMeta.appendChild(dur);
-    }
+    const duracion = Math.max(0, Number(item.duracionMinutos) || 0);
+    const dur = document.createElement('button');
+    dur.type = 'button';
+    dur.className = 'li-tag';
+    dur.title = 'Modificar duración de la sesión';
+    dur.setAttribute('aria-label', `Modificar duración de la sesión: ${duracion} minutos`);
+    dur.style.cssText = 'cursor:pointer;font-family:inherit;font-size:0.68rem;font-weight:600;';
+    const h = Math.floor(duracion / 60), m = duracion % 60;
+    dur.textContent = h > 0 ? `${h}h${m > 0 ? ` ${m}min` : ''}` : `${m}min`;
+    dur.addEventListener('click', e => {
+      e.stopPropagation();
+      mostrarModalDuracionSesion(item, rutaActual, index);
+    });
+    liMeta.appendChild(dur);
 
     let totalS = 0, doneS = 0;
     (item.hijos || []).forEach(b => {
@@ -230,13 +237,89 @@ function _crearIndice(item, index, nivel, rutaActual) {
   div.addEventListener('click', e => {
     if (dragging) { e.preventDefault(); e.stopPropagation(); return; }
     if (e.target === opBtn || opBtn.contains(e.target)) return;
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.closest('button, input, textarea, select')) return;
     const ruta = getRutaActual();
     ruta.push(index);
     getRenderizar()?.();
   });
 
   return div;
+}
+
+function mostrarModalDuracionSesion(item, rutaActual, index) {
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-overlay';
+  overlay.addEventListener('click', e => {
+    if (e.target === overlay) overlay.remove();
+  });
+
+  const modal = document.createElement('div');
+  modal.className = 'modal';
+  modal.style.cssText = 'width:min(90%,360px);text-align:left;';
+  modal.setAttribute('role', 'dialog');
+  modal.setAttribute('aria-modal', 'true');
+
+  const titulo = document.createElement('h2');
+  titulo.id = 'modalDuracionTitulo';
+  titulo.textContent = 'Duración de la sesión';
+  titulo.style.cssText = 'margin:0 0 8px;color:var(--primary-mint);font-size:1.15rem;';
+  modal.setAttribute('aria-labelledby', titulo.id);
+
+  const descripcion = document.createElement('p');
+  descripcion.textContent = 'Indica la duración total en minutos.';
+  descripcion.style.cssText = 'margin:0 0 16px;color:var(--text-secondary);font-size:0.9rem;';
+
+  const input = document.createElement('input');
+  input.type = 'number';
+  input.min = '0';
+  input.step = '1';
+  input.required = true;
+  input.value = String(Math.max(0, Number(item.duracionMinutos) || 0));
+  input.setAttribute('aria-label', 'Duración en minutos');
+  input.style.cssText = 'width:100%;margin:0 0 16px;padding:10px 12px;border:1px solid var(--border-color);border-radius:8px;font-size:1rem;box-sizing:border-box;';
+
+  const acciones = document.createElement('div');
+  acciones.style.cssText = 'display:flex;justify-content:flex-end;gap:8px;';
+
+  const cancelar = document.createElement('button');
+  cancelar.type = 'button';
+  cancelar.textContent = 'Cancelar';
+  cancelar.style.cssText = 'padding:9px 14px;border:1px solid var(--border-color);border-radius:8px;background:transparent;color:var(--text-secondary);cursor:pointer;';
+  cancelar.addEventListener('click', () => overlay.remove());
+
+  const guardar = document.createElement('button');
+  guardar.type = 'button';
+  guardar.textContent = 'Guardar';
+  guardar.style.cssText = 'padding:9px 14px;border:none;border-radius:8px;background:var(--primary-mint);color:white;font-weight:700;cursor:pointer;';
+  guardar.addEventListener('click', () => {
+    if (!input.reportValidity()) return;
+    const minutos = Number(input.value);
+    if (!Number.isInteger(minutos) || minutos < 0) {
+      input.setCustomValidity('Introduce un número entero de minutos igual o mayor que cero.');
+      input.reportValidity();
+      return;
+    }
+    input.setCustomValidity('');
+    if (!guardarDuracionSesion([...rutaActual, index], minutos)) {
+      alert('No se pudo guardar la duración de la sesión.');
+      return;
+    }
+    overlay.remove();
+    getRenderizar()?.();
+  });
+
+  input.addEventListener('input', () => input.setCustomValidity(''));
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') guardar.click();
+    if (e.key === 'Escape') overlay.remove();
+  });
+
+  acciones.append(cancelar, guardar);
+  modal.append(titulo, descripcion, input, acciones);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  input.focus();
+  input.select();
 }
 
 // ============================================================
@@ -684,6 +767,7 @@ document.addEventListener('touchend', dragEndEjercicio);
 // ============================================================
 function startDrag(e) {
   if (e.type === 'mousedown' && e.button !== 0) return;
+  if (e.target.closest('button, input, textarea, select')) return;
   dragItem = e.currentTarget.closest('.list-item');
   if (!dragItem) return;
   dragging = false; hasMoved = false;

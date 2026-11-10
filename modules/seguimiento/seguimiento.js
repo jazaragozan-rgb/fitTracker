@@ -4,6 +4,8 @@
 // ============================================================
 
 import { hoyISO, formatearFechaLarga } from '../../shared/utils.js';
+import { datos } from '../../core/store.js';
+import { crearResumenEstadisticasEntrenamiento } from './estadisticas-entrenamiento.js';
 
 const DIRECCION_OBJETIVO_POR_METRICA = {
   peso: 'decrease',
@@ -72,6 +74,7 @@ export function renderizarSeguimiento(seguidoNivel, contenido, subHeader, addBut
 
   contenido.innerHTML = '';
   contenido.className = (contenido.className || '') + ' seg-contenido seg-dashboard-shell';
+  contenido.appendChild(crearResumenEstadisticasEntrenamiento(datos));
   const medidas = seguidoNivel.hijos || [];
 
   if (!medidas.length) {
