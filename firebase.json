@@ -3,6 +3,7 @@
     "public": ".",
     "ignore": [
       "firebase.json",
+      "cloudflare/**",
       "**/.*",
       "**/node_modules/**"
     ]

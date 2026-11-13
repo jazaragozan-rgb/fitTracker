@@ -203,6 +203,20 @@ header {
   width: 76px;
   flex: 0 0 76px;
 }
+.header-edit-actions.editing {
+  right: 8px;
+  left: auto;
+  width: auto;
+  flex: 0 0 auto;
+}
+.header-action-btn {
+  width: auto;
+  min-width: 56px;
+  max-width: 76px;
+  height: 30px;
+  padding: 0 6px;
+  font-size: 0.62rem;
+}
 .subheader-level4 > .header-btn {
   position: absolute;
   left: 50%;
@@ -214,6 +228,12 @@ header {
 .subheader-level4 > .header-edit-actions {
   position: absolute;
   left: calc(50% + 88px);
+}
+.subheader-level4 > .header-edit-actions.editing {
+  right: 8px;
+  left: auto;
+  width: auto;
+  flex: 0 0 auto;
 }
 .header-btn:hover  { background: var(--primary-hover); }
 .header-btn:active { transform: scale(0.97); }

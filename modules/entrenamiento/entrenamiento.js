@@ -29,6 +29,7 @@ let draggingEjercicio = false;
 let _renderizar = null;
 let _rutaActual = null;
 let _sessionTimerInterval = null;
+let _nivel4Editando = false;
 
 const MOVEMENT_THRESHOLD  = 10;
 const LONG_PRESS_DURATION = 500;
@@ -54,10 +55,15 @@ function _rutasIguales(a, b) {
   return a.every((value, index) => value === b[index]);
 }
 
+function guardarCambiosNivel4(modoEdicion) {
+  if (!modoEdicion) guardarDatos();
+}
+
 // ============================================================
 // RENDER NIVEL 4: acordeón de ejercicios
 // ============================================================
 export function renderizarNivel4(nivel, contenido, rutaActual, modoEdicion = false) {
+  _nivel4Editando = modoEdicion;
   const rutaAnterior = _rutaActual;
   _renderizar = window.renderizar;
   _rutaActual = rutaActual;
@@ -348,7 +354,7 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual, modoEdicio
     const guardar = () => {
       ejercicio.nombre = input.value || 'Sin nombre';
       ejercicio.editando = false;
-      guardarDatos();
+      guardarCambiosNivel4(modoEdicion);
       getRenderizar()?.();
     };
     input.addEventListener('keydown', e => { if (e.key === 'Enter') guardar(); });
@@ -409,13 +415,13 @@ function _crearEjercicioAcordeon(ejercicio, index, nivel, rutaActual, modoEdicio
         onEliminar: () => mostrarConfirmacion(`¿Desea borrar "${ejercicio.nombre}"?`, () => {
           nivel.hijos.splice(index, 1);
           ejercicioExpandido = null;
-          guardarDatos();
+          guardarCambiosNivel4(modoEdicion);
           getRenderizar()?.();
         }),
         onCopiar: () => ({ nivel: rutaActual.length, datos: structuredClone(ejercicio) })
       };
       if (modoEdicion || ejercicioExpandido !== index) {
-        menuOpts.onEditar = () => { ejercicio.editando = true; guardarDatos(); getRenderizar()?.(); };
+        menuOpts.onEditar = () => { ejercicio.editando = true; guardarCambiosNivel4(modoEdicion); getRenderizar()?.(); };
       }
       mostrarMenuOpciones(menuOpts);
     });
@@ -474,7 +480,7 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
     addSerieBtn.onclick = e => {
       e.stopPropagation();
       ejercicio.series.push({ reps: '', peso: '', rir: '', descanso: '', completada: false });
-      guardarDatos();
+      guardarCambiosNivel4(modoEdicion);
       getRenderizar()?.();
     };
     inner.appendChild(addSerieBtn);
@@ -483,11 +489,11 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
   // Cabeceras
   const encabezados = document.createElement('div');
   encabezados.style.cssText = `
-    display:grid;grid-template-columns:40px repeat(4,1fr) 80px;
+    display:grid;grid-template-columns:${modoEdicion ? '40px repeat(4,1fr) 32px 32px' : '40px repeat(4,1fr) 40px'};
     gap:4px;margin-bottom:8px;font-size:0.7rem;font-weight:700;
     color:var(--text-secondary);text-transform:uppercase;text-align:center;
   `;
-  ['', 'REPS', 'PESO', 'RIR', 'DESC', ''].forEach(txt => {
+  ['', 'REPS', 'PESO', 'RIR', 'DESC', ...(modoEdicion ? ['', ''] : [''])].forEach(txt => {
     const c = document.createElement('div'); c.textContent = txt; encabezados.appendChild(c);
   });
   inner.appendChild(encabezados);
@@ -496,7 +502,7 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
     seriesToShow.forEach(({ serie, origen }, idx) => {
       const serieDiv = document.createElement('div');
       serieDiv.style.cssText = `
-        display:grid;grid-template-columns:40px repeat(4,1fr) 40px;
+        display:grid;grid-template-columns:${modoEdicion ? '40px repeat(4,1fr) 32px 32px' : '40px repeat(4,1fr) 40px'};
         gap:4px;margin:2px;padding:1px 4px;align-items:center;
         border-radius:8px;min-height:45px;height:45px;
         background:${serie.completada ? 'rgba(61,213,152,0.1)' : 'transparent'};
@@ -517,7 +523,7 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
           e.stopPropagation();
           mostrarSelectorMarca(serie, idx, () => {
             if (serie.marca === String(idx + 1)) delete serie.marca;
-            guardarDatos();
+            guardarCambiosNivel4(modoEdicion);
             getRenderizar()?.();
           });
         });
@@ -542,7 +548,7 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
           inp.classList.add('serie-input-editable');
           inp.addEventListener('input', () => {
             serie[property] = inp.value;
-            guardarDatos();
+            guardarCambiosNivel4(modoEdicion);
           });
         }
         return inp;
@@ -553,11 +559,23 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
       const rir      = mkInput(serie.rir,      'R', 'rir');
       const descanso = mkInput(serie.descanso, 'D', 'descanso');
 
-      // Check visible pero no clickeable (solo informativo)
-      const checkIcon = document.createElement('div');
+      const checkIcon = document.createElement(modoEdicion ? 'button' : 'div');
+      if (modoEdicion) {
+        checkIcon.type = 'button';
+        checkIcon.title = serie.completada ? 'Marcar serie como no completada' : 'Marcar serie como completada';
+        checkIcon.setAttribute('aria-label', checkIcon.title);
+        checkIcon.setAttribute('aria-pressed', String(Boolean(serie.completada)));
+        checkIcon.addEventListener('click', e => {
+          e.stopPropagation();
+          serie.completada = !serie.completada;
+          guardarCambiosNivel4(modoEdicion);
+          getRenderizar()?.();
+        });
+      }
       checkIcon.style.cssText = `
         font-size:1.1rem;display:flex;align-items:center;justify-content:center;
         width:26px;height:26px;opacity:${serie.completada ? '1' : '0.3'};
+        ${modoEdicion ? 'padding:0;border:0;background:transparent;cursor:pointer;' : ''}
       `;
       checkIcon.textContent = serie.completada ? '✔️' : '🕔';
 
@@ -571,13 +589,14 @@ function _rellenarBodyEjercicio(ejercicio, inner, nivel, index, rutaActual, modo
           e.stopPropagation();
           mostrarConfirmacion('¿Desea borrar esta serie?', () => {
             ejercicio.series.splice(ejercicio.series.indexOf(serie), 1);
-            guardarDatos();
+            guardarCambiosNivel4(modoEdicion);
             getRenderizar()?.();
           });
         });
         ultimaCelda = delBtn;
       }
-      [numBtn, reps, peso, rir, descanso, ultimaCelda].forEach(el => serieDiv.appendChild(el));
+      [numBtn, reps, peso, rir, descanso, checkIcon].forEach(el => serieDiv.appendChild(el));
+      if (ultimaCelda !== checkIcon) serieDiv.appendChild(ultimaCelda);
       inner.appendChild(serieDiv);
     });
 
@@ -671,6 +690,7 @@ export function guardarDuracionSesion(rutaSesion, minutos) {
 // DRAG & DROP — EJERCICIOS (nivel 4)
 // ============================================================
 function startDragEjercicio(e) {
+  if (_nivel4Editando) return;
   if (e.type === 'mousedown' && e.button !== 0) return;
   dragEjercicioItem = e.currentTarget.closest('.ejercicio-acordeon');
   if (!dragEjercicioItem) return;

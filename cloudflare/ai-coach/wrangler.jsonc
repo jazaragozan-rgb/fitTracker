@@ -1,0 +1,16 @@
+{
+	"name": "fittracker-ai-coach",
+	"main": "src/index.js",
+	"compatibility_date": "2026-11-11",
+	"workers_dev": true,
+	"observability": {
+		"enabled": true
+	},
+	"ai": {
+		"binding": "AI"
+	},
+	"vars": {
+		"FIREBASE_PROJECT_ID": "sesionmientreno",
+		"ALLOWED_ORIGINS": "https://sesionmientreno.web.app,https://sesionmientreno.firebaseapp.com,https://humble-space-trout-4j9gpgvpvq6jfjvqx-5503.app.github.dev"
+	}
+}

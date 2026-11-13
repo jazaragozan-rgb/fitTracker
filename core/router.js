@@ -30,6 +30,41 @@ let contenido, subHeader, menuTitulo;
 let backButton, addButton;
 let footerButtons, headerUserName, headerAvatar;
 let nivel4Editando = false;
+let nivel4Borrador = null;
+let nivel4Guardando = false;
+
+function hayEdicionNivel4Pendiente() {
+  return nivel4Editando;
+}
+
+function bloquearNavegacionEdicion() {
+  if (!hayEdicionNivel4Pendiente()) return false;
+  alert('Estás editando esta sesión. Pulsa Guardar o Cancelar antes de salir.');
+  return true;
+}
+
+function obtenerPadreDeRuta(ruta) {
+  let nodo = { hijos: datos };
+  for (const indice of ruta.slice(0, -1)) {
+    if (!Array.isArray(nodo.hijos) || !nodo.hijos[indice]) return null;
+    nodo = nodo.hijos[indice];
+  }
+  return nodo;
+}
+
+function actualizarProteccionSalida() {
+  if (!hayEdicionNivel4Pendiente()) {
+    window.removeEventListener('beforeunload', protegerSalidaEdicion);
+    return;
+  }
+  window.addEventListener('beforeunload', protegerSalidaEdicion);
+}
+
+function protegerSalidaEdicion(event) {
+  if (!hayEdicionNivel4Pendiente()) return;
+  event.preventDefault();
+  event.returnValue = '';
+}
 
 // ── Helpers ───────────────────────────────────────────────────
 const $ = id => document.getElementById(id);
@@ -84,7 +119,11 @@ export async function renderizar() {
   if (rutaActual.length === 0) {
     _buildSubheaderDashboard();
   } else {
-    _buildSubheaderNivel(nivel);
+    _buildSubheaderNivel(
+      rutaActual.length === 4 && nivel4Editando && nivel4Borrador
+        ? nivel4Borrador
+        : nivel
+    );
   }
 
   // ── Despacho a módulos ───────────────────────────────────────
@@ -125,7 +164,7 @@ export async function renderizar() {
 
   // NIVEL 4: acordeón de ejercicios
   if (rutaActual.length === 4) {
-    renderizarNivel4(nivel, contenido, rutaActual, nivel4Editando);
+    renderizarNivel4(nivel4Editando && nivel4Borrador ? nivel4Borrador : nivel, contenido, rutaActual, nivel4Editando);
     return;
   }
 
@@ -183,6 +222,7 @@ function _buildSubheaderNivel(nivel) {
     backBtn.innerHTML = '⬅';
     backBtn.addEventListener('click', e => {
       e.stopPropagation();
+      if (bloquearNavegacionEdicion()) return;
       rutaActual.pop();
       ejercicioExpandido = null;
       renderizar();
@@ -210,35 +250,85 @@ function _buildSubheaderNivel(nivel) {
     btnIniciar.className = 'header-btn';
     btnIniciar.textContent = '▶ Iniciar sesión';
     btnIniciar.style.cssText = 'background:var(--accent-green);min-width:160px;max-width:200px;';
-    btnIniciar.addEventListener('click', () => _iniciarSesionDesdeNivel4(nivel));
+    btnIniciar.hidden = nivel4Editando;
+    btnIniciar.addEventListener('click', () => {
+      if (bloquearNavegacionEdicion()) return;
+      _iniciarSesionDesdeNivel4(nivel);
+    });
     cont.appendChild(btnIniciar);
 
     const accionesEdicion = document.createElement('div');
     accionesEdicion.className = 'header-edit-actions';
+    if (nivel4Editando) accionesEdicion.classList.add('editing');
 
     const btnEditar = document.createElement('button');
-    btnEditar.className = 'header-btn header-icon-btn';
+    btnEditar.className = nivel4Editando ? 'header-btn header-action-btn' : 'header-btn header-icon-btn';
     btnEditar.type = 'button';
-    btnEditar.title = nivel4Editando ? 'Guardar entrenamiento' : 'Editar entrenamiento';
+    btnEditar.title = nivel4Editando ? 'Guardar sesión' : 'Editar sesión';
     btnEditar.setAttribute('aria-label', btnEditar.title);
-    btnEditar.textContent = nivel4Editando ? '💾' : '✎';
+    btnEditar.textContent = nivel4Editando ? 'Guardar' : '✎';
     btnEditar.addEventListener('click', () => {
       if (!nivel4Editando) {
+        nivel4Borrador = structuredClone(nivel);
         nivel4Editando = true;
+        actualizarProteccionSalida();
         renderizar();
         return;
       }
 
-      nivel4Editando = false;
-      renderizar();
-      Promise.resolve(guardarDatos({ immediate: true })).then(guardado => {
-        if (guardado !== false) return;
-        nivel4Editando = true;
+      if (nivel4Guardando || !nivel4Borrador) return;
+      nivel4Guardando = true;
+      btnEditar.disabled = true;
+      const padre = obtenerPadreDeRuta(rutaActual);
+      const indice = rutaActual[rutaActual.length - 1];
+      if (!padre?.hijos || !padre.hijos[indice]) {
+        nivel4Guardando = false;
+        btnEditar.disabled = false;
+        alert('No se encontró la sesión para guardar los cambios.');
+        return;
+      }
+
+      const original = padre.hijos[indice];
+      padre.hijos[indice] = nivel4Borrador;
+      Promise.resolve().then(() => guardarDatos({ immediate: true })).then(guardado => {
+        if (guardado === false) {
+          padre.hijos[indice] = original;
+          nivel4Guardando = false;
+          renderizar();
+          alert('No se pudo guardar la sesión. Tus cambios siguen abiertos para que puedas reintentarlo o cancelarlos.');
+          return;
+        }
+        nivel4Editando = false;
+        nivel4Borrador = null;
+        nivel4Guardando = false;
+        actualizarProteccionSalida();
         renderizar();
-        alert('No se pudo guardar el entrenamiento. Comprueba que has iniciado sesión y tu conexión.');
+      }).catch(error => {
+        console.error('[router] Error al guardar la sesión:', error);
+        padre.hijos[indice] = original;
+        nivel4Guardando = false;
+        renderizar();
+        alert('No se pudo guardar la sesión. Tus cambios siguen abiertos para que puedas reintentarlo o cancelarlos.');
       });
     });
     accionesEdicion.appendChild(btnEditar);
+
+    if (nivel4Editando) {
+      const btnCancelar = document.createElement('button');
+      btnCancelar.className = 'header-btn header-action-btn';
+      btnCancelar.type = 'button';
+      btnCancelar.title = 'Cancelar cambios';
+      btnCancelar.setAttribute('aria-label', btnCancelar.title);
+      btnCancelar.textContent = 'Cancelar';
+      btnCancelar.addEventListener('click', () => {
+        if (nivel4Guardando) return;
+        nivel4Editando = false;
+        nivel4Borrador = null;
+        actualizarProteccionSalida();
+        renderizar();
+      });
+      accionesEdicion.appendChild(btnCancelar);
+    }
 
     const btnBuscar = document.createElement('button');
     btnBuscar.className = 'header-btn header-icon-btn';
@@ -253,7 +343,6 @@ function _buildSubheaderNivel(nivel) {
       abrirBuscadorEjercicios((nombre, imagen) => {
         nivel.hijos = nivel.hijos || [];
         nivel.hijos.push({ nombre, imagen: imagen || '', hijos: [], series: [] });
-        guardarDatos();
         renderizar();
       });
     });
@@ -358,11 +447,13 @@ export function init() {
 
   // Botones fijos del header
   if (backButton) backButton.addEventListener('click', () => {
+    if (bloquearNavegacionEdicion()) return;
     if (rutaActual.length > 0) { rutaActual.pop(); ejercicioExpandido = null; renderizar(); }
   });
   footerButtons = document.querySelectorAll('.footer-btn');
   footerButtons.forEach(btn => {
     btn.addEventListener('click', () => {
+      if (bloquearNavegacionEdicion()) return;
       const s = btn.dataset.seccion;
       const mapa = { dashboard: [], entrenamiento: [0], progreso: [1], nutricion: [3], mas: [4] };
       const nombreMapa = { dashboard: 'Dashboard', entrenamiento: 'Entrenamiento', progreso: 'Progreso', nutricion: 'Nutrición', mas: 'Más' };
@@ -383,6 +474,7 @@ export function init() {
   window.datos                   = datos;
   window.nivelActual             = nivelActual;
   window.abrirBuscadorEjercicios = abrirBuscadorEjercicios;
+  actualizarProteccionSalida();
 }
 
 function _getAvatarText(user) {
